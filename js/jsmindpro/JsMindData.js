@@ -2,7 +2,7 @@ import JsMind from './JsMind'
 
 const logger = console
 
-export default class JsMindDataProvider {
+export default class JsMindData {
   constructor (jm) {
     this.jm = jm
   }

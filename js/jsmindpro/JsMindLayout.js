@@ -2,7 +2,7 @@ import JsMind from './JsMind'
 const logger = console
 
 
-export default class JsMindLayoutProvider {
+export default class JsMindLayout {
   constructor (jm, options) {
     this.opts = options
     this.jm = jm

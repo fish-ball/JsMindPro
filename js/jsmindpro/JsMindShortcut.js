@@ -1,7 +1,7 @@
 import JsMindUtil from './JsMindUtil'
 
 // shortcut provider
-export default class JsMindShortcutProvider {
+export default class JsMindShortcut {
   constructor (jm, options) {
     this.jm = jm
     this.opts = options

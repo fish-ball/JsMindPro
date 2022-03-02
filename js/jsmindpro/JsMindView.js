@@ -21,7 +21,7 @@ let $t = function (n, t) {
 }
 
 // view provider
-export default class JsMindViewProvider {
+export default class JsMindView {
   constructor (jm, options) {
     this.opts = options
     this.jm = jm
