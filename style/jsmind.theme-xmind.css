@@ -1,0 +1,36 @@
+/* xmind theme */
+jmnodes.theme-xmind jmnode {
+  background-color: #DCE6F2;
+  color: #376092;
+  border: 2px solid #558ED5;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  font-size: 14px;
+  padding: 5px 8px;
+}
+
+jmnodes.theme-xmind jmnode:hover {
+  background-color: #C8DDEB;
+  color: #4775A0;
+  border-color: #5E99D4;
+}
+
+jmnodes.theme-xmind jmnode.selected {
+  /*background-color: #11f;*/
+  /*color: #fff;*/
+  outline: 3px solid #C5D8E6;
+}
+
+jmnodes.theme-xmind jmnode.root {
+  border-width: 4px;
+  font-size: 18px;
+  padding: 8px 10px;
+}
+
+jmnodes.theme-xmind jmexpander {
+}
+
+jmnodes.theme-xmind jmexpander:hover {
+}
+
