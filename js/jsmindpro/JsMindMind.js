@@ -176,30 +176,6 @@ export default class JsMindMind {
    * @returns {Boolean}
    */
   remove_node (node) {
-
-    // if (!JsMindUtil.is_node(node)) {
-    //   let the_node = this.get_node(node)
-    //   if (!the_node) {
-    //     logger.error('the node[id=' + node + '] can not be found.')
-    //     return false
-    //   } else {
-    //     return this.remove_node(the_node)
-    //   }
-    // }
-    // if (!node) {
-    //   logger.error('fail, the node can not be found')
-    //   return false
-    // }
-    // if (node.isroot) {
-    //   logger.error('fail, can not remove root node')
-    //   return false
-    // }
-    // if (this.selected != null && this.selected.id == node.id) {
-    //   this.selected = null
-    // }
-
-
-
     node = this._sanitize_node(node)
     if (!node) return false
     if (node.isroot) {
