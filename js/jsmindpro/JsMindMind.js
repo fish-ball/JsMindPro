@@ -186,15 +186,17 @@ export default class JsMindMind {
     if (this.selected != null && this.selected.id === node.id) {
       this.selected = null
     }
+    let children = node.children
+    node.children = []
     // 后序遍历，先递归删除内部节点
-    node.children.forEach(node => {
+    children.forEach(node => {
       this.remove_node(node)
     })
-    node.children = []
     // 从父节点的 children 中剔除当前节点
-    node.parent.children.splice(node.parent.children.indexOf(node), 1)
+    node.parent.children.splice(node.parent.children.indexOf(node))
     // 节点集合中清除
     delete this.nodes[node.id]
+
     return true
   }
 

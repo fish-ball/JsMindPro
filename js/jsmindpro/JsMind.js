@@ -15,21 +15,9 @@ import JsMindView from './JsMindView'
 import JsMindShortcut from './JsMindShortcut'
 import JsMindFormat from './JsMindFormat'
 
-// set 'jsMind' as the library name.
-// __name__ should be a const value, Never try to change it easily.
-const __name__ = 'jsMind'
-// library version
-const __version__ = '0.5'
-// author
-const __author__ = 'hizzgdev@163.com'
+const __version__ = 0.5
 
-// an noop function define
-let _noop = () => {
-}
-let logger = (typeof console === 'undefined') ? {
-  log: _noop, debug: _noop, error: _noop, warn: _noop, info: _noop
-} : console
-
+const logger = console
 
 let DEFAULT_OPTIONS = {
   container: '',   // id of the container
