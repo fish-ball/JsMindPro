@@ -75,7 +75,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     let extract_count = 0
     while (i--) {
       node_json = node_array[i]
-      if (node_json.parentid == parentid) {
+      if (node_json.parentid === parentid) {
         data = df._extract_data(node_json)
         let d = null
         let node_direction = node_json.direction

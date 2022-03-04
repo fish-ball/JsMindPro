@@ -25,24 +25,18 @@ export default class JsMindNode {
     this._data = {}
   }
 
+  /**
+   * 对节点进行排序的函数，仅参考当前的 index 大小排序
+   * 原序号为 -1 的，靠后放
+   * @param node1 {JsMindNode}
+   * @param node2 {JsMindNode}
+   * @returns {number}
+   */
   static compare (node1, node2) {
-    // '-1' is alwary the last
-    let r = 0
-    let i1 = node1.index
-    let i2 = node2.index
-    if (i1 >= 0 && i2 >= 0) {
-      r = i1 - i2
-    } else if (i1 === -1 && i2 === -1) {
-      r = 0
-    } else if (i1 === -1) {
-      r = 1
-    } else if (i2 === -1) {
-      r = -1
-    } else {
-      r = 0
-    }
-    //logger.debug(i1+' <> '+i2+'  =  '+r)
-    return r
+    if (node1.index === node2.index) return 0
+    if (node1.index === -1) return 1
+    if (node2.index === -1) return -1
+    return node1.index - node2.index
   }
 
   static inherited (pnode, node) {
