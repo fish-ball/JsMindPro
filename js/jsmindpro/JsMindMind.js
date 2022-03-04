@@ -193,10 +193,9 @@ export default class JsMindMind {
       this.remove_node(node)
     })
     // 从父节点的 children 中剔除当前节点
-    node.parent.children.splice(node.parent.children.indexOf(node))
+    node.parent.children.splice(node.parent.children.indexOf(node), 1)
     // 节点集合中清除
     delete this.nodes[node.id]
-
     return true
   }
 
