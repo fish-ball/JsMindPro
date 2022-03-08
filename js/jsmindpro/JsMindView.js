@@ -1,16 +1,10 @@
+import 'jsmind'
 import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
 
 const logger = console
 
-// detect isElement
-let $i = function (el) {
-  return !!el &&
-    (typeof el === 'object') &&
-    (el.nodeType === 1) &&
-    (typeof el.style === 'object') &&
-    (typeof el.ownerDocument === 'object')
-}
+///////// Shortcut Functions /////////
 
 let $t = function (n, t) {
   if (n.hasChildNodes()) {
@@ -24,8 +18,8 @@ let $t = function (n, t) {
 export default class JsMindView {
   constructor (jm, options) {
     this.opts = options
+    /** @type JsMind */
     this.jm = jm
-    this.layout = jm.layout
 
     this.container = null
     this.e_panel = null
@@ -39,14 +33,13 @@ export default class JsMindView {
     this.editing_node = null
   }
 
-  init () {
-    logger.debug('view.init')
+  async init () {
+    // https://stackoverflow.com/a/36894871/2544762
+    this.container = (this.opts.container instanceof Element ||
+      this.opts.container instanceof HTMLDocument) ? this.opts.container
+      : document.getElementById(this.opts.container)
+    if (!this.container) throw new Error('the options.view.container was not be found in dom')
 
-    this.container = $i(this.opts.container) ? this.opts.container : $g(this.opts.container)
-    if (!this.container) {
-      logger.error('the options.view.container was not be found in dom')
-      return
-    }
     this.e_panel = document.createElement('div')
     this.e_canvas = document.createElement('canvas')
     this.e_nodes = document.createElement('jmnodes')
@@ -65,9 +58,10 @@ export default class JsMindView {
     this.maxZoom = 2
 
     let v = this
+    // 结束标记的事件，TODO: 为啥要写在这种地方？
     JsMindUtil.dom.add_event(this.e_editor, 'keydown', function (e) {
       let evt = e || event
-      if (evt.keyCode == 13) {
+      if (evt.keyCode === 13) {
         v.edit_node_end()
         evt.stopPropagation()
       }
@@ -76,52 +70,55 @@ export default class JsMindView {
       v.edit_node_end()
     })
 
+    // 挂载控件
     this.container.appendChild(this.e_panel)
 
-    this.init_canvas()
+    await this.init_canvas()
   }
 
-  add_event (obj, event_name, event_handle) {
-    JsMindUtil.dom.add_event(this.e_nodes, event_name, function (e) {
+  /**
+   * 在某个对象上调用添加某个事件的处理器
+   * @param obj
+   * @param eventName {String}
+   * @param handler {Function}
+   */
+  add_event (obj, eventName, handler) {
+    JsMindUtil.dom.add_event(this.e_nodes, eventName, function (e) {
       let evt = e || event
-      event_handle.call(obj, evt)
+      handler.call(obj, evt)
     })
   }
 
+  /**
+   * 获取当前元素绑定的节点 nodeId，可以冒泡寻找父节点
+   * @param element
+   * @returns {String|null}
+   */
   get_binded_nodeid (element) {
-    if (element == null) {
-      return null
-    }
+    if (!element) return null
     let tagName = element.tagName.toLowerCase()
-    if (tagName == 'jmnodes' || tagName == 'body' || tagName == 'html') {
-      return null
-    }
-    if (tagName == 'jmnode' || tagName == 'jmexpander') {
-      return element.getAttribute('nodeid')
-    } else {
-      return this.get_binded_nodeid(element.parentElement)
-    }
+    if (/^jmnodes|body|html$/.test(tagName)) return null
+    if (/^jmnode|jmexpander$/.test(tagName)) return element.getAttribute('nodeid')
+    // 冒泡查找父标签
+    return this.get_binded_nodeid(element.parentElement)
   }
 
-  is_expander (element) {
-    return (element.tagName.toLowerCase() == 'jmexpander')
-  }
-
+  /**
+   * 重置一个 View
+   */
   reset () {
-    logger.debug('view.reset')
     this.selected_node = null
     this.clear_lines()
     this.clear_nodes()
     this.reset_theme()
   }
 
+  /**
+   * 重设主题标记
+   */
   reset_theme () {
     let theme_name = this.jm.options.theme
-    if (!!theme_name) {
-      this.e_nodes.className = 'theme-' + theme_name
-    } else {
-      this.e_nodes.className = ''
-    }
+    this.e_nodes.className = theme_name ? 'theme-' + theme_name : ''
   }
 
   reset_custom_style () {
@@ -137,7 +134,7 @@ export default class JsMindView {
   }
 
   expand_size () {
-    let min_size = this.layout.get_min_size()
+    let min_size = this.jm.layout.get_min_size()
     let min_width = min_size.w + this.opts.hmargin * 2
     let min_height = min_size.h + this.opts.vmargin * 2
     let client_w = this.e_panel.clientWidth
@@ -321,7 +318,7 @@ export default class JsMindView {
   }
 
   get_view_offset () {
-    let bounds = this.layout.bounds
+    let bounds = this.jm.layout.bounds
     let _x = (this.size.w - bounds.e - bounds.w) / 2
     let _y = this.size.h / 2
     return {x: _x, y: _y}
@@ -344,7 +341,7 @@ export default class JsMindView {
     this.e_nodes.style.height = this.size.h + 'px'
     this.show_nodes()
     this.show_lines()
-    //this.layout.cache_valid = true
+    //this.jm.layout.cache_valid = true
     this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
   }
 
@@ -410,19 +407,15 @@ export default class JsMindView {
     this.e_panel.scrollTop = parseInt(vd.element.style.top) - vd._saved_location.y
   }
 
+  /**
+   * 清理所有的 dom 节点
+   */
   clear_nodes () {
-    let mind = this.jm.mind
-    if (mind == null) {
-      return
-    }
-    let nodes = mind.nodes
-    let node = null
-    for (let nodeid in nodes) {
-      node = nodes[nodeid]
+    let nodes = this.jm.mind.nodes
+    nodes.forEach(node => {
       node._data.view.element = null
       node._data.view.expander = null
-    }
-    this.e_nodes.innerHTML = ''
+    })
   }
 
   show_nodes () {
@@ -440,13 +433,13 @@ export default class JsMindView {
       view_data = node._data.view
       node_element = view_data.element
       expander = view_data.expander
-      if (!this.layout.is_visible(node)) {
+      if (!this.jm.layout.is_visible(node)) {
         node_element.style.display = 'none'
         expander.style.display = 'none'
         continue
       }
       this.reset_node_custom_style(node)
-      p = this.layout.get_node_point(node)
+      p = this.jm.layout.get_node_point(node)
       view_data.abs_x = _offset.x + p.x
       view_data.abs_y = _offset.y + p.y
       node_element.style.left = (_offset.x + p.x) + 'px'
@@ -455,7 +448,7 @@ export default class JsMindView {
       node_element.style.visibility = 'visible'
       if (!node.isroot && node.children.length > 0) {
         expander_text = node.expanded ? '-' : '+'
-        p_expander = this.layout.get_expander_point(node)
+        p_expander = this.jm.layout.get_expander_point(node)
         expander.style.left = (_offset.x + p_expander.x) + 'px'
         expander.style.top = (_offset.y + p_expander.y) + 'px'
         expander.style.display = ''
@@ -533,30 +526,34 @@ export default class JsMindView {
     node_element.style.color = ""
   }
 
-  clear_lines (canvas_ctx) {
-    let ctx = canvas_ctx || this.canvas_ctx
-    JsMindUtil.canvas.clear(ctx, 0, 0, this.size.w, this.size.h)
+  /**
+   * 清除画布上的所有线条
+   * @param canvasContext
+   */
+  clear_lines (canvasContext) {
+    let ctx = canvasContext || this.canvas_ctx
+    ctx.clearRect(0, 0, this.size.w, this.size.h)
   }
 
-  show_lines (canvas_ctx) {
-    this.clear_lines(canvas_ctx)
-    let nodes = this.jm.mind.nodes
-    let node = null
-    let pin = null
-    let pout = null
+  /**
+   * 绘制画布上的所有线条
+   * @param canvasContext
+   */
+  show_lines (canvasContext) {
+    this.clear_lines(canvasContext)
     let _offset = this.get_view_offset()
-    for (let nodeid in nodes) {
-      node = nodes[nodeid]
-      if (!!node.isroot) {
-        continue
-      }
-      if (('visible' in node._data.layout) && !node._data.layout.visible) {
-        continue
-      }
-      pin = this.layout.get_node_point_in(node)
-      pout = this.layout.get_node_point_out(node.parent)
-      this.draw_line(pout, pin, _offset, canvas_ctx)
-    }
+    this.jm.mind.nodes.forEach(node => {
+      // 根节点没有线
+      if (node.isroot) return
+      // 隐藏的节点没有线
+      if (('visible' in node._data.layout) && !node._data.layout.visible) return
+      // 获取布局的入点坐标
+      const pin = this.jm.layout.get_node_point_in(node)
+      // 获取父节点布局的出点坐标
+      const pout = this.jm.layout.get_node_point_out(node.parent)
+      // 画线
+      this.draw_line(pout, pin, _offset, canvasContext)
+    })
   }
 
   draw_line (pin, pout, offset, canvas_ctx) {

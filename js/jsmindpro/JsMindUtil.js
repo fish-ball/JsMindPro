@@ -7,6 +7,15 @@ export default class JsMindUtil {
     return !!node && node instanceof JsMindNode
   }
 
+  /**
+   * 如果传入是节点，返回其 ID，否则返回其本身（假设其是一个 ID）
+   * @param node {JsMindNode|Integer|String}
+   * @returns {Integer|String}
+   */
+  static to_node_id (node) {
+    return this.is_node(node) ? node.id : node
+  }
+
   static ajax = {
     _xhr: function () {
       let xhr = null
@@ -98,9 +107,6 @@ export default class JsMindUtil {
       ctx.moveTo(x1, y1)
       ctx.lineTo(x2, y2)
       ctx.stroke()
-    },
-    clear: function (ctx, x, y, w, h) {
-      ctx.clearRect(x, y, w, h)
     }
   }
 

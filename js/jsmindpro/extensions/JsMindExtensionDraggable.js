@@ -217,7 +217,7 @@ class JsMindExtensionDraggable {
     })
   }
 
-  dragstart (e) {
+  async dragstart (e) {
     if (!this.jm.get_editable()) {
       return
     }
@@ -233,7 +233,7 @@ class JsMindExtensionDraggable {
     }
     let nodeid = jview.get_binded_nodeid(el)
     if (!!nodeid) {
-      let node = this.jm.get_node(nodeid)
+      let node = await this.jm.get_node(nodeid)
       if (!node.isroot) {
         this.reset_shadow(el)
         this.active_node = node
@@ -304,7 +304,7 @@ class JsMindExtensionDraggable {
     this.capture = false
   }
 
-  move_node (src_node, target_node, target_direct) {
+  async move_node (src_node, target_node, target_direct) {
     let shadow_h = this.shadow.offsetTop
     if (!!target_node && !!src_node && !JsMind.node.inherited(src_node, target_node)) {
       // lookup before_node
@@ -328,7 +328,7 @@ class JsMindExtensionDraggable {
       if (!!node_before) {
         beforeid = node_before.id
       }
-      this.jm.move_node(src_node.id, beforeid, target_node.id, target_direct)
+      await this.jm.move_node(src_node.id, beforeid, target_node.id, target_direct)
     }
     this.active_node = null
     this.target_node = null

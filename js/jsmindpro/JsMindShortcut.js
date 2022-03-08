@@ -52,28 +52,39 @@ export default class JsMindShortcut {
     }
   }
 
-  handle_addchild (_jm, e) {
-    let selected_node = _jm.get_selected_node()
-    if (!!selected_node) {
+  /**
+   * 处理添加一个子节点
+   * @param jm {JsMind} JsMind 实例
+   * @param e {Event}
+   * @returns {Promise<void>}
+   */
+  async handle_addchild (jm, e) {
+    let selectedNode = jm.get_selected_node()
+    if (!!selectedNode) {
       let nodeid = JsMindUtil.uuid.newid()
-      let node = _jm.add_node(selected_node, nodeid, 'New Node')
+      let node = await jm.add_node(selectedNode, nodeid, 'New Node')
       if (!!node) {
-        _jm.select_node(nodeid)
-        _jm.begin_edit(nodeid)
+        await jm.select_node(nodeid)
+        await jm.begin_edit(nodeid)
       }
     }
   }
 
-  handle_addbrother (_jm, e) {
-    let selected_node = _jm.get_selected_node()
-    if (!!selected_node && !selected_node.isroot) {
-      let nodeid = JsMindUtil.uuid.newid()
-      let node = _jm.insert_node_after(selected_node, nodeid, 'New Node')
-      if (!!node) {
-        _jm.select_node(nodeid)
-        _jm.begin_edit(nodeid)
-      }
-    }
+  /**
+   * 处理添加一个兄弟节点
+   * @param jm {JsMind} JsMind 实例
+   * @param e {Event}
+   * @returns {Promise<void>}
+   */
+  async handle_addbrother (jm, e) {
+    let selectedNode = jm.get_selected_node()
+    if (!selectedNode) return
+    if (selectedNode.isroot) return this.handle_addchild(jm, e)
+    let nodeId = JsMindUtil.uuid.newid()
+    let node = await jm.insert_node_after(selectedNode, nodeId, 'New Node')
+    await jm.select_node(node.id)
+    await jm.begin_edit(node.id)
+    e.preventDefault()
   }
 
   handle_editnode (_jm, e) {
@@ -83,12 +94,18 @@ export default class JsMindShortcut {
     }
   }
 
-  handle_delnode (_jm, e) {
-    let selected_node = _jm.get_selected_node()
-    if (!!selected_node && !selected_node.isroot) {
-      _jm.select_node(selected_node.parent)
-      _jm.remove_node(selected_node)
-    }
+  /**
+   * 处理一个删除节点事件
+   * @param jm {JsMind}
+   * @param e {Event}
+   * @returns {Promise<void>}
+   */
+  async handle_delnode (jm, e) {
+    let selected_node = jm.get_selected_node()
+    if (!selected_node) return
+    if (selected_node.isroot) throw new Error('Cannot delete root node.')
+    await jm.select_node(selected_node.parent)
+    await jm.remove_node(selected_node)
   }
 
   handle_toggle (_jm, e) {

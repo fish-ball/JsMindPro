@@ -15,29 +15,23 @@ export default class JsMindData {
     logger.debug('data.reset')
   }
 
-  load (mind_data) {
-    let df = null
-    let mind = null
-    if (typeof mind_data === 'object') {
-      if (!!mind_data.format) {
-        df = mind_data.format
-      } else {
-        df = 'node_tree'
-      }
-    } else {
-      df = 'freemind'
-    }
+  /**
+   * 自动加载一个 mind 的配置数据（包含格式）
+   * @param mind_data
+   * @returns {Promise<JsMindMind>}
+   */
+  async load (mind_data) {
+    let format = typeof mind_data === 'object' ?
+      (mind_data.format || 'node_tree') : 'freemind'
 
-    if (df === 'node_array') {
-      mind = JsMind.format.node_array.get_mind(mind_data)
-    } else if (df === 'node_tree') {
-      mind = JsMind.format.node_tree.get_mind(mind_data)
-    } else if (df === 'freemind') {
-      mind = JsMind.format.freemind.get_mind(mind_data)
-    } else {
-      logger.warn('unsupported format')
+    if (format === 'node_array') {
+      return JsMind.format.node_array.get_mind(mind_data)
+    } else if (format === 'node_tree') {
+      return JsMind.format.node_tree.get_mind(mind_data)
+    } else if (format === 'freemind') {
+      return JsMind.format.freemind.get_mind(mind_data)
     }
-    return mind
+    throw new Error('unsupported format')
   }
 
   get_data (data_format) {

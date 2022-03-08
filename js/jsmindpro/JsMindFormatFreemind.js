@@ -1,8 +1,11 @@
+/**
+ * TODO: 尚未进行异步化重构，暂时别用
+ */
 import JsMind from './JsMind'
 import JsMindMind from './JsMindMind'
 import JsMindFormatBase from './JsMindFormatBase'
 
-export default class JsMindFormatFreemind extends JsMindFormatBase{
+export default class JsMindFormatFreemind extends JsMindFormatBase {
   static example = {
     "meta": {
       "name": 'Albert Einstein',
@@ -82,7 +85,7 @@ export default class JsMindFormatFreemind extends JsMindFormatBase{
     return node
   }
 
-  static _load_node (mind, parent_id, xml_node) {
+  static async _load_node (mind, parent_id, xml_node) {
     let df = JsMind.format.freemind
     let node_id = xml_node.getAttribute('ID')
     let node_topic = xml_node.getAttribute('TEXT')
@@ -93,24 +96,24 @@ export default class JsMindFormatFreemind extends JsMindFormatBase{
       for (let i = 0; i < topic_children.length; i++) {
         topic_child = topic_children[i]
         //logger.debug(topic_child.tagName)
-        if (topic_child.nodeType == 1 && topic_child.tagName === 'richcontent') {
+        if (topic_child.nodeType === 1 && topic_child.tagName === 'richcontent') {
           node_topic = topic_child.textContent
           break
         }
       }
     }
-    let node_data = df._load_attributes(xml_node)
-    let node_expanded = ('expanded' in node_data) ? (node_data.expanded == 'true') : true
+    let node_data = await df._load_attributes(xml_node)
+    let node_expanded = ('expanded' in node_data) ? (node_data.expanded === 'true') : true
     delete node_data.expanded
 
     let node_position = xml_node.getAttribute('POSITION')
     let node_direction = null
     if (!!node_position) {
-      node_direction = node_position == 'left' ? JsMind.direction.left : JsMind.direction.right
+      node_direction = node_position === 'left' ? JsMind.direction.left : JsMind.direction.right
     }
     //logger.debug(node_position +':'+ node_direction)
     if (!!parent_id) {
-      mind.add_node(parent_id, node_id, node_topic, node_data, null, node_direction, node_expanded)
+      await mind.add_node(parent_id, node_id, node_topic, node_data, null, node_direction, node_expanded)
     } else {
       mind.set_root(node_id, node_topic, node_data)
     }
@@ -118,8 +121,8 @@ export default class JsMindFormatFreemind extends JsMindFormatBase{
     let child = null
     for (let i = 0; i < children.length; i++) {
       child = children[i]
-      if (child.nodeType == 1 && child.tagName == 'node') {
-        df._load_node(mind, node_id, child)
+      if (child.nodeType === 1 && child.tagName === 'node') {
+        await df._load_node(mind, node_id, child)
       }
     }
   }

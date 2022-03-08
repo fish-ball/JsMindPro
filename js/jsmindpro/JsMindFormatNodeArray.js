@@ -52,14 +52,21 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     }
   }
 
-  static _extract_root (mind, node_array) {
+  /**
+   * 解析出根节点
+   * @param mind {JsMindMind}
+   * @param node_array {[]}
+   * @returns {Promise<Integer|String|null>} 返回根节点的 id
+   * @private
+   */
+  static async _extract_root (mind, node_array) {
     let df = JsMind.format.node_array
     let i = node_array.length
     while (i--) {
-      if ('isroot' in node_array[i] && node_array[i].isroot) {
+      if (node_array[i].isroot) {
         let root_json = node_array[i]
         let data = df._extract_data(root_json)
-        mind.set_root(root_json.id, root_json.topic, data)
+        await mind.set_root(root_json.id, root_json.topic, data)
         node_array.splice(i, 1)
         return root_json.id
       }
@@ -67,7 +74,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     return null
   }
 
-  static _extract_subnode (mind, parentid, node_array) {
+  static async _extract_subnode (mind, parentid, node_array) {
     let df = JsMind.format.node_array
     let i = node_array.length
     let node_json = null
@@ -76,16 +83,16 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     while (i--) {
       node_json = node_array[i]
       if (node_json.parentid === parentid) {
-        data = df._extract_data(node_json)
+        data = await df._extract_data(node_json)
         let d = null
         let node_direction = node_json.direction
         if (!!node_direction) {
-          d = node_direction == 'left' ? JsMind.direction.left : JsMind.direction.right
+          d = node_direction === 'left' ? JsMind.direction.left : JsMind.direction.right
         }
-        mind.add_node(parentid, node_json.id, node_json.topic, data, null, d, node_json.expanded)
+        await mind.add_node(parentid, node_json.id, node_json.topic, data, null, d, node_json.expanded)
         node_array.splice(i, 1)
         extract_count++
-        let sub_extract_count = df._extract_subnode(mind, node_json.id, node_array)
+        let sub_extract_count = await df._extract_subnode(mind, node_json.id, node_array)
         if (sub_extract_count > 0) {
           // reset loop index after extract subordinate node
           i = node_array.length

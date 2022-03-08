@@ -212,27 +212,32 @@ export default class JsMindLayout {
     return total_height
   }
 
+  /**
+   * 获取某个节点的偏移量
+   * @param node {JsMindNode}
+   * @returns {*}
+   */
   get_node_offset (node) {
-    let layout_data = node._data.layout
-    let offset_cache = null
-    if (('_offset_' in layout_data) && this.cache_valid) {
-      offset_cache = layout_data._offset_
+    const layoutData = node._data.layout
+    let offsetCache = null
+    if (('_offset_' in layoutData) && this.cache_valid) {
+      offsetCache = layoutData._offset_
     } else {
-      offset_cache = {x: -1, y: -1}
-      layout_data._offset_ = offset_cache
+      offsetCache = {x: -1, y: -1}
+      layoutData._offset_ = offsetCache
     }
-    if (offset_cache.x == -1 || offset_cache.y == -1) {
-      let x = layout_data.offset_x
-      let y = layout_data.offset_y
+    if (offsetCache.x === -1 || offsetCache.y === -1) {
+      let x = layoutData.offset_x
+      let y = layoutData.offset_y
       if (!node.isroot) {
-        let offset_p = this.get_node_offset(node.parent)
-        x += offset_p.x
-        y += offset_p.y
+        const offset = this.get_node_offset(node.parent)
+        x += offset.x
+        y += offset.y
       }
-      offset_cache.x = x
-      offset_cache.y = y
+      offsetCache.x = x
+      offsetCache.y = y
     }
-    return offset_cache
+    return offsetCache
   }
 
   get_node_point (node) {
@@ -246,34 +251,41 @@ export default class JsMindLayout {
     return p
   }
 
+  /**
+   * 获取某个节点的进入点（父节点连过来的线的连接点）
+   * @param node {JsMindNode}
+   * @returns {{x: number, y: number}|*}
+   */
   get_node_point_in (node) {
-    let p = this.get_node_offset(node)
-    return p
+    return this.get_node_offset(node)
   }
 
+  /**
+   * 获取某个节点的退出点（父节点连过来的线的连接点）
+   * @param node {JsMindNode}
+   * @returns {{x: number, y: number}|null}
+   */
   get_node_point_out (node) {
-    let layout_data = node._data.layout
-    let pout_cache = null
-    if (('_pout_' in layout_data) && this.cache_valid) {
-      pout_cache = layout_data._pout_
+    const layoutData = node._data.layout
+    const viewData = node._data.view
+    let poutCache = null
+    if (('_pout_' in layoutData) && this.cache_valid) {
+      poutCache = layoutData._pout_
     } else {
-      pout_cache = {x: -1, y: -1}
-      layout_data._pout_ = pout_cache
+      poutCache = {x: -1, y: -1}
+      layoutData._pout_ = poutCache
     }
-    if (pout_cache.x == -1 || pout_cache.y == -1) {
+    if (poutCache.x === -1 || poutCache.y === -1) {
       if (node.isroot) {
-        pout_cache.x = 0
-        pout_cache.y = 0
+        poutCache.x = 0
+        poutCache.y = 0
       } else {
-        let view_data = node._data.view
-        let offset_p = this.get_node_offset(node)
-        pout_cache.x = offset_p.x + (view_data.width + this.opts.pspace) * node._data.layout.direction
-        pout_cache.y = offset_p.y
-        //logger.debug('pout')
-        //logger.debug(pout_cache)
+        const offset = this.get_node_offset(node)
+        poutCache.x = offset.x + (viewData.width + this.opts.pspace) * layoutData.direction
+        poutCache.y = offset.y
       }
     }
-    return pout_cache
+    return poutCache
   }
 
   get_expander_point (node) {
