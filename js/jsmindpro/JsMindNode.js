@@ -1,3 +1,5 @@
+import JsMindNodeData from './JsMindNodeData'
+
 const logger = console
 
 export default class JsMindNode {
@@ -22,7 +24,11 @@ export default class JsMindNode {
     this.direction = eDirection
     this.expanded = !!bExpanded
     this.children = []
-    this._data = {}
+    /**
+     * @type {JsMindNodeData}
+     * @private
+     */
+    this._data = new JsMindNodeData()
   }
 
   /**

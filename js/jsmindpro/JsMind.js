@@ -455,7 +455,9 @@ export default class JsMind {
     await this.layout.layout()
     await this.view.show(false)
     await this.view.restore_location(parent)
-    this.invoke_event_handle(JsMind.event_type.edit, {evt: 'remove_node', data: [nodeId], node: parentId})
+    await this.invoke_event_handle(JsMind.event_type.edit, {
+      evt: 'remove_node', data: [nodeId], node: parentId
+    })
     return true
   }
 
@@ -656,8 +658,8 @@ export default class JsMind {
   /**
    * 重设大小
    */
-  resize () {
-    this.view.resize()
+  async resize () {
+    return this.view.resize()
   }
 
   /**
@@ -673,12 +675,10 @@ export default class JsMind {
    * 触发一个事件处理
    * @param type
    * @param data
+   * @returns {Promise<[any]>}
    */
-  invoke_event_handle (type, data) {
-    let j = this
-    setTimeout(function () {
-      j._invoke_event_handle(type, data)
-    }, 0)
+  async invoke_event_handle (type, data) {
+    return Promise.all(this.event_handles.map(handler => handler(type, data)))
   }
 
   // >>>>>>>> static methods >>>>>>>>
@@ -712,19 +712,11 @@ export default class JsMind {
   async _show (mind) {
     // m 是数据
     let m = mind || JsMind.format.node_array.example
-
     this.mind = await this.data.load(m)
     await this.view.load()
     await this.layout.layout()
     await this.view.show(true)
     await this.invoke_event_handle(JsMind.event_type.show, {data: [mind]})
-  }
-
-  _invoke_event_handle (type, data) {
-    let l = this.event_handles.length
-    for (let i = 0; i < l; i++) {
-      this.event_handles[i](type, data)
-    }
   }
 
   /**

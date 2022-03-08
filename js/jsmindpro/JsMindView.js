@@ -1,6 +1,7 @@
 import 'jsmind'
 import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
+import JsMindNodeView from './JsMindNodeView'
 
 const logger = console
 
@@ -14,7 +15,6 @@ let $t = function (n, t) {
   }
 }
 
-// view provider
 export default class JsMindView {
   constructor (jm, options) {
     this.opts = options
@@ -33,6 +33,10 @@ export default class JsMindView {
     this.editing_node = null
   }
 
+  /**
+   * 初始化一个 view
+   * @returns {Promise<void>}
+   */
   async init () {
     // https://stackoverflow.com/a/36894871/2544762
     this.container = (this.opts.container instanceof Element ||
@@ -129,24 +133,18 @@ export default class JsMindView {
   }
 
   load () {
-    logger.debug('view.load')
     this.init_nodes()
   }
 
+  /**
+   * 展开到画布大小显示范围（缩放至显示全部）
+   */
   expand_size () {
-    let min_size = this.jm.layout.get_min_size()
-    let min_width = min_size.w + this.opts.hmargin * 2
-    let min_height = min_size.h + this.opts.vmargin * 2
-    let client_w = this.e_panel.clientWidth
-    let client_h = this.e_panel.clientHeight
-    if (client_w < min_width) {
-      client_w = min_width
-    }
-    if (client_h < min_height) {
-      client_h = min_height
-    }
-    this.size.w = client_w
-    this.size.h = client_h
+    let minSize = this.jm.layout.get_min_size()
+    let minWidth = minSize.w + this.opts.hmargin * 2
+    let minHeight = minSize.h + this.opts.vmargin * 2
+    this.size.w = Math.max(this.e_panel.clientWidth, minWidth)
+    this.size.h = Math.max(this.e_panel.clientHeight, minHeight)
   }
 
   init_canvas () {
@@ -160,16 +158,19 @@ export default class JsMindView {
     view_data.height = view_data.element.clientHeight
   }
 
+  /**
+   * 初始化节点
+   */
   init_nodes () {
     let nodes = this.jm.mind.nodes
-    let doc_frag = document.createDocumentFragment()
-    for (let nodeid in nodes) {
-      this.create_node_element(nodes[nodeid], doc_frag)
-    }
-    this.e_nodes.appendChild(doc_frag)
-    for (let nodeid in nodes) {
-      this.init_nodes_size(nodes[nodeid])
-    }
+    let fragment = document.createDocumentFragment()
+    Object.keys(nodes).forEach(key => {
+      this.create_node_element(nodes[key], fragment)
+    })
+    this.e_nodes.appendChild(fragment)
+    Object.keys(nodes).forEach(key => {
+      this.init_nodes_size(nodes[key])
+    })
   }
 
   add_node (node) {
@@ -177,46 +178,47 @@ export default class JsMindView {
     this.init_nodes_size(node)
   }
 
-  create_node_element (node, parent_node) {
-    let view_data = null
-    if ('view' in node._data) {
-      view_data = node._data.view
-    } else {
-      view_data = {}
-      node._data.view = view_data
+  /**
+   * 创建一个节点元素
+   * @param node
+   * @param parentNode
+   */
+  create_node_element (node, parentNode) {
+    if(!node._data.view) {
+      node._data.view = new JsMindNodeView()
     }
-
-    let d = document.createElement('jmnode')
+    // 创建 DOM 元素
+    const elNode = document.createElement('jmnode')
     if (node.isroot) {
-      d.className = 'root'
+      elNode.className = 'root'
     } else {
-      let d_e = document.createElement('jmexpander')
-      $t(d_e, '-')
-      d_e.setAttribute('nodeid', node.id)
-      d_e.style.visibility = 'hidden'
-      parent_node.appendChild(d_e)
-      view_data.expander = d_e
+      // 为父元素创建一个 expander
+      const elExpander = document.createElement('jmexpander')
+      $t(elExpander, '-')
+      elExpander.setAttribute('nodeid', node.id)
+      elExpander.style.visibility = 'hidden'
+      parentNode.appendChild(elExpander)
+      node._data.view.expander = elExpander
     }
-    if (!!node.topic) {
+    if (node.topic) {
       if (this.opts.support_html) {
-        d.innerHTML = node.topic
+        elNode.innerHTML = node.topic
       } else {
-        $t(d, node.topic)
+        $t(elNode, node.topic)
       }
     }
-    d.setAttribute('nodeid', node.id)
-    d.style.visibility = 'hidden'
-    this._reset_node_custom_style(d, node.data)
-
-    parent_node.appendChild(d)
-    view_data.element = d
+    elNode.setAttribute('nodeid', node.id)
+    elNode.style.visibility = 'hidden'
+    this._reset_node_custom_style(elNode, node.data)
+    parentNode.appendChild(elNode)
+    node._data.view.element = elNode
   }
 
   remove_node (node) {
-    if (this.selected_node != null && this.selected_node.id == node.id) {
+    if (this.selected_node != null && this.selected_node.id === node.id) {
       this.selected_node = null
     }
-    if (this.editing_node != null && this.editing_node.id == node.id) {
+    if (this.editing_node != null && this.editing_node.id === node.id) {
       node._data.view.element.removeChild(this.e_editor)
       this.editing_node = null
     }
@@ -226,8 +228,8 @@ export default class JsMindView {
       this.remove_node(children[i])
     }
     if (node._data.view) {
-      let element = node._data.view.element
-      let expander = node._data.view.expander
+      const element = node._data.view.element
+      const expander = node._data.view.expander
       this.e_nodes.removeChild(element)
       this.e_nodes.removeChild(expander)
       node._data.view.element = null
@@ -317,32 +319,29 @@ export default class JsMindView {
     }
   }
 
+  /**
+   * 获取当前视图的偏移量
+   * @returns {{x: number, y: number}}
+   */
   get_view_offset () {
     let bounds = this.jm.layout.bounds
-    let _x = (this.size.w - bounds.e - bounds.w) / 2
-    let _y = this.size.h / 2
-    return {x: _x, y: _y}
+    const x = (this.size.w - bounds.e - bounds.w) / 2
+    const y = this.size.h / 2
+    return {x, y}
   }
 
-  resize () {
+  /**
+   * 执行一次重新调整大小
+   * @returns {Promise<void>}
+   */
+  async resize () {
     this.e_canvas.width = 1
     this.e_canvas.height = 1
     this.e_nodes.style.width = '1px'
     this.e_nodes.style.height = '1px'
 
     this.expand_size()
-    this._show()
-  }
-
-  _show () {
-    this.e_canvas.width = this.size.w
-    this.e_canvas.height = this.size.h
-    this.e_nodes.style.width = this.size.w + 'px'
-    this.e_nodes.style.height = this.size.h + 'px'
-    this.show_nodes()
-    this.show_lines()
-    //this.jm.layout.cache_valid = true
-    this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
+    await this._show()
   }
 
   zoomIn () {
@@ -366,31 +365,23 @@ export default class JsMindView {
 
   }
 
-  _center_root () {
-    // center root node
-    let outer_w = this.e_panel.clientWidth
-    let outer_h = this.e_panel.clientHeight
-    if (this.size.w > outer_w) {
-      let _offset = this.get_view_offset()
-      this.e_panel.scrollLeft = _offset.x - outer_w / 2
-    }
-    if (this.size.h > outer_h) {
-      this.e_panel.scrollTop = (this.size.h - outer_h) / 2
-    }
+  /**
+   * 渲染视图
+   * @param keepCenter {Boolean} 是否定位到中心
+   */
+  async show (keepCenter) {
+    this.expand_size()
+    await this._show()
+    if (keepCenter) this._center_root()
   }
 
-  show (keep_center) {
-    logger.debug('view.show')
+  /**
+   * 重设布局
+   * @returns {Promise<void>}
+   */
+  async relayout () {
     this.expand_size()
-    this._show()
-    if (!!keep_center) {
-      this._center_root()
-    }
-  }
-
-  relayout () {
-    this.expand_size()
-    this._show()
+    await this._show()
   }
 
   save_location (node) {
@@ -411,41 +402,38 @@ export default class JsMindView {
    * 清理所有的 dom 节点
    */
   clear_nodes () {
-    let nodes = this.jm.mind.nodes
-    nodes.forEach(node => {
+    if (!this.jm.mind) return
+    this.jm.mind.nodes.forEach(node => {
       node._data.view.element = null
       node._data.view.expander = null
     })
   }
 
   show_nodes () {
-    let nodes = this.jm.mind.nodes
-    let node = null
-    let node_element = null
-    let expander = null
     let p = null
     let p_expander = null
     let expander_text = '-'
-    let view_data = null
     let _offset = this.get_view_offset()
-    for (let nodeid in nodes) {
-      node = nodes[nodeid]
-      view_data = node._data.view
-      node_element = view_data.element
-      expander = view_data.expander
+    Object.keys(this.jm.mind.nodes).forEach(key => {
+      const node = this.jm.mind.nodes[key]
+      const viewData = node._data.view
+      const nodeElement = viewData.element
+      const expander = viewData.expander
+      // 不可见的话隐藏，完事
       if (!this.jm.layout.is_visible(node)) {
-        node_element.style.display = 'none'
+        nodeElement.style.display = 'none'
         expander.style.display = 'none'
-        continue
+        return
       }
+      // 重置节点的自定义样式
       this.reset_node_custom_style(node)
       p = this.jm.layout.get_node_point(node)
-      view_data.abs_x = _offset.x + p.x
-      view_data.abs_y = _offset.y + p.y
-      node_element.style.left = (_offset.x + p.x) + 'px'
-      node_element.style.top = (_offset.y + p.y) + 'px'
-      node_element.style.display = ''
-      node_element.style.visibility = 'visible'
+      viewData.abs_x = _offset.x + p.x
+      viewData.abs_y = _offset.y + p.y
+      nodeElement.style.left = (_offset.x + p.x) + 'px'
+      nodeElement.style.top = (_offset.y + p.y) + 'px'
+      nodeElement.style.display = ''
+      nodeElement.style.visibility = 'visible'
       if (!node.isroot && node.children.length > 0) {
         expander_text = node.expanded ? '-' : '+'
         p_expander = this.jm.layout.get_expander_point(node)
@@ -460,61 +448,68 @@ export default class JsMindView {
         expander.style.display = 'none'
         expander.style.visibility = 'hidden'
       }
-    }
+    })
   }
 
+  /**
+   * 重置节点的自定义样式
+   * @param node {JsMindNode}
+   */
   reset_node_custom_style (node) {
     this._reset_node_custom_style(node._data.view.element, node.data)
   }
 
-  _reset_node_custom_style (node_element, node_data) {
-    if ('background-color' in node_data) {
-      node_element.style.backgroundColor = node_data['background-color']
+  /**
+   * 重设节点的自定义样式
+   * @param nodeElement
+   * @param nodeData
+   * @private
+   */
+  _reset_node_custom_style (nodeElement, nodeData) {
+    if ('background-color' in nodeData) {
+      nodeElement.style.backgroundColor = nodeData['background-color']
     }
-    if ('foreground-color' in node_data) {
-      node_element.style.color = node_data['foreground-color']
+    if ('foreground-color' in nodeData) {
+      nodeElement.style.color = nodeData['foreground-color']
     }
-    if ('width' in node_data) {
-      node_element.style.width = node_data['width'] + 'px'
+    if ('width' in nodeData) {
+      nodeElement.style.width = nodeData['width'] + 'px'
     }
-    if ('height' in node_data) {
-      node_element.style.height = node_data['height'] + 'px'
+    if ('height' in nodeData) {
+      nodeElement.style.height = nodeData['height'] + 'px'
     }
-    if ('font-size' in node_data) {
-      node_element.style.fontSize = node_data['font-size'] + 'px'
+    if ('font-size' in nodeData) {
+      nodeElement.style.fontSize = nodeData['font-size'] + 'px'
     }
-    if ('font-weight' in node_data) {
-      node_element.style.fontWeight = node_data['font-weight']
+    if ('font-weight' in nodeData) {
+      nodeElement.style.fontWeight = nodeData['font-weight']
     }
-    if ('font-style' in node_data) {
-      node_element.style.fontStyle = node_data['font-style']
+    if ('font-style' in nodeData) {
+      nodeElement.style.fontStyle = nodeData['font-style']
     }
-    if ('background-image' in node_data) {
-      let backgroundImage = node_data['background-image']
-      if (backgroundImage.startsWith('data') && node_data['width'] && node_data['height']) {
+    if ('background-image' in nodeData) {
+      let backgroundImage = nodeData['background-image']
+      if (backgroundImage.startsWith('data') && nodeData['width'] && nodeData['height']) {
         let img = new Image()
-
         img.onload = function () {
           let c = document.createElement('canvas')
-          c.width = node_element.clientWidth
-          c.height = node_element.clientHeight
-          let img = this
+          c.width = nodeElement.clientWidth
+          c.height = nodeElement.clientHeight
           if (c.getContext) {
             let ctx = c.getContext('2d')
-            ctx.drawImage(img, 2, 2, node_element.clientWidth, node_element.clientHeight)
+            ctx.drawImage(this, 2, 2, nodeElement.clientWidth, nodeElement.clientHeight)
             let scaledImageData = c.toDataURL()
-            node_element.style.backgroundImage = 'url(' + scaledImageData + ')'
+            nodeElement.style.backgroundImage = 'url(' + scaledImageData + ')'
           }
         }
         img.src = backgroundImage
-
       } else {
-        node_element.style.backgroundImage = 'url(' + backgroundImage + ')'
+        nodeElement.style.backgroundImage = 'url(' + backgroundImage + ')'
       }
-      node_element.style.backgroundSize = '99%'
+      nodeElement.style.backgroundSize = '99%'
 
-      if ('background-rotation' in node_data) {
-        node_element.style.transform = 'rotate(' + node_data['background-rotation'] + 'deg)'
+      if ('background-rotation' in nodeData) {
+        nodeElement.style.transform = 'rotate(' + nodeData['background-rotation'] + 'deg)'
       }
 
     }
@@ -542,7 +537,8 @@ export default class JsMindView {
   show_lines (canvasContext) {
     this.clear_lines(canvasContext)
     let _offset = this.get_view_offset()
-    this.jm.mind.nodes.forEach(node => {
+    Object.keys(this.jm.mind.nodes).forEach(key => {
+      const node = this.jm.mind.nodes[key]
       // 根节点没有线
       if (node.isroot) return
       // 隐藏的节点没有线
@@ -569,4 +565,39 @@ export default class JsMindView {
       pout.x + offset.x,
       pout.y + offset.y)
   }
+
+  //////// PRIVATE METHODS ////////
+
+  /**
+   * 定位到中心
+   * @private
+   */
+  _center_root () {
+    // center root node
+    let outerW = this.e_panel.clientWidth
+    let outerH = this.e_panel.clientHeight
+    if (this.size.w > outerW) {
+      const offset = this.get_view_offset()
+      this.e_panel.scrollLeft = offset.x - outerW / 2
+    }
+    if (this.size.h > outerH) {
+      this.e_panel.scrollTop = (this.size.h - outerH) / 2
+    }
+  }
+
+  /**
+   * 执行一次渲染
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _show () {
+    this.e_canvas.width = this.size.w
+    this.e_canvas.height = this.size.h
+    this.e_nodes.style.width = this.size.w + 'px'
+    this.e_nodes.style.height = this.size.h + 'px'
+    this.show_nodes()
+    this.show_lines()
+    await this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
+  }
+
 }

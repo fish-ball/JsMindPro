@@ -71,7 +71,7 @@ export default class JsMindForMatNodeTree extends JsMindFormatBase {
     if (node_parent.isroot) {
       d = node_json.direction === 'left' ? JsMind.direction.left : JsMind.direction.right
     }
-    let node = await mind.add_node(node_parent, node_json.id, node_json.topic, data, null, d, node_json.expanded)
+    let node = await mind.add_node(node_parent, node_json.id, node_json.topic, data, -1, d, node_json.expanded)
     if ('children' in node_json) {
       let children = node_json.children
       for (let i = 0; i < children.length; i++) {

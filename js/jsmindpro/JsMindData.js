@@ -17,7 +17,7 @@ export default class JsMindData {
 
   /**
    * 自动加载一个 mind 的配置数据（包含格式）
-   * @param mind_data
+   * @param mind_data {Object}
    * @returns {Promise<JsMindMind>}
    */
   async load (mind_data) {

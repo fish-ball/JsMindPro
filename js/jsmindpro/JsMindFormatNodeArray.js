@@ -15,13 +15,17 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     ]
   }
 
-  static get_mind (source) {
-    let df = JsMind.format.node_array
+  /**
+   * 用指定的数据源生成一个 JsMindMind 对象
+   * @param source {Object} 数据源
+   * @returns {JsMindMind}
+   */
+  static async get_mind (source) {
     let mind = new JsMindMind()
     mind.name = source.meta.name
     mind.author = source.meta.author
     mind.version = source.meta.version
-    df._parse(mind, source.data)
+    await this._parse(mind, source.data)
     return mind
   }
 
@@ -39,78 +43,88 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     return json
   }
 
-  static _parse (mind, node_array) {
-    let df = JsMind.format.node_array
-    let narray = node_array.slice(0)
-    // reverse array for improving looping performance
-    narray.reverse()
-    let root_id = df._extract_root(mind, narray)
-    if (!!root_id) {
-      df._extract_subnode(mind, root_id, narray)
-    } else {
-      logger.error('root node can not be found')
-    }
+  /**
+   * 从 node_array 中展开输入填入 mind
+   * @param mind
+   * @param nodeArray {Object[]}
+   * @private
+   */
+  static async _parse (mind, nodeArray) {
+    // 切片复制一份
+    const arr = nodeArray.slice(0)
+    // 翻转一下快点
+    arr.reverse()
+    const rootId = await this._extract_root(mind, arr)
+    if (!rootId) throw new Error('root node can not be found')
+    await this._extract_subnode(mind, rootId, arr)
   }
 
   /**
    * 解析出根节点
    * @param mind {JsMindMind}
-   * @param node_array {[]}
+   * @param nodeArray {[]}
    * @returns {Promise<Integer|String|null>} 返回根节点的 id
    * @private
    */
-  static async _extract_root (mind, node_array) {
-    let df = JsMind.format.node_array
-    let i = node_array.length
+  static _extract_root (mind, nodeArray) {
+    let i = nodeArray.length
     while (i--) {
-      if (node_array[i].isroot) {
-        let root_json = node_array[i]
-        let data = df._extract_data(root_json)
-        await mind.set_root(root_json.id, root_json.topic, data)
-        node_array.splice(i, 1)
-        return root_json.id
+      if (nodeArray[i].isroot) {
+        let rawNode = nodeArray[i]
+        let data = this._extract_data(rawNode)
+        mind.set_root(rawNode.id, rawNode.topic, data)
+        nodeArray.splice(i, 1)
+        return rawNode.id
       }
     }
     return null
   }
 
-  static async _extract_subnode (mind, parentid, node_array) {
-    let df = JsMind.format.node_array
-    let i = node_array.length
-    let node_json = null
-    let data = null
+  /**
+   * 从 node_array 里面解析并提取子节点到 parentId 的节点子集中
+   * @param mind {JsMindMind}
+   * @param parentId {Integer|String}
+   * @param nodeArray {Object[]} 原始节点数据
+   * @returns {Promise<number>}
+   * @private
+   */
+  static async _extract_subnode (mind, parentId, nodeArray) {
+    let i = nodeArray.length
     let extract_count = 0
     while (i--) {
-      node_json = node_array[i]
-      if (node_json.parentid === parentid) {
-        data = await df._extract_data(node_json)
-        let d = null
-        let node_direction = node_json.direction
-        if (!!node_direction) {
-          d = node_direction === 'left' ? JsMind.direction.left : JsMind.direction.right
-        }
-        await mind.add_node(parentid, node_json.id, node_json.topic, data, null, d, node_json.expanded)
-        node_array.splice(i, 1)
-        extract_count++
-        let sub_extract_count = await df._extract_subnode(mind, node_json.id, node_array)
-        if (sub_extract_count > 0) {
-          // reset loop index after extract subordinate node
-          i = node_array.length
-          extract_count += sub_extract_count
-        }
+      const rawNode = nodeArray[i]
+      if (rawNode.parentid !== parentId) continue
+      const data = await this._extract_data(rawNode)
+      let d = null
+      let direction = rawNode.direction
+      if (!!direction) {
+        d = direction === 'left' ? JsMind.direction.left : JsMind.direction.right
+      }
+      await mind.add_node(parentId, rawNode.id, rawNode.topic, data, -1, d, rawNode.expanded)
+      nodeArray.splice(i, 1)
+      extract_count++
+      let sub_extract_count = await this._extract_subnode(mind, rawNode.id, nodeArray)
+      if (sub_extract_count > 0) {
+        // reset loop index after extract subordinate node
+        i = nodeArray.length
+        extract_count += sub_extract_count
       }
     }
     return extract_count
   }
 
-  static _extract_data (node_json) {
+  /**
+   * 整理一个原始数据，剔除一些保留字段之后产生一个剩余字段的对象作为原始对象
+   * @param rawNode {Object}
+   * @private
+   */
+  static _extract_data (rawNode) {
     let data = {}
-    for (let k in node_json) {
-      if (k == 'id' || k == 'topic' || k == 'parentid' || k == 'isroot' || k == 'direction' || k == 'expanded') {
-        continue
+    Object.keys(rawNode).forEach(k => {
+      if (!/^id|topic|parentid|isroot|direction|expanded$/.test(k)) {
+        data[k] = rawNode[k]
       }
-      data[k] = node_json[k]
-    }
+    })
     return data
   }
 
