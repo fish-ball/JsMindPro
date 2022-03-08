@@ -478,7 +478,9 @@ export default class JsMind {
     await this.view.update_node(node)
     await this.layout.layout()
     await this.view.show(false)
-    await this.invoke_event_handle(JsMind.event_type.edit, {evt: 'update_node', data: [nodeId, topic], node: nodeId})
+    await this.invoke_event_handle(JsMind.event_type.edit, {
+      evt: 'update_node', data: [nodeId, topic], node: nodeId
+    })
   }
 
   /**
@@ -492,6 +494,7 @@ export default class JsMind {
    */
   async move_node (node, nodeBefore, parent, direction) {
     await this._require_editable()
+    parent = await this._sanitize_node(parent)
     node = await this.mind.move_node(node, nodeBefore, parent, direction)
     await this.view.update_node(node)
     await this.layout.layout()
@@ -716,7 +719,9 @@ export default class JsMind {
     await this.view.load()
     await this.layout.layout()
     await this.view.show(true)
-    await this.invoke_event_handle(JsMind.event_type.show, {data: [mind]})
+    await this.invoke_event_handle(JsMind.event_type.show, {
+      data: [mind]
+    })
   }
 
   /**
