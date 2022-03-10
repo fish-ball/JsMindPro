@@ -3,16 +3,10 @@ import JsMindNode from '../JsMindNode'
 import JsMindUtil from '../JsMindUtil'
 import JsMindPlugin from '../JsMindPlugin'
 
-let clear_selection = window.getSelection ? function () {
-  window.getSelection().removeAllRanges()
-} : function () {
-  document.selection.empty()
-}
-
 let options = {
-  line_width: 2,
-  lookup_delay: 500,
-  lookup_interval: 80
+  line_width: 1,
+  stroke_style: 'rgba(0,0,0,0.3)',
+  stroke_dash: [8, 4]
 }
 
 class JsMindExtensionDraggable {
@@ -28,12 +22,8 @@ class JsMindExtensionDraggable {
     this.active_node = null
     this.target_node = null
     this.target_direct = null
-    this.client_w = 0
-    this.client_h = 0
     this.offset_x = 0
     this.offset_y = 0
-    this.hlookup_delay = 0
-    this.hlookup_timer = 0
     this.capture = false
     this.moved = false
   }
@@ -47,6 +37,9 @@ class JsMindExtensionDraggable {
     this._event_bind()
   }
 
+  /**
+   * 重设大小
+   */
   resize () {
     this.jm.view.e_nodes.appendChild(this.shadow)
     this.e_canvas.width = this.jm.view.size.w
@@ -90,7 +83,12 @@ class JsMindExtensionDraggable {
    */
   lookup_close_node () {
     let node = this._lookup_close_node()
-    if (!node) return
+    if (!node) {
+      this.target_node = null
+      this.target_direct = null
+      this._clear_lines()
+      return
+    }
     this._magnet_shadow(node)
     this.target_node = node.node
     this.target_direct = node.direction
@@ -125,16 +123,19 @@ class JsMindExtensionDraggable {
   /**
    * 绘制到影子到的目标节点连接线
    * @param node {JsMindNode} 目标节点
+   * @param direction {Integer} 方向
+   * @param sp {{x, y}} ShadowPoint 连接点坐标
+   * @param np {{x, y}} NodePoint 连接点坐标
    * @private
    */
-  _magnet_shadow (node) {
-    if (!!node) {
-      this.canvas_ctx.lineWidth = options.line_width
-      this.canvas_ctx.strokeStyle = 'rgba(0,0,0,0.3)'
-      this.canvas_ctx.lineCap = 'round'
-      this._clear_lines()
-      this._canvas_lineto(node.sp.x, node.sp.y, node.np.x, node.np.y)
-    }
+  _magnet_shadow ({node, direction, sp, np}) {
+    this._clear_lines()
+    this.canvas_ctx.lineWidth = options.line_width
+    this.canvas_ctx.strokeStyle = options.stroke_style
+    this.canvas_ctx.setLineDash(options.stroke_dash)
+    this.canvas_ctx.lineCap = 'round'
+    // 绘制连接线
+    JsMindUtil.canvas.bezierto(this.canvas_ctx, sp.x, sp.y, np.x, np.y)
   }
 
   /**
@@ -146,23 +147,8 @@ class JsMindExtensionDraggable {
   }
 
   /**
-   * 在画布上绘制连接线（后面改成光滑曲线而不是直线）
-   * @param x1
-   * @param y1
-   * @param x2
-   * @param y2
-   * @private
-   */
-  _canvas_lineto (x1, y1, x2, y2) {
-    this.canvas_ctx.beginPath()
-    this.canvas_ctx.moveTo(x1, y1)
-    this.canvas_ctx.lineTo(x2, y2)
-    this.canvas_ctx.stroke()
-  }
-
-  /**
    * 查找最近的节点
-   * @returns {{node:*,direction:*,np:*,sp:*}|null}
+   * @returns {{node:*,direction:*,np:*,sp:*}}
    * @private
    */
   _lookup_close_node () {
@@ -207,7 +193,6 @@ class JsMindExtensionDraggable {
         sp = {x: sx + options.line_width, y: sy + sh / 2}
       } else if (direction === JsMind.direction.left) {
         if (sx + sw > nx) return null
-        console.log('left', node.topic)
         distance = Math.hypot(sx + sw - nx, sy + sh / 2 - ny - nh / 2)
         np = {x: nx + options.line_width, y: ny + nh / 2}
         sp = {x: sx + sw - options.line_width, y: sy + sh / 2}
@@ -219,7 +204,6 @@ class JsMindExtensionDraggable {
         nodePoint = np
         shadowPoint = sp
         minDistance = distance
-        console.log(minDistance, closestNode)
       }
     })
     if (!closestNode) return null
@@ -231,157 +215,134 @@ class JsMindExtensionDraggable {
     }
   }
 
+  /**
+   * 绑定拖拽相关的的事件
+   * @private
+   */
   _event_bind () {
     let jd = this
     let container = this.jm.view.container
     JsMindUtil.dom.add_event(container, 'mousedown', function (e) {
       let evt = e || event
-      jd.dragstart.call(jd, evt)
+      jd.dragStart.call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'mousemove', function (e) {
       let evt = e || event
-      jd.drag.call(jd, evt)
+      _.debounce(jd.drag).call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'mouseup', function (e) {
       let evt = e || event
-      jd.dragend.call(jd, evt)
+      jd.dragEnd.call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'touchstart', function (e) {
       let evt = e || event
-      jd.dragstart.call(jd, evt)
+      jd.dragStart.call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'touchmove', function (e) {
       let evt = e || event
-      jd.drag.call(jd, evt)
+      _.debounce(jd.drag).call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'touchend', function (e) {
       let evt = e || event
-      jd.dragend.call(jd, evt)
+      jd.dragEnd.call(jd, evt)
     })
   }
 
-  dragstart (e) {
-    if (!this.jm.get_editable()) {
-      return
-    }
-    if (this.capture) {
-      return
-    }
+  /**
+   * 开始拖动
+   * @param e {MouseEvent|TouchEvent}
+   */
+  dragStart (e) {
+    if (!this.jm.get_editable()) return
+    if (this.capture) return
     this.active_node = null
 
-    let jview = this.jm.view
+    let view = this.jm.view
     let el = e.target || event.srcElement
-    if (el.tagName.toLowerCase() !== 'jmnode') {
-      return
-    }
-    let nodeid = jview.get_binded_nodeid(el)
-    if (!!nodeid) {
-      let node = this.jm.get_node(nodeid)
-      if (!node.isroot) {
-        this.reset_shadow(el)
-        this.active_node = node
-        this.offset_x = (e.clientX || e.touches[0].clientX) / jview.actualZoom - el.offsetLeft
-        this.offset_y = (e.clientY || e.touches[0].clientY) / jview.actualZoom - el.offsetTop
-        this.client_hw = Math.floor(el.clientWidth / 2)
-        this.client_hh = Math.floor(el.clientHeight / 2)
-        if (this.hlookup_delay !== 0) {
-          clearTimeout(this.hlookup_delay)
-        }
-        if (this.hlookup_timer !== 0) {
-          clearInterval(this.hlookup_timer)
-        }
-        let jd = this
-        this.hlookup_delay = setTimeout(function () {
-          jd.hlookup_delay = 0
-          jd.hlookup_timer = setInterval(function () {
-            jd.lookup_close_node.call(jd)
-          }, options.lookup_interval)
-        }, options.lookup_delay)
-        this.capture = true
-      }
-    }
+    if (el.tagName.toLowerCase() !== 'jmnode') return
+    let nodeId = view.get_binded_nodeid(el)
+    if (!nodeId) return
+    let node = this.jm.get_node(nodeId)
+    if (node.isroot) return
+    this.reset_shadow(el)
+    this.active_node = node
+    this.offset_x = (e.clientX || e.touches[0].clientX) / view.actualZoom - el.offsetLeft
+    this.offset_y = (e.clientY || e.touches[0].clientY) / view.actualZoom - el.offsetTop
+    this.capture = true
   }
 
+  /**
+   * 触发拖动
+   * @param e {MouseEvent|TouchEvent}
+   */
   drag (e) {
-    if (!this.jm.get_editable()) {
-      return
-    }
-    if (this.capture) {
-      e.preventDefault()
-      this.show_shadow()
-      this.moved = true
-      clear_selection()
-      let jview = this.jm.view
-      let px = (e.clientX || e.touches[0].clientX) / jview.actualZoom - this.offset_x
-      let py = (e.clientY || e.touches[0].clientY) / jview.actualZoom - this.offset_y
-      this.shadow.style.left = px + 'px'
-      this.shadow.style.top = py + 'px'
-      clear_selection()
-    }
+    if (!this.jm.get_editable()) return
+    if (!this.capture) return
+    e.preventDefault()
+    this.show_shadow()
+    this.moved = true
+    let view = this.jm.view
+    let px = (e.clientX || e.touches[0].clientX) / view.actualZoom - this.offset_x
+    let py = (e.clientY || e.touches[0].clientY) / view.actualZoom - this.offset_y
+    this.shadow.style.left = px + 'px'
+    this.shadow.style.top = py + 'px'
+    // 触发磁力线计算
+    this.lookup_close_node.call(this)
   }
 
-  dragend (e) {
-    if (!this.jm.get_editable()) {
-      return
-    }
-    if (this.capture) {
-      if (this.hlookup_delay !== 0) {
-        clearTimeout(this.hlookup_delay)
-        this.hlookup_delay = 0
-        this._clear_lines()
-      }
-      if (this.hlookup_timer !== 0) {
-        clearInterval(this.hlookup_timer)
-        this.hlookup_timer = 0
-        this._clear_lines()
-      }
-      if (this.moved) {
-        let src_node = this.active_node
-        let target_node = this.target_node
-        let target_direct = this.target_direct
-        this.move_node(src_node, target_node, target_direct)
-      }
-      this.hide_shadow()
-    }
+  /**
+   * 拖动结束的处理
+   * @param e
+   */
+  dragEnd (e) {
+    if (!this.jm.get_editable() || !this.capture || !this.moved) return
+    this._clear_lines()
+    this.hide_shadow()
+    this.move_node(this.active_node, this.target_node, this.target_direct)
     this.moved = false
     this.capture = false
   }
 
-  move_node (src_node, target_node, target_direct) {
-    let shadow_h = this.shadow.offsetTop
-    if (!!target_node && !!src_node && !JsMindNode.inherited(src_node, target_node)) {
-      // lookup before_node
-      let sibling_nodes = target_node.children
-      let sc = sibling_nodes.length
-      let node = null
-      let delta_y = Number.MAX_VALUE
-      let node_before = null
-      let beforeid = '_last_'
-      while (sc--) {
-        node = sibling_nodes[sc]
-        if (node.direction === target_direct && node.id !== src_node.id) {
-          let dy = node.get_location().y - shadow_h
-          if (dy > 0 && dy < delta_y) {
-            delta_y = dy
-            node_before = node
-            beforeid = '_first_'
-          }
+  /**
+   * 执行逻辑逻辑节点移动
+   * @param srcNode
+   * @param targetNode
+   * @param targetDirection
+   */
+  move_node (srcNode, targetNode, targetDirection) {
+    let shadowH = this.shadow.offsetTop
+    if (!targetNode || !srcNode || JsMindNode.inherited(srcNode, targetNode)) return
+    // lookup before_node
+    let sibling_nodes = targetNode.children
+    let node = null
+    let deltaY = Number.MAX_VALUE
+    let nodeBefore = null
+    let beforeId = '_last_'
+    for (let sc = sibling_nodes.length; sc--;) {
+      node = sibling_nodes[sc]
+      if (node.direction === targetDirection && node.id !== srcNode.id) {
+        let dy = node.get_location().y - shadowH
+        if (dy > 0 && dy < deltaY) {
+          deltaY = dy
+          nodeBefore = node
+          beforeId = '_first_'
         }
       }
-      if (!!node_before) {
-        beforeid = node_before.id
-      }
-      this.jm.move_node(src_node.id, beforeid, target_node.id, target_direct)
     }
+    if (nodeBefore) beforeId = nodeBefore.id
+    this.jm.move_node(srcNode.id, beforeId, targetNode.id, targetDirection)
     this.active_node = null
     this.target_node = null
     this.target_direct = null
   }
 
+  /**
+   * 处理 jm 时间注入入口
+   * @param type
+   * @param data
+   */
   jm_event_handle (type, data) {
-    if (type === JsMind.event_type.resize) {
-      this.resize()
-    }
+    if (type === JsMind.event_type.resize) this.resize()
   }
 
 }
@@ -393,7 +354,7 @@ class JsMindExtensionDraggable {
     let jd = new JsMindExtensionDraggable(jm)
     jd.init()
     jm.add_event_listener(function (type, data) {
-      jd.jm_event_handle.call(jd, type, data)
+      jd.jm_event_handle(type, data)
     })
   })
 
