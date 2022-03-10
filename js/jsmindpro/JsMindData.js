@@ -18,9 +18,9 @@ export default class JsMindData {
   /**
    * 自动加载一个 mind 的配置数据（包含格式）
    * @param mind_data {Object}
-   * @returns {Promise<JsMindMind>}
+   * @returns {JsMindMind}
    */
-  async load (mind_data) {
+  load (mind_data) {
     let format = typeof mind_data === 'object' ?
       (mind_data.format || 'node_tree') : 'freemind'
 

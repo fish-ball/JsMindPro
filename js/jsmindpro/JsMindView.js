@@ -35,9 +35,8 @@ export default class JsMindView {
 
   /**
    * 初始化一个 view
-   * @returns {Promise<void>}
    */
-  async init () {
+  init () {
     // https://stackoverflow.com/a/36894871/2544762
     this.container = (this.opts.container instanceof Element ||
       this.opts.container instanceof HTMLDocument) ? this.opts.container
@@ -77,7 +76,8 @@ export default class JsMindView {
     // 挂载控件
     this.container.appendChild(this.e_panel)
 
-    await this.init_canvas()
+    // 初始化画布
+    this.canvas_ctx = this.e_canvas.getContext('2d')
   }
 
   /**
@@ -96,13 +96,13 @@ export default class JsMindView {
   /**
    * 获取当前元素绑定的节点 nodeId，可以冒泡寻找父节点
    * @param element
-   * @returns {String|null}
+   * @returns {Integer|null}
    */
   get_binded_nodeid (element) {
     if (!element) return null
     let tagName = element.tagName.toLowerCase()
     if (/^jmnodes|body|html$/.test(tagName)) return null
-    if (/^jmnode|jmexpander$/.test(tagName)) return element.getAttribute('nodeid')
+    if (/^jmnode|jmexpander$/.test(tagName)) return Number(element.getAttribute('nodeid'))
     // 冒泡查找父标签
     return this.get_binded_nodeid(element.parentElement)
   }
@@ -125,11 +125,13 @@ export default class JsMindView {
     this.e_nodes.className = theme_name ? 'theme-' + theme_name : ''
   }
 
+  /**
+   * 重设所有节点的自定义样式
+   */
   reset_custom_style () {
-    let nodes = this.jm.mind.nodes
-    for (let nodeid in nodes) {
-      this.reset_node_custom_style(nodes[nodeid])
-    }
+    Object.keys(this.jm.mind.nodes).forEach(key => {
+      this.jm.mind.nodes[key].reset_custom_style()
+    })
   }
 
   load () {
@@ -147,71 +149,24 @@ export default class JsMindView {
     this.size.h = Math.max(this.e_panel.clientHeight, minHeight)
   }
 
-  init_canvas () {
-    let ctx = this.e_canvas.getContext('2d')
-    this.canvas_ctx = ctx
-  }
-
-  init_nodes_size (node) {
-    let view_data = node._data.view
-    view_data.width = view_data.element.clientWidth
-    view_data.height = view_data.element.clientHeight
-  }
-
   /**
    * 初始化节点
    */
   init_nodes () {
     let nodes = this.jm.mind.nodes
     let fragment = document.createDocumentFragment()
-    Object.keys(nodes).forEach(key => {
-      this.create_node_element(nodes[key], fragment)
-    })
+    _.forEach(nodes, node => node.createElement(fragment, this.jm))
     this.e_nodes.appendChild(fragment)
-    Object.keys(nodes).forEach(key => {
-      this.init_nodes_size(nodes[key])
-    })
-  }
-
-  add_node (node) {
-    this.create_node_element(node, this.e_nodes)
-    this.init_nodes_size(node)
+    _.forEach(nodes, node => node.init_size())
   }
 
   /**
-   * 创建一个节点元素
-   * @param node
-   * @param parentNode
+   * 添加一个 node
+   * @param node {JsMindNode}
    */
-  create_node_element (node, parentNode) {
-    if(!node._data.view) {
-      node._data.view = new JsMindNodeView()
-    }
-    // 创建 DOM 元素
-    const elNode = document.createElement('jmnode')
-    if (node.isroot) {
-      elNode.className = 'root'
-    } else {
-      // 为父元素创建一个 expander
-      const elExpander = document.createElement('jmexpander')
-      $t(elExpander, '-')
-      elExpander.setAttribute('nodeid', node.id)
-      elExpander.style.visibility = 'hidden'
-      parentNode.appendChild(elExpander)
-      node._data.view.expander = elExpander
-    }
-    if (node.topic) {
-      if (this.opts.support_html) {
-        elNode.innerHTML = node.topic
-      } else {
-        $t(elNode, node.topic)
-      }
-    }
-    elNode.setAttribute('nodeid', node.id)
-    elNode.style.visibility = 'hidden'
-    this._reset_node_custom_style(elNode, node.data)
-    parentNode.appendChild(elNode)
-    node._data.view.element = elNode
+  add_node (node) {
+    node.createElement(this.e_nodes, this.jm)
+    node.init_size()
   }
 
   remove_node (node) {
@@ -251,19 +206,22 @@ export default class JsMindView {
     view_data.height = element.clientHeight
   }
 
+  /**
+   * 选择一个节点
+   * @param node {JsMindNode|node}
+   */
   select_node (node) {
-    if (!!this.selected_node) {
-      this.selected_node._data.view.element.className =
-        this.selected_node._data.view.element.className.replace(/\s*selected\b/i, '')
-      this.reset_node_custom_style(this.selected_node)
-    }
-    if (!!node) {
+    if (node === this.selected_node) return
+    if (this.selected_node) this.selected_node.deselect()
+    if (node) {
+      node.select()
       this.selected_node = node
-      node._data.view.element.className += ' selected'
-      this.clear_node_custom_style(node)
     }
   }
 
+  /**
+   * 清除选中
+   */
   select_clear () {
     this.select_node(null)
   }
@@ -332,16 +290,15 @@ export default class JsMindView {
 
   /**
    * 执行一次重新调整大小
-   * @returns {Promise<void>}
    */
-  async resize () {
+  resize () {
     this.e_canvas.width = 1
     this.e_canvas.height = 1
     this.e_nodes.style.width = '1px'
     this.e_nodes.style.height = '1px'
 
     this.expand_size()
-    await this._show()
+    this._show()
   }
 
   zoomIn () {
@@ -369,19 +326,18 @@ export default class JsMindView {
    * 渲染视图
    * @param keepCenter {Boolean} 是否定位到中心
    */
-  async show (keepCenter) {
+  show (keepCenter) {
     this.expand_size()
-    await this._show()
+    this._show()
     if (keepCenter) this._center_root()
   }
 
   /**
    * 重设布局
-   * @returns {Promise<void>}
    */
-  async relayout () {
+  relayout () {
     this.expand_size()
-    await this._show()
+    this._show()
   }
 
   save_location (node) {
@@ -426,7 +382,7 @@ export default class JsMindView {
         return
       }
       // 重置节点的自定义样式
-      this.reset_node_custom_style(node)
+      node.reset_node_custom_style()
       p = this.jm.layout.get_node_point(node)
       viewData.abs_x = _offset.x + p.x
       viewData.abs_y = _offset.y + p.y
@@ -444,81 +400,11 @@ export default class JsMindView {
         $t(expander, expander_text)
       }
       // hide expander while all children have been removed
-      if (!node.isroot && node.children.length == 0) {
+      if (!node.isroot && node.children.length === 0) {
         expander.style.display = 'none'
         expander.style.visibility = 'hidden'
       }
     })
-  }
-
-  /**
-   * 重置节点的自定义样式
-   * @param node {JsMindNode}
-   */
-  reset_node_custom_style (node) {
-    this._reset_node_custom_style(node._data.view.element, node.data)
-  }
-
-  /**
-   * 重设节点的自定义样式
-   * @param nodeElement
-   * @param nodeData
-   * @private
-   */
-  _reset_node_custom_style (nodeElement, nodeData) {
-    if ('background-color' in nodeData) {
-      nodeElement.style.backgroundColor = nodeData['background-color']
-    }
-    if ('foreground-color' in nodeData) {
-      nodeElement.style.color = nodeData['foreground-color']
-    }
-    if ('width' in nodeData) {
-      nodeElement.style.width = nodeData['width'] + 'px'
-    }
-    if ('height' in nodeData) {
-      nodeElement.style.height = nodeData['height'] + 'px'
-    }
-    if ('font-size' in nodeData) {
-      nodeElement.style.fontSize = nodeData['font-size'] + 'px'
-    }
-    if ('font-weight' in nodeData) {
-      nodeElement.style.fontWeight = nodeData['font-weight']
-    }
-    if ('font-style' in nodeData) {
-      nodeElement.style.fontStyle = nodeData['font-style']
-    }
-    if ('background-image' in nodeData) {
-      let backgroundImage = nodeData['background-image']
-      if (backgroundImage.startsWith('data') && nodeData['width'] && nodeData['height']) {
-        let img = new Image()
-        img.onload = function () {
-          let c = document.createElement('canvas')
-          c.width = nodeElement.clientWidth
-          c.height = nodeElement.clientHeight
-          if (c.getContext) {
-            let ctx = c.getContext('2d')
-            ctx.drawImage(this, 2, 2, nodeElement.clientWidth, nodeElement.clientHeight)
-            let scaledImageData = c.toDataURL()
-            nodeElement.style.backgroundImage = 'url(' + scaledImageData + ')'
-          }
-        }
-        img.src = backgroundImage
-      } else {
-        nodeElement.style.backgroundImage = 'url(' + backgroundImage + ')'
-      }
-      nodeElement.style.backgroundSize = '99%'
-
-      if ('background-rotation' in nodeData) {
-        nodeElement.style.transform = 'rotate(' + nodeData['background-rotation'] + 'deg)'
-      }
-
-    }
-  }
-
-  clear_node_custom_style (node) {
-    let node_element = node._data.view.element
-    node_element.style.backgroundColor = ""
-    node_element.style.color = ""
   }
 
   /**
@@ -587,17 +473,16 @@ export default class JsMindView {
 
   /**
    * 执行一次渲染
-   * @returns {Promise<void>}
    * @private
    */
-  async _show () {
+  _show () {
     this.e_canvas.width = this.size.w
     this.e_canvas.height = this.size.h
     this.e_nodes.style.width = this.size.w + 'px'
     this.e_nodes.style.height = this.size.h + 'px'
     this.show_nodes()
     this.show_lines()
-    await this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
+    this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
   }
 
 }

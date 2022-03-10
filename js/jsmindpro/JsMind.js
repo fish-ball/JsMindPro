@@ -89,9 +89,8 @@ export default class JsMind {
 
   /**
    * 初始化 JsMind 控件
-   * @returns {Promise<void>}
    */
-  async init () {
+  init () {
     if (this.inited) return
     this.inited = true
 
@@ -99,7 +98,7 @@ export default class JsMind {
 
     // create instance of function provider
     this.data = new JsMindData(this)
-    await this.data.init()
+    this.data.init()
 
     // Init layout
     this.layout = new JsMindLayout(this, {
@@ -108,7 +107,7 @@ export default class JsMind {
       vspace: opts.layout.vspace,
       pspace: opts.layout.pspace
     })
-    await this.layout.init()
+    this.layout.init()
 
     // Init view
     this.view = new JsMindView(this, {
@@ -119,15 +118,15 @@ export default class JsMind {
       line_width: opts.view.line_width,
       line_color: opts.view.line_color
     })
-    await this.view.init()
+    this.view.init()
 
     // Init shortcut
     this.shortcut = new JsMindShortcut(this, opts.shortcut)
-    await this.shortcut.init()
+    this.shortcut.init()
 
-    await this._event_bind()
+    this._event_bind()
 
-    await JsMind.init_plugins(this)
+    JsMind.init_plugins(this)
   }
 
   /**
@@ -173,9 +172,8 @@ export default class JsMind {
   /**
    * 设置当前思维导图实例的主题
    * @param theme {String}
-   * @returns {Promise<void>}
    */
-  async set_theme (theme) {
+  set_theme (theme) {
     let theme_old = this.options.theme
     this.options.theme = (!!theme) ? theme : null
     if (theme_old !== this.options.theme) {
@@ -188,14 +186,14 @@ export default class JsMind {
    * 处理鼠标按下事件
    * @param e {Event}
    */
-  async mousedown_handle (e) {
+  mousedown_handle (e) {
     if (!this.options.default_event_handle['enable_mousedown_handle']) return
     let element = e.target || event.srcElement
     let nodeId = this.view.get_binded_nodeid(element)
     if (!!nodeId) {
-      await this.select_node(nodeId)
+      this.select_node(nodeId)
     } else {
-      await this.select_clear()
+      this.select_clear()
     }
   }
 
@@ -203,7 +201,7 @@ export default class JsMind {
    * 点击事件处理器
    * @param e {Event}
    */
-  async click_handle (e) {
+  click_handle (e) {
     if (!this.options.default_event_handle['enable_click_handle']) return
     let element = e.target || event.srcElement
     let isExpander = element.tagName.toLowerCase() === 'jmexpander'
@@ -219,7 +217,7 @@ export default class JsMind {
    * 双击事件处理器
    * @param e {Event}
    */
-  async dblclick_handle (e) {
+  dblclick_handle (e) {
     if (!this.options.default_event_handle['enable_dblclick_handle']) return
     if (this.get_editable()) {
       let element = e.target || event.srcElement
@@ -233,101 +231,92 @@ export default class JsMind {
   /**
    * 开始编辑一个节点
    * @param node {JsMindNode|Integer|String}
-   * @returns {*}
    */
-  async begin_edit (node) {
-    node = await this._sanitize_node(node)
-    await this._require_editable()
-    await this.view.edit_node_begin(node)
+  begin_edit (node) {
+    node = this._sanitize_node(node)
+    this._require_editable()
+    this.view.edit_node_begin(node)
   }
 
   /**
    * 结束一个节点的编辑状态
-   * @returns {Promise<void>}
    */
-  async end_edit () {
-    await this.view.edit_node_end()
+  end_edit () {
+    this.view.edit_node_end()
   }
 
   /**
    * 切换一个节点的折叠/展开状态
    * @param node {JsMindNode|Integer|String}
-   * @returns {Promise<*>}
    */
-  async toggle_node (node) {
-    node = await this._sanitize_node(node)
+  toggle_node (node) {
+    node = this._sanitize_node(node)
     if (node.isroot) return
-    await this.view.save_location(node)
-    await this.layout.toggle_node(node)
-    await this.view.relayout()
-    await this.view.restore_location(node)
+    this.view.save_location(node)
+    this.layout.toggle_node(node)
+    this.view.relayout()
+    this.view.restore_location(node)
   }
 
   /**
    * 展开一个节点
    * @param node {JsMindNode|Integer|String}
-   * @returns {Promise<*>}
    */
-  async expand_node (node) {
-    node = await this._sanitize_node(node)
+  expand_node (node) {
+    node = this._sanitize_node(node)
     if (node.isroot) return
-    await this.view.save_location(node)
-    await this.layout.expand_node(node)
-    await this.view.relayout()
-    await this.view.restore_location(node)
+    this.view.save_location(node)
+    this.layout.expand_node(node)
+    this.view.relayout()
+    this.view.restore_location(node)
   }
 
   /**
    * 折叠一个节点
    * @param node {JsMindNode|Integer|String}
-   * @returns {Promise<void>}
    */
-  async collapse_node (node) {
-    node = await this._sanitize_node(node)
+  collapse_node (node) {
+    node = this._sanitize_node(node)
     if (node.isroot) return
-    await this.view.save_location(node)
-    await this.layout.collapse_node(node)
-    await this.view.relayout()
-    await this.view.restore_location(node)
+    this.view.save_location(node)
+    this.layout.collapse_node(node)
+    this.view.relayout()
+    this.view.restore_location(node)
   }
 
   /**
    * 展开所有的节点
-   * @returns {Promise<void>}
    */
-  async expand_all () {
-    await this.layout.expand_all()
-    await this.view.relayout()
+  expand_all () {
+    this.layout.expand_all()
+    this.view.relayout()
   }
 
   /**
    * 折叠所有的节点
-   * @returns {Promise<void>}
    */
-  async collapse_all () {
-    await this.layout.collapse_all()
-    await this.view.relayout()
+  collapse_all () {
+    this.layout.collapse_all()
+    this.view.relayout()
   }
 
   /**
    * 展开到指定的层级
    * @param depth {Integer} 层级
-   * @returns {Promise<void>}
    */
-  async expand_to_depth (depth) {
-    await this.layout.expand_to_depth(depth)
-    await this.view.relayout()
+  expand_to_depth (depth) {
+    this.layout.expand_to_depth(depth)
+    this.view.relayout()
   }
 
   /**
    * 渲染一个数据，相当于重置之后再渲染
    * @param mind {Object} 加载的思维导图数据
-   * @returns {Promise<void>}
    */
-  async show (mind) {
-    await this.init()
-    await this._reset()
-    await this._show(mind)
+  show (mind) {
+    this.init()
+    this._reset()
+    this._show(mind)
   }
 
   /**
@@ -362,10 +351,19 @@ export default class JsMind {
   /**
    * 在当前图内获取指定 id 的 node
    * @param nodeId {Integer}
-   * @returns {Promise<*|JsMindNode>}
+   * @returns {JsMindNode}
    */
-  async get_node (nodeId) {
-    return await this.mind.get_node(nodeId)
+  get_node (nodeId) {
+    return this.mind.get_node(nodeId)
+  }
+
+  /**
+   * 修改一个节点的 id
+   * @param oldId
+   * @param newId
+   */
+  rename_node (oldId, newId) {
+    this.mind.rename_node(oldId, newId)
   }
 
   /**
@@ -374,17 +372,17 @@ export default class JsMind {
    * @param nodeId {Integer|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
-   * @returns {Promise<JsMindNode>} 范围添加成功后的节点，操作失败返回 null
+   * @returns {JsMindNode} 范围添加成功后的节点，操作失败返回 null
    */
-  async add_node (parentNode, nodeId, topic, data) {
-    await this._require_editable()
-    let node = await this.mind.add_node(parentNode, nodeId, topic, data)
-    await this.view.add_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
-    await this.view.reset_node_custom_style(node)
-    await this.expand_node(parentNode)
-    await this.invoke_event_handle(JsMind.event_type.edit, {
+  add_node (parentNode, nodeId, topic, data = null) {
+    this._require_editable()
+    let node = this.mind.add_node(parentNode, nodeId, topic, data)
+    this.view.add_node(node)
+    this.layout.layout()
+    this.view.show(false)
+    node.reset_node_custom_style()
+    this.expand_node(parentNode)
+    this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'add_node',
       data: [parentNode.id, nodeId, topic, data],
       node: nodeId
@@ -398,15 +396,15 @@ export default class JsMind {
    * @param nodeId {Integer|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
-   * @returns {Promise<JsMindNode>}
+   * @returns {JsMindNode}
    */
-  async insert_node_before (nodeBefore, nodeId, topic, data) {
-    await this._require_editable()
-    let node = await this.mind.insert_node_before(nodeBefore, nodeId, topic, data)
-    await this.view.add_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
-    await this.invoke_event_handle(JsMind.event_type.edit, {
+  insert_node_before (nodeBefore, nodeId, topic, data) {
+    this._require_editable()
+    let node = this.mind.insert_node_before(nodeBefore, nodeId, topic, data)
+    this.view.add_node(node)
+    this.layout.layout()
+    this.view.show(false)
+    this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_before',
       data: [JsMindUtil.to_node_id(nodeBefore), nodeId, topic, data],
       node: nodeId
@@ -421,15 +419,15 @@ export default class JsMind {
    * @param nodeId nodeId {Integer|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
-   * @returns {Promise<JsMindNode>}
+   * @returns {JsMindNode}
    */
-  async insert_node_after (nodeAfter, nodeId, topic, data) {
-    await this._require_editable()
-    let node = await this.mind.insert_node_after(nodeAfter, nodeId, topic, data)
-    await this.view.add_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
-    await this.invoke_event_handle(JsMind.event_type.edit, {
+  insert_node_after (nodeAfter, nodeId, topic, data) {
+    this._require_editable()
+    let node = this.mind.insert_node_after(nodeAfter, nodeId, topic, data)
+    this.view.add_node(node)
+    this.layout.layout()
+    this.view.show(false)
+    this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_after',
       data: [JsMindUtil.to_node_id(nodeAfter), nodeId, topic, data],
       node: nodeId
@@ -440,22 +438,21 @@ export default class JsMind {
   /**
    * 移除一个指定的节点
    * @param node {JsMindNode|Integer|String} 待移除节点或者 ID
-   * @returns {Promise<*>}
    */
-  async remove_node (node) {
-    node = await this._sanitize_node(node)
-    await this._require_editable()
+  remove_node (node) {
+    node = this._sanitize_node(node)
+    this._require_editable()
     if (node.isroot) throw new Error('Can not remove root node')
     let nodeId = node.id
     let parentId = node.parent.id
-    let parent = await this.get_node(parentId)
-    await this.view.save_location(parent)
-    await this.view.remove_node(node)
-    await this.mind.remove_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
-    await this.view.restore_location(parent)
-    await this.invoke_event_handle(JsMind.event_type.edit, {
+    let parent = this.get_node(parentId)
+    this.view.save_location(parent)
+    this.view.remove_node(node)
+    this.mind.remove_node(node)
+    this.layout.layout()
+    this.view.show(false)
+    this.view.restore_location(parent)
+    this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'remove_node', data: [nodeId], node: parentId
     })
     return true
@@ -465,20 +462,19 @@ export default class JsMind {
    * 修改一个节点的内容
    * @param nodeId {Integer|String} 节点ID
    * @param topic {String} 新的节点内容
-   * @returns {Promise<void>}
    */
-  async update_node (nodeId, topic) {
-    await this._require_editable()
+  update_node (nodeId, topic) {
+    this._require_editable()
     if (JsMindUtil.text.is_empty(topic)) throw new Error('topic can not be empty')
-    let node = await this.get_node(nodeId)
+    let node = this.get_node(nodeId)
     // 没有修改
     if (node.topic === topic) return this.view.update_node(node)
     // 有修改
     node.topic = topic
-    await this.view.update_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
-    await this.invoke_event_handle(JsMind.event_type.edit, {
+    this.view.update_node(node)
+    this.layout.layout()
+    this.view.show(false)
+    this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'update_node', data: [nodeId, topic], node: nodeId
     })
   }
@@ -490,16 +486,15 @@ export default class JsMind {
    *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
    * @param parent {JsMindNode|Integer|String}
    * @param direction {Integer} 如果目标位置是一级子节点，指定方向
-   * @returns {Promise<void>}
    */
-  async move_node (node, nodeBefore, parent, direction) {
-    await this._require_editable()
-    parent = await this._sanitize_node(parent)
-    node = await this.mind.move_node(node, nodeBefore, parent, direction)
-    await this.view.update_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
-    await this.invoke_event_handle(JsMind.event_type.edit, {
+  move_node (node, nodeBefore, parent, direction) {
+    this._require_editable()
+    parent = this._sanitize_node(parent)
+    node = this.mind.move_node(node, nodeBefore, parent, direction)
+    this.view.update_node(node)
+    this.layout.layout()
+    this.view.show(false)
+    this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'move_node',
       data: [node, nodeBefore, parent, direction],
       node: node
@@ -509,13 +504,12 @@ export default class JsMind {
   /**
    * 触发选中某个节点
    * @param node {JsMindNode|Integer|String} 待选中的节点
-   * @returns {Promise<void>}
    */
-  async select_node (node) {
-    node = await this._sanitize_node(node)
+  select_node (node) {
+    node = this._sanitize_node(node)
     if (!this.layout.is_visible(node)) return
     this.mind.selected = node
-    await this.view.select_node(node)
+    this.view.select_node(node)
   }
 
   /**
@@ -528,11 +522,10 @@ export default class JsMind {
 
   /**
    * 清除节点的选中状态
-   * @returns {Promise<void>}
    */
-  async select_clear () {
+  select_clear () {
     this.mind.selected = null
-    await this.view.select_clear()
+    this.view.select_clear()
   }
 
   /**
@@ -547,10 +540,10 @@ export default class JsMind {
   /**
    * 返回指定节点的上一个节点（注意会穿越层级，也就是按↑键对应的节点）
    * @param node {JsMindNode|Integer|String}
-   * @returns {Promise<JsMindNode|null>}
+   * @returns {JsMindNode}
    */
-  async find_node_before (node) {
-    node = await this._sanitize_node(node)
+  find_node_before (node) {
+    node = this._sanitize_node(node)
     if (node.isroot) return null
     // 非一级子节点好搞，直接上一个
     if (!node.parent.is_root) return this.mind.get_node_before(node)
@@ -566,10 +559,10 @@ export default class JsMind {
   /**
    * 返回指定节点的下一个节点（注意会穿越层级，也就是按↓键对应的节点）
    * @param node {JsMindNode|Integer|String}
-   * @returns {Promise<JsMindNode|null>}
+   * @returns {JsMindNode}
    */
-  async find_node_after (node) {
-    node = await this._sanitize_node(node)
+  find_node_after (node) {
+    node = this._sanitize_node(node)
     if (node.isroot) return null
     // 非一级子节点好搞，直接上一个
     if (!node.parent.is_root) return this.mind.get_node_after(node)
@@ -587,14 +580,13 @@ export default class JsMind {
    * @param nodeId {Integer|String} 节点Id
    * @param bgColor {String} 背景色
    * @param fgColor {String} 前景色
-   * @returns {Promise<void>}
    */
-  async set_node_color (nodeId, bgColor, fgColor) {
+  set_node_color (nodeId, bgColor, fgColor) {
     if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = await this.mind.get_node(nodeId)
+    let node = this.mind.get_node(nodeId)
     if (bgColor) node.data['background-color'] = bgColor
     if (fgColor) node.data['foreground-color'] = fgColor
-    await this.view.reset_node_custom_style(node)
+    node.reset_node_custom_style()
   }
 
   /**
@@ -603,18 +595,17 @@ export default class JsMind {
    * @param size {String}
    * @param weight {String}
    * @param style
-   * @returns {Promise<null>}
    */
-  async set_node_font_style (nodeId, size, weight, style) {
+  set_node_font_style (nodeId, size, weight, style) {
     if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = await this.mind.get_node(nodeId)
+    let node = this.mind.get_node(nodeId)
     if (size) node.data['font-size'] = size
     if (weight) node.data['font-weight'] = weight
     if (style) node.data['font-style'] = style
-    await this.view.reset_node_custom_style(node)
-    await this.view.update_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
+    node.reset_node_custom_style()
+    this.view.update_node(node)
+    this.layout.layout()
+    this.view.show(false)
   }
 
   /**
@@ -624,44 +615,42 @@ export default class JsMind {
    * @param width
    * @param height
    * @param rotation
-   * @returns {Promise<void>}
    */
-  async set_node_background_image (nodeId, image, width, height, rotation) {
+  set_node_background_image (nodeId, image, width, height, rotation) {
     if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = await this.mind.get_node(nodeId)
+    let node = this.mind.get_node(nodeId)
     if (image) node.data['background-image'] = image
     if (width) node.data['width'] = width
     if (height) node.data['height'] = height
     if (rotation) node.data['background-rotation'] = rotation
-    await this.view.reset_node_custom_style(node)
-    await this.view.update_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
+    node.reset_node_custom_style()
+    this.view.update_node(node)
+    this.layout.layout()
+    this.view.show(false)
   }
 
   /**
    * 设置背景旋转
    * @param nodeId {Integer}
    * @param rotation {String}
-   * @returns {Promise<void>}
    */
-  async set_node_background_rotation (nodeId, rotation) {
+  set_node_background_rotation (nodeId, rotation) {
     if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = await this.mind.get_node(nodeId)
+    let node = this.mind.get_node(nodeId)
     if (!node.data['background-image']) {
       throw new Error('Can only change rotation angle of node with background image')
     }
     node.data['background-rotation'] = rotation
-    await this.view.reset_node_custom_style(node)
-    await this.view.update_node(node)
-    await this.layout.layout()
-    await this.view.show(false)
+    node.reset_node_custom_style()
+    this.view.update_node(node)
+    this.layout.layout()
+    this.view.show(false)
   }
 
   /**
    * 重设大小
    */
-  async resize () {
+  resize () {
     return this.view.resize()
   }
 
@@ -678,10 +667,9 @@ export default class JsMind {
    * 触发一个事件处理
    * @param type
    * @param data
-   * @returns {Promise<[any]>}
    */
-  async invoke_event_handle (type, data) {
-    return Promise.all(this.event_handles.map(handler => handler(type, data)))
+  invoke_event_handle (type, data) {
+    this.event_handles.forEach(handler => handler(type, data))
   }
 
   // >>>>>>>> static methods >>>>>>>>
@@ -698,13 +686,12 @@ export default class JsMind {
 
   /**
    * 全部重置
-   * @returns {Promise<void>}
    * @private
    */
-  async _reset () {
+  _reset () {
     this.view.reset()
-    await this.layout.reset()
-    await this.data.reset()
+    this.layout.reset()
+    this.data.reset()
   }
 
   /**
@@ -712,24 +699,23 @@ export default class JsMind {
    * @param mind {Object} 加载的思维导图数据
    * @private
    */
-  async _show (mind) {
+  _show (mind) {
     // m 是数据
     let m = mind || JsMind.format.node_array.example
-    this.mind = await this.data.load(m)
-    await this.view.load()
-    await this.layout.layout()
-    await this.view.show(true)
-    await this.invoke_event_handle(JsMind.event_type.show, {
+    this.mind = this.data.load(m)
+    this.view.load()
+    this.layout.layout()
+    this.view.show(true)
+    this.invoke_event_handle(JsMind.event_type.show, {
       data: [mind]
     })
   }
 
   /**
    * 要求有 editable 状态，否则抛错
-   * @returns {Promise<void>}
    * @private
    */
-  async _require_editable () {
+  _require_editable () {
     if (!this.get_editable()) throw new Error('This mind map is not editable')
   }
 
@@ -738,10 +724,10 @@ export default class JsMind {
    * + 如果传入 nodeId，则返回对应的节点集内的 node，找不到返回 null
    * + 如果传入的是 node 实例，则查找是否在节点集内并一致，一致返回节点本身，否则返回 null
    * @param node {JsMindNode|Integer}
-   * @returns {Promise<JsMindNode>}
+   * @returns {JsMindNode}
    * @private
    */
-  async _sanitize_node (node) {
+  _sanitize_node (node) {
     if (!JsMindUtil.is_node(node)) return this.get_node(node)
     if (this.mind.nodes[node.id] === node) return node
     throw new Error('The node is not defined inside the current tree.')
@@ -753,11 +739,11 @@ export default class JsMind {
    * 快捷工厂方法，传入参数，创建一个 JSMind 实例。
    * @param options {Object} JSMind 选项
    * @param mind {Object} JSMind 内容数据
-   * @returns {Promise<JsMind>}
+   * @returns {JsMind}
    */
-  static async show (options, mind) {
+  static show (options, mind) {
     let jm = new JsMind(options)
-    await jm.show(mind)
+    jm.show(mind)
     return jm
   }
 
@@ -773,10 +759,10 @@ export default class JsMind {
    * 初始化插件
    * @param sender
    */
-  static async init_plugins (sender) {
-    return Promise.all(JsMind.plugins.map(async plugin => {
-      await plugin.init(sender)
-    }))
+  static init_plugins (sender) {
+    JsMind.plugins.forEach(plugin => {
+      plugin.init(sender)
+    })
   }
 
 }

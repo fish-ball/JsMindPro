@@ -85,7 +85,7 @@ export default class JsMindFormatFreemind extends JsMindFormatBase {
     return node
   }
 
-  static async _load_node (mind, parent_id, xml_node) {
+  static _load_node (mind, parent_id, xml_node) {
     let df = JsMind.format.freemind
     let node_id = xml_node.getAttribute('ID')
     let node_topic = xml_node.getAttribute('TEXT')
@@ -102,7 +102,7 @@ export default class JsMindFormatFreemind extends JsMindFormatBase {
         }
       }
     }
-    let node_data = await df._load_attributes(xml_node)
+    let node_data = df._load_attributes(xml_node)
     let node_expanded = ('expanded' in node_data) ? (node_data.expanded === 'true') : true
     delete node_data.expanded
 
@@ -113,7 +113,7 @@ export default class JsMindFormatFreemind extends JsMindFormatBase {
     }
     //logger.debug(node_position +':'+ node_direction)
     if (!!parent_id) {
-      await mind.add_node(parent_id, node_id, node_topic, node_data, null, node_direction, node_expanded)
+      mind.add_node(parent_id, node_id, node_topic, node_data, void 0, node_direction, node_expanded)
     } else {
       mind.set_root(node_id, node_topic, node_data)
     }
@@ -122,7 +122,7 @@ export default class JsMindFormatFreemind extends JsMindFormatBase {
     for (let i = 0; i < children.length; i++) {
       child = children[i]
       if (child.nodeType === 1 && child.tagName === 'node') {
-        await df._load_node(mind, node_id, child)
+        df._load_node(mind, node_id, child)
       }
     }
   }

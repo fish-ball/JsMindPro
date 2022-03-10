@@ -1,5 +1,7 @@
 import JsMind from '../JsMind'
+import JsMindNode from '../JsMindNode'
 import JsMindUtil from '../JsMindUtil'
+import JsMindPlugin from '../JsMindPlugin'
 
 let clear_selection = window.getSelection ? function () {
   window.getSelection().removeAllRanges()
@@ -8,7 +10,7 @@ let clear_selection = window.getSelection ? function () {
 }
 
 let options = {
-  line_width: 5,
+  line_width: 2,
   lookup_delay: 500,
   lookup_interval: 80
 }
@@ -16,6 +18,7 @@ let options = {
 class JsMindExtensionDraggable {
 
   constructor (jm) {
+    /** @type JsMind */
     this.jm = jm
     this.e_canvas = null
     this.canvas_ctx = null
@@ -35,6 +38,9 @@ class JsMindExtensionDraggable {
     this.moved = false
   }
 
+  /**
+   * 初始化插件
+   */
   init () {
     this._create_canvas()
     this._create_shadow()
@@ -47,23 +53,10 @@ class JsMindExtensionDraggable {
     this.e_canvas.height = this.jm.view.size.h
   }
 
-  _create_canvas () {
-    let c = $d.createElement('canvas')
-    this.jm.view.e_panel.appendChild(c)
-    let ctx = c.getContext('2d')
-    this.e_canvas = c
-    this.canvas_ctx = ctx
-  }
-
-  _create_shadow () {
-    let s = $d.createElement('jmnode')
-    s.style.visibility = 'hidden'
-    s.style.zIndex = '3'
-    s.style.cursor = 'move'
-    s.style.opacity = '0.7'
-    this.shadow = s
-  }
-
+  /**
+   * 重设影子元素（复制指定节点的内容）
+   * @param el
+   */
   reset_shadow (el) {
     let s = this.shadow.style
     this.shadow.innerHTML = el.innerHTML
@@ -78,16 +71,62 @@ class JsMindExtensionDraggable {
     this.shadow_h = this.shadow.clientHeight
   }
 
+  /**
+   * 显示影子元素
+   */
   show_shadow () {
-    if (!this.moved) {
-      this.shadow.style.visibility = 'visible'
-    }
+    if (!this.moved) this.shadow.style.visibility = 'visible'
   }
 
+  /**
+   * 隐藏影子元素
+   */
   hide_shadow () {
     this.shadow.style.visibility = 'hidden'
   }
 
+  /**
+   * 触发查找最近节点，并渲染影子到该节点的连接线
+   */
+  lookup_close_node () {
+    let node = this._lookup_close_node()
+    if (!node) return
+    this._magnet_shadow(node)
+    this.target_node = node.node
+    this.target_direct = node.direction
+  }
+
+  /**
+   * 创建画布（用于绘制连接线）
+   * @private
+   */
+  _create_canvas () {
+    let c = document.createElement('canvas')
+    this.jm.view.e_panel.appendChild(c)
+    let ctx = c.getContext('2d')
+    this.e_canvas = c
+    this.canvas_ctx = ctx
+  }
+
+  /**
+   * 创建拖动时的影子元素
+   * @private
+   */
+  _create_shadow () {
+    let s = document.createElement('jmnode')
+    // 还没拖动，所以默认是隐藏的
+    s.style.visibility = 'hidden'
+    s.style.zIndex = '3'
+    s.style.cursor = 'move'
+    s.style.opacity = '0.7'
+    this.shadow = s
+  }
+
+  /**
+   * 绘制到影子到的目标节点连接线
+   * @param node {JsMindNode} 目标节点
+   * @private
+   */
   _magnet_shadow (node) {
     if (!!node) {
       this.canvas_ctx.lineWidth = options.line_width
@@ -98,10 +137,22 @@ class JsMindExtensionDraggable {
     }
   }
 
+  /**
+   *  清除画布（内的连接线）
+   * @private
+   */
   _clear_lines () {
     this.canvas_ctx.clearRect(0, 0, this.jm.view.size.w, this.jm.view.size.h)
   }
 
+  /**
+   * 在画布上绘制连接线（后面改成光滑曲线而不是直线）
+   * @param x1
+   * @param y1
+   * @param x2
+   * @param y2
+   * @private
+   */
   _canvas_lineto (x1, y1, x2, y2) {
     this.canvas_ctx.beginPath()
     this.canvas_ctx.moveTo(x1, y1)
@@ -109,82 +160,74 @@ class JsMindExtensionDraggable {
     this.canvas_ctx.stroke()
   }
 
+  /**
+   * 查找最近的节点
+   * @returns {{node:*,direction:*,np:*,sp:*}|null}
+   * @private
+   */
   _lookup_close_node () {
     let root = this.jm.get_root()
-    let root_location = root.get_location()
-    let root_size = root.get_size()
-    let root_x = root_location.x + root_size.w / 2
+    const {x: rx, y: ry} = root.get_location()
+    const {w: rw, h: rh} = root.get_size()
 
-    let sw = this.shadow_w
-    let sh = this.shadow_h
-    let sx = this.shadow.offsetLeft
-    let sy = this.shadow.offsetTop
+    const sw = this.shadow_w
+    const sh = this.shadow_h
+    const sx = this.shadow.offsetLeft
+    const sy = this.shadow.offsetTop
+    // console.log(`
+    // rw=${rw}, rh=${rh}, rx=${rx}, rootY=${ry}
+    // sw=${sw}, sh=${sh}, sx=${sx}, sy=${sy}
+    // `)
 
-    let ns, nl
-
-    let direct = (sx + sw / 2) >= root_x ?
-      JsMind.direction.right : JsMind.direction.left
-    let nodes = this.jm.mind.nodes
-    let node = null
-    let layout = this.jm.layout
-    let min_distance = Number.MAX_VALUE
+    // 影子在根节点的左边还是右边
+    // 不左不右直接断链
+    if (rx + rw > sx && sx > rx - sw) return null
+    const direction = sx > rx + rw ? JsMind.direction.right : JsMind.direction.left
+    let minDistance = Number.MAX_VALUE
     let distance = 0
-    let closest_node = null
-    let closest_p = null
-    let shadow_p = null
-    for (let nodeid in nodes) {
+    let closestNode = null
+    let nodePoint = null
+    let shadowPoint = null
+    _.forEach(this.jm.mind.nodes, node => {
       let np, sp
-      node = nodes[nodeid]
-      if (node.isroot || node.direction == direct) {
-        if (node.id == this.active_node.id) {
-          continue
-        }
-        if (!layout.is_visible(node)) {
-          continue
-        }
-        ns = node.get_size()
-        nl = node.get_location()
-        if (direct == JsMind.direction.right) {
-          if (sx - nl.x - ns.w <= 0) {
-            continue
-          }
-          distance = Math.abs(sx - nl.x - ns.w) + Math.abs(sy + sh / 2 - nl.y - ns.h / 2)
-          np = {x: nl.x + ns.w - options.line_width, y: nl.y + ns.h / 2}
-          sp = {x: sx + options.line_width, y: sy + sh / 2}
-        } else {
-          if (nl.x - sx - sw <= 0) {
-            continue
-          }
-          distance = Math.abs(sx + sw - nl.x) + Math.abs(sy + sh / 2 - nl.y - ns.h / 2)
-          np = {x: nl.x + options.line_width, y: nl.y + ns.h / 2}
-          sp = {x: sx + sw - options.line_width, y: sy + sh / 2}
-        }
-        if (distance < min_distance) {
-          closest_node = node
-          closest_p = np
-          shadow_p = sp
-          min_distance = distance
-        }
+      // 忽略另一边的节点
+      if (!node.isroot && node.direction !== direction) return null
+      // 不能移动到自己或自己的子节点
+      for (let nd = node; nd; nd = nd.parent) {
+        if (nd.id === this.active_node.id) return null
       }
-    }
-    let result_node = null
-    if (!!closest_node) {
-      result_node = {
-        node: closest_node,
-        direction: direct,
-        sp: shadow_p,
-        np: closest_p
+      // 不能移动到隐藏的节点下面
+      if (!this.jm.layout.is_visible(node)) return null
+      const {w: nw, h: nh} = node.get_size()
+      const {x: nx, y: ny} = node.get_location()
+      if (direction === JsMind.direction.right) {
+        if (sx < nx + nw) return null
+        distance = Math.hypot(sx - nx - nw, sy + sh / 2 - ny - nh / 2)
+        np = {x: nx + nw - options.line_width, y: ny + nh / 2}
+        sp = {x: sx + options.line_width, y: sy + sh / 2}
+      } else if (direction === JsMind.direction.left) {
+        if (sx + sw > nx) return null
+        console.log('left', node.topic)
+        distance = Math.hypot(sx + sw - nx, sy + sh / 2 - ny - nh / 2)
+        np = {x: nx + options.line_width, y: ny + nh / 2}
+        sp = {x: sx + sw - options.line_width, y: sy + sh / 2}
+      } else {
+        throw new Error('方向错误')
       }
-    }
-    return result_node
-  }
-
-  lookup_close_node () {
-    let node_data = this._lookup_close_node()
-    if (!!node_data) {
-      this._magnet_shadow(node_data)
-      this.target_node = node_data.node
-      this.target_direct = node_data.direction
+      if (distance < minDistance) {
+        closestNode = node
+        nodePoint = np
+        shadowPoint = sp
+        minDistance = distance
+        console.log(minDistance, closestNode)
+      }
+    })
+    if (!closestNode) return null
+    return {
+      node: closestNode,
+      direction: direction,
+      sp: shadowPoint,
+      np: nodePoint
     }
   }
 
@@ -217,7 +260,7 @@ class JsMindExtensionDraggable {
     })
   }
 
-  async dragstart (e) {
+  dragstart (e) {
     if (!this.jm.get_editable()) {
       return
     }
@@ -228,12 +271,12 @@ class JsMindExtensionDraggable {
 
     let jview = this.jm.view
     let el = e.target || event.srcElement
-    if (el.tagName.toLowerCase() != 'jmnode') {
+    if (el.tagName.toLowerCase() !== 'jmnode') {
       return
     }
     let nodeid = jview.get_binded_nodeid(el)
     if (!!nodeid) {
-      let node = await this.jm.get_node(nodeid)
+      let node = this.jm.get_node(nodeid)
       if (!node.isroot) {
         this.reset_shadow(el)
         this.active_node = node
@@ -241,16 +284,16 @@ class JsMindExtensionDraggable {
         this.offset_y = (e.clientY || e.touches[0].clientY) / jview.actualZoom - el.offsetTop
         this.client_hw = Math.floor(el.clientWidth / 2)
         this.client_hh = Math.floor(el.clientHeight / 2)
-        if (this.hlookup_delay != 0) {
-          $w.clearTimeout(this.hlookup_delay)
+        if (this.hlookup_delay !== 0) {
+          clearTimeout(this.hlookup_delay)
         }
-        if (this.hlookup_timer != 0) {
-          $w.clearInterval(this.hlookup_timer)
+        if (this.hlookup_timer !== 0) {
+          clearInterval(this.hlookup_timer)
         }
         let jd = this
-        this.hlookup_delay = $w.setTimeout(function () {
+        this.hlookup_delay = setTimeout(function () {
           jd.hlookup_delay = 0
-          jd.hlookup_timer = $w.setInterval(function () {
+          jd.hlookup_timer = setInterval(function () {
             jd.lookup_close_node.call(jd)
           }, options.lookup_interval)
         }, options.lookup_delay)
@@ -282,13 +325,13 @@ class JsMindExtensionDraggable {
       return
     }
     if (this.capture) {
-      if (this.hlookup_delay != 0) {
-        $w.clearTimeout(this.hlookup_delay)
+      if (this.hlookup_delay !== 0) {
+        clearTimeout(this.hlookup_delay)
         this.hlookup_delay = 0
         this._clear_lines()
       }
-      if (this.hlookup_timer != 0) {
-        $w.clearInterval(this.hlookup_timer)
+      if (this.hlookup_timer !== 0) {
+        clearInterval(this.hlookup_timer)
         this.hlookup_timer = 0
         this._clear_lines()
       }
@@ -304,9 +347,9 @@ class JsMindExtensionDraggable {
     this.capture = false
   }
 
-  async move_node (src_node, target_node, target_direct) {
+  move_node (src_node, target_node, target_direct) {
     let shadow_h = this.shadow.offsetTop
-    if (!!target_node && !!src_node && !JsMind.node.inherited(src_node, target_node)) {
+    if (!!target_node && !!src_node && !JsMindNode.inherited(src_node, target_node)) {
       // lookup before_node
       let sibling_nodes = target_node.children
       let sc = sibling_nodes.length
@@ -328,7 +371,7 @@ class JsMindExtensionDraggable {
       if (!!node_before) {
         beforeid = node_before.id
       }
-      await this.jm.move_node(src_node.id, beforeid, target_node.id, target_direct)
+      this.jm.move_node(src_node.id, beforeid, target_node.id, target_direct)
     }
     this.active_node = null
     this.target_node = null
@@ -344,10 +387,9 @@ class JsMindExtensionDraggable {
 }
 
 (function () {
+  if (JsMind.draggable !== void 0) return
 
-  if (typeof JsMind.draggable !== void 0) return
-
-  let draggable_plugin = new JsMind.plugin('draggable', function (jm) {
+  let draggable_plugin = new JsMindPlugin('draggable', function (jm) {
     let jd = new JsMindExtensionDraggable(jm)
     jd.init()
     jm.add_event_listener(function (type, data) {

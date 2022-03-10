@@ -64,18 +64,18 @@ export default class JsMindForMatNodeTree extends JsMindFormatBase {
     return data
   }
 
-  static async _extract_subnode (mind, node_parent, node_json) {
+  static _extract_subnode (mind, node_parent, node_json) {
     let df = JsMind.format.node_tree
-    let data = await df._extract_data(node_json)
+    let data = df._extract_data(node_json)
     let d = null
     if (node_parent.isroot) {
       d = node_json.direction === 'left' ? JsMind.direction.left : JsMind.direction.right
     }
-    let node = await mind.add_node(node_parent, node_json.id, node_json.topic, data, -1, d, node_json.expanded)
+    let node = mind.add_node(node_parent, node_json.id, node_json.topic, data, void 0, d, node_json.expanded)
     if ('children' in node_json) {
       let children = node_json.children
       for (let i = 0; i < children.length; i++) {
-        await df._extract_subnode(mind, node, children[i])
+        df._extract_subnode(mind, node, children[i])
       }
     }
   }

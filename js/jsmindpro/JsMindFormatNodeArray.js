@@ -20,12 +20,12 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
    * @param source {Object} 数据源
    * @returns {JsMindMind}
    */
-  static async get_mind (source) {
+  static get_mind (source) {
     let mind = new JsMindMind()
     mind.name = source.meta.name
     mind.author = source.meta.author
     mind.version = source.meta.version
-    await this._parse(mind, source.data)
+    this._parse(mind, source.data)
     return mind
   }
 
@@ -49,21 +49,21 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
    * @param nodeArray {Object[]}
    * @private
    */
-  static async _parse (mind, nodeArray) {
+  static _parse (mind, nodeArray) {
     // 切片复制一份
     const arr = nodeArray.slice(0)
     // 翻转一下快点
     arr.reverse()
-    const rootId = await this._extract_root(mind, arr)
+    const rootId = this._extract_root(mind, arr)
     if (!rootId) throw new Error('root node can not be found')
-    await this._extract_subnode(mind, rootId, arr)
+    this._extract_subnode(mind, rootId, arr)
   }
 
   /**
    * 解析出根节点
    * @param mind {JsMindMind}
    * @param nodeArray {[]}
-   * @returns {Promise<Integer|String|null>} 返回根节点的 id
+   * @returns {Integer|String} 返回根节点的 id
    * @private
    */
   static _extract_root (mind, nodeArray) {
@@ -85,25 +85,25 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
    * @param mind {JsMindMind}
    * @param parentId {Integer|String}
    * @param nodeArray {Object[]} 原始节点数据
-   * @returns {Promise<number>}
+   * @returns {Number}
    * @private
    */
-  static async _extract_subnode (mind, parentId, nodeArray) {
+  static _extract_subnode (mind, parentId, nodeArray) {
     let i = nodeArray.length
     let extract_count = 0
     while (i--) {
       const rawNode = nodeArray[i]
       if (rawNode.parentid !== parentId) continue
-      const data = await this._extract_data(rawNode)
-      let d = null
-      let direction = rawNode.direction
-      if (!!direction) {
-        d = direction === 'left' ? JsMind.direction.left : JsMind.direction.right
-      }
-      await mind.add_node(parentId, rawNode.id, rawNode.topic, data, -1, d, rawNode.expanded)
+      const data = this._extract_data(rawNode)
+      const direction = {
+        left: JsMind.direction.left,
+        right: JsMind.direction.right
+      }[rawNode.direction]
+      mind.add_node(
+        parentId, rawNode.id, rawNode.topic, data, void 0, direction, rawNode.expanded)
       nodeArray.splice(i, 1)
       extract_count++
-      let sub_extract_count = await this._extract_subnode(mind, rawNode.id, nodeArray)
+      let sub_extract_count = this._extract_subnode(mind, rawNode.id, nodeArray)
       if (sub_extract_count > 0) {
         // reset loop index after extract subordinate node
         i = nodeArray.length

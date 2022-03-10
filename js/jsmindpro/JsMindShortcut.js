@@ -1,3 +1,4 @@
+import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
 
 // shortcut provider
@@ -49,6 +50,7 @@ export default class JsMindShortcut {
     let kc = evt.keyCode
     if (kc in this._mapping) {
       this._mapping[kc].call(this, this.jm, e)
+      e.preventDefault()
     }
   }
 
@@ -56,16 +58,15 @@ export default class JsMindShortcut {
    * 处理添加一个子节点
    * @param jm {JsMind} JsMind 实例
    * @param e {Event}
-   * @returns {Promise<void>}
    */
-  async handle_addchild (jm, e) {
+  handle_addchild (jm, e) {
     let selectedNode = jm.get_selected_node()
     if (!!selectedNode) {
       let nodeid = JsMindUtil.uuid.newid()
-      let node = await jm.add_node(selectedNode, nodeid, 'New Node')
+      let node = jm.add_node(selectedNode, nodeid, 'New Node')
       if (!!node) {
-        await jm.select_node(nodeid)
-        await jm.begin_edit(nodeid)
+        jm.select_node(nodeid)
+        jm.begin_edit(nodeid)
       }
     }
   }
@@ -74,16 +75,15 @@ export default class JsMindShortcut {
    * 处理添加一个兄弟节点
    * @param jm {JsMind} JsMind 实例
    * @param e {Event}
-   * @returns {Promise<void>}
    */
-  async handle_addbrother (jm, e) {
+  handle_addbrother (jm, e) {
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     if (selectedNode.isroot) return this.handle_addchild(jm, e)
     let nodeId = JsMindUtil.uuid.newid()
-    let node = await jm.insert_node_after(selectedNode, nodeId, 'New Node')
-    await jm.select_node(node.id)
-    await jm.begin_edit(node.id)
+    let node = jm.insert_node_after(selectedNode, nodeId, 'New Node')
+    jm.select_node(node.id)
+    jm.begin_edit(node.id)
     e.preventDefault()
   }
 
@@ -98,21 +98,20 @@ export default class JsMindShortcut {
    * 处理一个删除节点事件
    * @param jm {JsMind}
    * @param e {Event}
-   * @returns {Promise<void>}
    */
-  async handle_delnode (jm, e) {
+  handle_delnode (jm, e) {
     let selected_node = jm.get_selected_node()
     if (!selected_node) return
     if (selected_node.isroot) throw new Error('Cannot delete root node.')
-    await jm.select_node(selected_node.parent)
-    await jm.remove_node(selected_node)
+    jm.select_node(selected_node.parent)
+    jm.remove_node(selected_node)
   }
 
-  handle_toggle (_jm, e) {
+  handle_toggle (jm, e) {
     let evt = e || event
-    let selected_node = _jm.get_selected_node()
+    let selected_node = jm.get_selected_node()
     if (!!selected_node) {
-      _jm.toggle_node(selected_node.id)
+      jm.toggle_node(selected_node.id)
       evt.stopPropagation()
       evt.preventDefault()
     }
