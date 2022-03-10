@@ -492,6 +492,7 @@ export default class JsMind {
     this._require_editable()
     parent = this._sanitize_node(parent)
     node = this.mind.move_node(node, nodeBefore, parent, direction)
+    this.layout.expand_node(parent)
     this.view.update_node(node)
     this.layout.layout()
     this.view.show(false)
