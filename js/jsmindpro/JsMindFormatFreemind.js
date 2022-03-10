@@ -16,9 +16,9 @@ export default class JsMindFormatFreemind extends JsMindFormatBase {
     "data": "<map version=\"1.0.1\"><node ID=\"root\" TEXT=\"freemind Example\"/></map>"
   }
 
-  static get_mind (source) {
+  static get_mind (source, jm) {
     let df = JsMind.format.freemind
-    let mind = new JsMindMind()
+    let mind = new JsMindMind(jm)
     mind.name = source.meta.name
     mind.author = source.meta.author
     mind.version = source.meta.version

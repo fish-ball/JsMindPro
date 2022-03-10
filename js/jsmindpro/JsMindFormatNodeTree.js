@@ -18,9 +18,9 @@ export default class JsMindForMatNodeTree extends JsMindFormatBase {
     "data": {"id": "root", "topic": "jsMind Example"}
   }
 
-  static get_mind (source) {
+  static get_mind (source, jm) {
     let df = JsMind.format.node_tree
-    let mind = new JsMindMind()
+    let mind = new JsMindMind(jm)
     mind.name = source.meta.name
     mind.author = source.meta.author
     mind.version = source.meta.version

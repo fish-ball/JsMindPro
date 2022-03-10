@@ -33,7 +33,8 @@ let DEFAULT_OPTIONS = {
   layout: {
     hspace: 30,
     vspace: 20,
-    pspace: 13
+    pspace: 13,
+    direction: 'right' // left/right/both
   },
   default_event_handle: {
     enable_mousedown_handle: true,
@@ -702,7 +703,7 @@ export default class JsMind {
   _show (mind) {
     // m 是数据
     let m = mind || JsMind.format.node_array.example
-    this.mind = this.data.load(m)
+    this.mind = this.data.load(m, this)
     this.view.load()
     this.layout.layout()
     this.view.show(true)

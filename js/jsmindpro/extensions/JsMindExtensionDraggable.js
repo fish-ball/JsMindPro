@@ -149,7 +149,7 @@ class JsMindExtensionDraggable {
 
   /**
    * 查找最近的节点
-   * @returns {{node:*,direction:*,np:*,sp:*}}
+   * @returns {{node:*,direction:*,np:*,sp:*}|null}
    * @private
    */
   _lookup_close_node () {
@@ -170,6 +170,11 @@ class JsMindExtensionDraggable {
     // 不左不右直接断链
     if (rx + rw > sx && sx > rx - sw) return null
     const direction = sx > rx + rw ? JsMind.direction.right : JsMind.direction.left
+    // 如果设置是有指定方向的（left/right 而不是 both），则不允许放到另一边
+    if (this.jm.options.layout.direction === 'left' && direction !== JsMind.direction.left ||
+      this.jm.options.layout.direction === 'right' && direction !== JsMind.direction.right) {
+      return null
+    }
     let minDistance = Number.MAX_VALUE
     let distance = 0
     let closestNode = null

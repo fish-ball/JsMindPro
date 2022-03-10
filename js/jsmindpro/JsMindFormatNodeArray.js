@@ -18,10 +18,11 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
   /**
    * 用指定的数据源生成一个 JsMindMind 对象
    * @param source {Object} 数据源
+   * @param jm {JsMind} JsMind 实例
    * @returns {JsMindMind}
    */
-  static get_mind (source) {
-    let mind = new JsMindMind()
+  static get_mind (source, jm) {
+    let mind = new JsMindMind(jm)
     mind.name = source.meta.name
     mind.author = source.meta.author
     mind.version = source.meta.version

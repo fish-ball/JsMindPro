@@ -6,10 +6,14 @@ import JsMindNode from './JsMindNode'
 import JsMindUtil from './JsMindUtil'
 
 export default class JsMindMind {
-  constructor () {
+  /**
+   * @param jm {JsMind}
+   */
+  constructor (jm) {
     this.name = null
     this.author = null
     this.version = null
+    this.jm = jm
     /**
      * 根节点
      * @type {JsMindNode|null}
@@ -87,18 +91,23 @@ export default class JsMindMind {
     // 父亲为根节点的话，还要看方向
     if (parentNode.isroot) {
       // 如果入参未指定方向，则按照实际计算方向较少那边平衡补位
-      // TODO: 此处行为是否合理？或者应该可以配置？
-      if (direction === null || isNaN(direction)) {
-        let children = parentNode.children
-        let r = 0
-        for (let i = 0; i < children.length; i++) {
-          if (children[i].direction === JsMind.direction.left) {
-            r--
-          } else {
-            r++
+      if (this.jm.options.layout.direction === 'both') {
+        if (direction === null || isNaN(direction)) {
+          let children = parentNode.children
+          let r = 0
+          for (let i = 0; i < children.length; i++) {
+            if (children[i].direction === JsMind.direction.left) {
+              r--
+            } else {
+              r++
+            }
           }
+          direction = (children.length > 1 && r > 0) ? JsMind.direction.left : JsMind.direction.right
         }
-        direction = (children.length > 1 && r > 0) ? JsMind.direction.left : JsMind.direction.right
+      } else if (this.jm.options.layout.direction === 'left') {
+        direction = JsMind.direction.left
+      } else if (this.jm.options.layout.direction === 'right') {
+        direction = JsMind.direction.right
       }
       node = new JsMindNode(nodeId, idx, topic, data, false, parentNode, direction, expanded)
     } else {
