@@ -26,6 +26,7 @@ class JsMindExtensionDraggable {
     this.offset_y = 0
     this.capture = false
     this.moved = false
+    this._timer_capturing = 0
   }
 
   /**
@@ -264,11 +265,17 @@ class JsMindExtensionDraggable {
     if (!nodeId) return
     let node = this.jm.get_node(nodeId)
     if (node.isroot) return
-    this.reset_shadow(el)
-    this.active_node = node
-    this.offset_x = (e.clientX || e.touches[0].clientX) / view.actualZoom - el.offsetLeft
-    this.offset_y = (e.clientY || e.touches[0].clientY) / view.actualZoom - el.offsetTop
-    this.capture = true
+    this._cleanCapturing()
+    this._timer_capturing = setTimeout(() => {
+      this._timer_capturing = 0
+      this.reset_shadow(el)
+      this.active_node = node
+      this.offset_x = (e.clientX || e.touches[0].clientX) / view.actualZoom - el.offsetLeft
+      this.offset_y = (e.clientY || e.touches[0].clientY) / view.actualZoom - el.offsetTop
+      this.capture = true
+      // 时间到，先触发一次 drag 避免不动的时候错乱
+      this.drag(e)
+    }, 200)
   }
 
   /**
@@ -295,6 +302,7 @@ class JsMindExtensionDraggable {
    * @param e
    */
   dragEnd (e) {
+    this._cleanCapturing()
     if (!this.jm.get_editable() || !this.capture || !this.moved) return
     this._clear_lines()
     this.hide_shadow()
@@ -343,6 +351,17 @@ class JsMindExtensionDraggable {
    */
   jm_event_handle (type, data) {
     if (type === JsMind.event_type.resize) this.resize()
+  }
+
+  /**
+   * 清理捕捉状态
+   * @private
+   */
+  _cleanCapturing () {
+    if (this._timer_capturing) {
+      clearTimeout(this._timer_capturing)
+      this._timer_capturing = 0
+    }
   }
 
 }
