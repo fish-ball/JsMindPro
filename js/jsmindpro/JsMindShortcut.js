@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
 
@@ -24,11 +25,11 @@ export default class JsMindShortcut {
     this.handles['left'] = this.handle_left
     this.handles['right'] = this.handle_right
 
-    for (let handle in this.mapping) {
-      if (!!this.mapping[handle] && (handle in this.handles)) {
-        this._mapping[this.mapping[handle]] = this.handles[handle]
+    _.forEach(this.mapping, (key, handle) => {
+      if (handle in this.mapping && handle in this.handles) {
+        this._mapping[key] = this.handles[handle]
       }
-    }
+    })
   }
 
   enable_shortcut () {
@@ -39,27 +40,28 @@ export default class JsMindShortcut {
     this.opts.enable = false
   }
 
+  /**
+   * 调度器
+   * @param e {KeyboardEvent}
+   */
   handler (e) {
-    if (this.jm.view.is_editing()) {
-      return
-    }
+    // 编辑中状态不处理热键
+    if (this.jm.view.is_editing()) return
     let evt = e || event
-    if (!this.opts.enable) {
-      return true
-    }
+    if (!this.opts.enable) return
     let kc = evt.keyCode
     if (kc in this._mapping) {
-      this._mapping[kc].call(this, this.jm, e)
+      this._mapping[kc].call(this, e)
       e.preventDefault()
     }
   }
 
   /**
    * 处理添加一个子节点
-   * @param jm {JsMind} JsMind 实例
-   * @param e {Event}
+   * @param e {KeyboardEvent}
    */
-  handle_addchild (jm, e) {
+  handle_addchild (e) {
+    const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!!selectedNode) {
       let nodeid = JsMindUtil.uuid.newid()
@@ -73,10 +75,10 @@ export default class JsMindShortcut {
 
   /**
    * 处理添加一个兄弟节点
-   * @param jm {JsMind} JsMind 实例
-   * @param e {Event}
+   * @param e {KeyboardEvent}
    */
-  handle_addbrother (jm, e) {
+  handle_addbrother (e) {
+    const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     if (selectedNode.isroot) return this.handle_addchild(jm, e)
@@ -87,19 +89,22 @@ export default class JsMindShortcut {
     e.preventDefault()
   }
 
-  handle_editnode (_jm, e) {
-    let selected_node = _jm.get_selected_node()
-    if (!!selected_node) {
-      _jm.begin_edit(selected_node)
-    }
+  /**
+   * 触发编辑一个节点
+   * @param e {KeyboardEvent}
+   */
+  handle_editnode (e) {
+    const jm = this.jm
+    let selected_node = jm.get_selected_node()
+    if (selected_node) jm.begin_edit(selected_node)
   }
 
   /**
    * 处理一个删除节点事件
-   * @param jm {JsMind}
-   * @param e {Event}
+   * @param e {KeyboardEvent}
    */
-  handle_delnode (jm, e) {
+  handle_delnode (e) {
+    const jm = this.jm
     let selected_node = jm.get_selected_node()
     if (!selected_node) return
     if (selected_node.isroot) throw new Error('Cannot delete root node.')
@@ -107,7 +112,12 @@ export default class JsMindShortcut {
     jm.remove_node(selected_node)
   }
 
-  handle_toggle (jm, e) {
+  /**
+   * 处理展开和折叠节点
+   * @param e {KeyboardEvent}
+   */
+  handle_toggle (e) {
+    const jm = this.jm
     let evt = e || event
     let selected_node = jm.get_selected_node()
     if (!!selected_node) {
@@ -117,55 +127,80 @@ export default class JsMindShortcut {
     }
   }
 
-  handle_up (_jm, e) {
+  /**
+   * 处理↑按键
+   * @param e {KeyboardEvent}
+   */
+  handle_up (e) {
+    const jm = this.jm
     let evt = e || event
-    let selected_node = _jm.get_selected_node()
-    if (!!selected_node) {
-      let up_node = _jm.find_node_before(selected_node)
-      if (!up_node) {
-        let np = _jm.find_node_before(selected_node.parent)
-        if (!!np && np.children.length > 0) {
-          up_node = np.children[np.children.length - 1]
-        }
+    let selected_node = jm.get_selected_node()
+    if (!selected_node || selected_node.isroot) return
+    let up_node = jm.find_node_before(selected_node)
+    if (!up_node) {
+      let np = jm.find_node_before(selected_node.parent)
+      if (!!np && np.children.length > 0) {
+        up_node = np.children[np.children.length - 1]
       }
-      if (!!up_node) {
-        _jm.select_node(up_node)
-      }
-      evt.stopPropagation()
-      evt.preventDefault()
     }
-  }
-
-  handle_down (_jm, e) {
-    let evt = e || event
-    let selected_node = _jm.get_selected_node()
-    if (!!selected_node) {
-      let down_node = _jm.find_node_after(selected_node)
-      if (!down_node) {
-        let np = _jm.find_node_after(selected_node.parent)
-        if (!!np && np.children.length > 0) {
-          down_node = np.children[0]
-        }
-      }
-      if (!!down_node) {
-        _jm.select_node(down_node)
-      }
-      evt.stopPropagation()
-      evt.preventDefault()
+    if (!!up_node) {
+      jm.select_node(up_node)
     }
+    evt.stopPropagation()
+    evt.preventDefault()
   }
 
-  handle_left (_jm, e) {
-    this._handle_direction(_jm, e, JsMind.direction.left)
-  }
-
-  handle_right (_jm, e) {
-    this._handle_direction(_jm, e, JsMind.direction.right)
-  }
-
-  _handle_direction (_jm, e, d) {
+  /**
+   * 处理↓键的响应
+   * @param e {KeyboardEvent}
+   */
+  handle_down (e) {
+    const jm = this.jm
     let evt = e || event
-    let selected_node = _jm.get_selected_node()
+    let selected_node = jm.get_selected_node()
+    if (!selected_node || selected_node.isroot) return
+    let down_node = jm.find_node_after(selected_node)
+    if (!down_node) {
+      let np = jm.find_node_after(selected_node.parent)
+      if (!!np && np.children.length > 0) {
+        down_node = np.children[0]
+      }
+    }
+    if (!!down_node) {
+      jm.select_node(down_node)
+    }
+    evt.stopPropagation()
+    evt.preventDefault()
+  }
+
+
+  /**
+   * 处理按键←的响应
+   * @param e {KeyboardEvent}
+   */
+  handle_left (e) {
+    const jm = this.jm
+    this._handle_direction(e, JsMind.direction.left)
+  }
+
+  /**
+   * 处理按键右的响应
+   * @param e {KeyboardEvent}
+   */
+  handle_right (e) {
+    this._handle_direction(e, JsMind.direction.right)
+  }
+
+  /**
+   * 处理左或者右方向的按键响应
+   * @param e {KeyboardEvent}
+   * @param d {Integer} 方向枚举值
+   * @private
+   */
+  _handle_direction (e, d) {
+    const jm = this.jm
+    let evt = e || event
+    let selected_node = jm.get_selected_node()
     let node = null
     if (!!selected_node) {
       if (selected_node.isroot) {
@@ -188,7 +223,7 @@ export default class JsMindShortcut {
         node = selected_node.parent
       }
       if (!!node) {
-        _jm.select_node(node)
+        jm.select_node(node)
       }
       evt.stopPropagation()
       evt.preventDefault()

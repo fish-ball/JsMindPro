@@ -22,7 +22,7 @@ export default class JsMindLayout {
   }
 
   layout () {
-    logger.debug('layout.layout')
+    console.log('layout.layout')
     this.layout_direction()
     this.layout_offset()
   }

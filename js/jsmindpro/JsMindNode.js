@@ -86,7 +86,12 @@ export default class JsMindNode {
       this._data.view.expander = elExpander
     }
     if (this.topic) {
-      if (jm.options.support_html) {
+      if (jm.options.renderNode instanceof Function) {
+        // jm.options.renderNode.call(jm, elNode, node)
+        jm.options.renderNode(elNode, this)
+        // elNode.innerHTML = ''
+        // elNode.appendChild(jm.options.renderNode(document.createElement, this))
+      } else if (jm.options.support_html) {
         elNode.innerHTML = this.topic
       } else {
         elNode.innerText = this.topic
