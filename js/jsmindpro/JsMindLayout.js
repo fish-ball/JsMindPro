@@ -106,6 +106,10 @@ export default class JsMindLayout {
     this.bounds.s = Math.max(layout.outer_height_left, layout.outer_height_right)
   }
 
+  // layout both the x and y axis
+  _layout_offset_subnodes_1 (nodes) {
+  }
+
   /**
    * 调整一系列子节点的布局定位
    * @param nodes {JsMindNode[]}
@@ -116,11 +120,10 @@ export default class JsMindLayout {
     let baseY = 0
     nodes.forEach(node => {
       const layout = node.meta.layout
+      layout.outer_height = this._layout_offset_subnodes(node.children)
       if (!node.expanded) {
         layout.outer_height = 0
         this.set_visible(node.children, false)
-      } else {
-        layout.outer_height = this._layout_offset_subnodes(node.children)
       }
       layout.outer_height = Math.max(node.meta.view.height, layout.outer_height)
       layout.offset_y = baseY + layout.outer_height / 2
