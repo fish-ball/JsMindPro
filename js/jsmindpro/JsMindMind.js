@@ -91,7 +91,7 @@ export default class JsMindMind {
     // 父亲为根节点的话，还要看方向
     if (parentNode.isroot) {
       // 如果入参未指定方向，则按照实际计算方向较少那边平衡补位
-      if (this.jm.options.layout.direction === 'both') {
+      if ((this.jm.options.mode || 'both') === 'both') {
         if (direction === null || isNaN(direction)) {
           let children = parentNode.children
           let r = 0
@@ -104,10 +104,10 @@ export default class JsMindMind {
           }
           direction = (children.length > 1 && r > 0) ? JsMind.direction.left : JsMind.direction.right
         }
-      } else if (this.jm.options.layout.direction === 'left') {
-        direction = JsMind.direction.left
-      } else if (this.jm.options.layout.direction === 'right') {
+      } else if (this.jm.options.mode === 'side') {
         direction = JsMind.direction.right
+      } else {
+        throw new Error(`Unsupported options mode=[${this.jsm.options.mode}]`)
       }
       node = new JsMindNode(nodeId, idx, topic, data, false, parentNode, direction, expanded)
     } else {

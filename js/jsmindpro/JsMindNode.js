@@ -1,6 +1,6 @@
 import JsMind from './JsMind'
 import JsMindNodeView from './JsMindNodeView'
-import JsMindNodeData from './JsMindNodeData'
+import JsMindNodeMeta from './JsMindNodeMeta'
 
 export default class JsMindNode {
   /**
@@ -27,11 +27,8 @@ export default class JsMindNode {
     this.direction = direction
     this.expanded = expanded
     this.children = []
-    /**
-     * @type {JsMindNodeData}
-     * @private
-     */
-    this._data = new JsMindNodeData()
+    /** @type {JsMindNodeMeta} */
+    this.meta = new JsMindNodeMeta()
   }
 
   /**
@@ -40,24 +37,24 @@ export default class JsMindNode {
    */
   rename (newId) {
     this.id = newId
-    if (this._data.view.element) this._data.view.element.setAttribute('nodeid', newId)
-    if (this._data.view.expander) this._data.view.expander.setAttribute('nodeid', newId)
+    if (this.meta.view.element) this.meta.view.element.setAttribute('nodeid', newId)
+    if (this.meta.view.expander) this.meta.view.expander.setAttribute('nodeid', newId)
   }
 
   /**
    * 清除节点的自定义样式
    */
   clear_custom_style () {
-    let el = this._data.view.element
+    let el = this.meta.view.element
     el.style.backgroundColor = ''
     el.style.color = ''
   }
 
   /**
-   * 加载元素的宽高，回写到 _data.view 对象中
+   * 加载元素的宽高，回写到 meta.view 对象中
    */
   init_size () {
-    let view = this._data.view
+    let view = this.meta.view
     view.width = view.element.clientWidth
     view.height = view.element.clientHeight
   }
@@ -68,9 +65,6 @@ export default class JsMindNode {
    * @param jm {JsMind}
    */
   createElement (elParent, jm) {
-    if (!this._data.view) {
-      this._data.view = new JsMindNodeView()
-    }
     // 创建 DOM 元素
     const elNode = document.createElement('jmnode')
     if (this.isroot) {
@@ -83,7 +77,7 @@ export default class JsMindNode {
       elExpander.setAttribute('nodeid', this.id)
       elExpander.style.visibility = 'hidden'
       elParent.appendChild(elExpander)
-      this._data.view.expander = elExpander
+      this.meta.view.expander = elExpander
     }
     if (this.topic) {
       if (jm.options.renderNode instanceof Function) {
@@ -102,14 +96,14 @@ export default class JsMindNode {
     elNode.style.visibility = 'hidden'
     this.reset_node_custom_style()
     elParent.appendChild(elNode)
-    this._data.view.element = elNode
+    this.meta.view.element = elNode
   }
 
   /**
    * 选中一个节点
    */
   select () {
-    this._data.view.element.className += ' selected'
+    this.meta.view.element.className += ' selected'
     this.clear_custom_style()
   }
 
@@ -117,8 +111,8 @@ export default class JsMindNode {
    * 取消选中一个节点
    */
   deselect () {
-    this._data.view.element.className =
-      this._data.view.element.className.replace(/\s*selected\b/i, '')
+    this.meta.view.element.className =
+      this.meta.view.element.className.replace(/\s*selected\b/i, '')
     this.reset_node_custom_style()
   }
 
@@ -128,8 +122,8 @@ export default class JsMindNode {
    */
   get_location () {
     return {
-      x: this._data.view.abs_x,
-      y: this._data.view.abs_y
+      x: this.meta.view.abs_x,
+      y: this.meta.view.abs_y
     }
   }
 
@@ -139,8 +133,8 @@ export default class JsMindNode {
    */
   get_size () {
     return {
-      w: this._data.view.width,
-      h: this._data.view.height
+      w: this.meta.view.width,
+      h: this.meta.view.height
     }
   }
 
@@ -148,7 +142,7 @@ export default class JsMindNode {
    * 重置节点的自定义样式
    */
   reset_node_custom_style () {
-    const nodeElement = this._data.view.element
+    const nodeElement = this.meta.view.element
     const nodeData = this.data
     if ('background-color' in nodeData) {
       nodeElement.style.backgroundColor = nodeData['background-color']

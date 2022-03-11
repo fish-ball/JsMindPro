@@ -1,4 +1,6 @@
 import JsMind from './JsMind'
+import JsMindNodeLayout from './JsMindNodeLayout'
+
 const logger = console
 
 
@@ -22,152 +24,117 @@ export default class JsMindLayout {
   }
 
   layout () {
-    console.log('layout.layout')
-    this.layout_direction()
-    this.layout_offset()
-  }
-
-  layout_direction () {
     this._layout_direction_root()
+    this._layout_offset()
   }
 
+  /**
+   *
+   * @private
+   */
   _layout_direction_root () {
     let node = this.jm.mind.root
     // logger.debug(node)
-    let layout_data = null
-    if ('layout' in node._data) {
-      layout_data = node._data.layout
-    } else {
-      layout_data = {}
-      node._data.layout = layout_data
-    }
     let children = node.children
-    let children_count = children.length
-    layout_data.direction = JsMind.direction.center
-    layout_data.side_index = 0
+    node.meta.layout.direction = JsMind.direction.center
+    node.meta.layout.side_index = 0
     if (this.isside) {
-      let i = children_count
+      let i = node.children.length
       while (i--) {
         this._layout_direction_side(children[i], JsMind.direction.right, i)
       }
     } else {
-      let i = children_count
+      let i = node.children.length
       let subnode = null
+      let leftCount = 0
+      let rightCount = 0
       while (i--) {
         subnode = children[i]
-        if (subnode.direction == JsMind.direction.left) {
-          this._layout_direction_side(subnode, JsMind.direction.left, i)
+        if (subnode.direction === JsMind.direction.left) {
+          this._layout_direction_side(subnode, JsMind.direction.left, leftCount)
+          leftCount += 1
         } else {
-          this._layout_direction_side(subnode, JsMind.direction.right, i)
+          this._layout_direction_side(subnode, JsMind.direction.right, rightCount)
+          rightCount += 1
         }
       }
-      /*
-      let boundary = Math.ceil(children_count/2)
-      let i = children_count
-      while(i--){
-          if(i>=boundary){
-              this._layout_direction_side(children[i],JsMind.direction.left, children_count-i-1)
-          }else{
-              this._layout_direction_side(children[i],JsMind.direction.right, i)
-          }
-      }*/
-
     }
   }
 
-  _layout_direction_side (node, direction, side_index) {
-    let layout_data = null
-    if ('layout' in node._data) {
-      layout_data = node._data.layout
-    } else {
-      layout_data = {}
-      node._data.layout = layout_data
-    }
+  /**
+   * 布局一个节点到指定的方向
+   * @param node {JsMindNode} 节点
+   * @param direction {Integer} 这个节点的布局方向
+   * @param sideIndex {Integer} 这个节点在指定方向的序号
+   * @private
+   */
+  _layout_direction_side (node, direction, sideIndex) {
     let children = node.children
-    let children_count = children.length
-
-    layout_data.direction = direction
-    layout_data.side_index = side_index
-    let i = children_count
+    node.meta.layout.direction = direction
+    node.meta.layout.sideIndex = sideIndex
+    let i = node.children.length
     while (i--) {
       this._layout_direction_side(children[i], direction, i)
     }
   }
 
-  layout_offset () {
+  /**
+   * 调整全部节点的布局定位
+   * @private
+   */
+  _layout_offset () {
     let node = this.jm.mind.root
-    let layout_data = node._data.layout
-    layout_data.offset_x = 0
-    layout_data.offset_y = 0
-    layout_data.outer_height = 0
-    let children = node.children
-    let i = children.length
-    let left_nodes = []
-    let right_nodes = []
-    let subnode = null
-    while (i--) {
-      subnode = children[i]
-      if (subnode._data.layout.direction == JsMind.direction.right) {
-        right_nodes.unshift(subnode)
+    const layout = node.meta.layout
+    layout.offset_x = 0
+    layout.offset_y = 0
+    layout.outer_height = 0
+    layout.left_nodes = []
+    layout.right_nodes = []
+    node.children.forEach(child => {
+      if (child.meta.layout.direction === JsMind.direction.right) {
+        layout.right_nodes.push(child)
       } else {
-        left_nodes.unshift(subnode)
+        layout.left_nodes.push(child)
       }
-    }
-    layout_data.left_nodes = left_nodes
-    layout_data.right_nodes = right_nodes
-    layout_data.outer_height_left = this._layout_offset_subnodes(left_nodes)
-    layout_data.outer_height_right = this._layout_offset_subnodes(right_nodes)
-    this.bounds.e = node._data.view.width / 2
+    })
+    layout.outer_height_left = this._layout_offset_subnodes(layout.left_nodes)
+    layout.outer_height_right = this._layout_offset_subnodes(layout.right_nodes)
+    this.bounds.e = node.meta.view.width / 2
     this.bounds.w = 0 - this.bounds.e
     //logger.debug(this.bounds.w)
     this.bounds.n = 0
-    this.bounds.s = Math.max(layout_data.outer_height_left, layout_data.outer_height_right)
+    this.bounds.s = Math.max(layout.outer_height_left, layout.outer_height_right)
   }
 
-  // layout both the x and y axis
+  /**
+   * 调整一系列子节点的布局定位
+   * @param nodes {JsMindNode[]}
+   * @private
+   */
   _layout_offset_subnodes (nodes) {
-    let total_height = 0
-    let nodes_count = nodes.length
-    let i = nodes_count
-    let node = null
-    let node_outer_height = 0
-    let layout_data = null
-    let base_y = 0
-    let pd = null // parent._data
-    while (i--) {
-      node = nodes[i]
-      layout_data = node._data.layout
-      if (pd == null) {
-        pd = node.parent._data
-      }
-
-      node_outer_height = this._layout_offset_subnodes(node.children)
+    let totalHeight = 0
+    let baseY = 0
+    nodes.forEach(node => {
+      const layout = node.meta.layout
       if (!node.expanded) {
-        node_outer_height = 0
+        layout.outer_height = 0
         this.set_visible(node.children, false)
+      } else {
+        layout.outer_height = this._layout_offset_subnodes(node.children)
       }
-      node_outer_height = Math.max(node._data.view.height, node_outer_height)
-
-      layout_data.outer_height = node_outer_height
-      layout_data.offset_y = base_y - node_outer_height / 2
-      layout_data.offset_x = this.opts.hspace * layout_data.direction + pd.view.width * (pd.layout.direction + layout_data.direction) / 2
-      if (!node.parent.isroot) {
-        layout_data.offset_x += this.opts.pspace * layout_data.direction
-      }
-
-      base_y = base_y - node_outer_height - this.opts.vspace
-      total_height += node_outer_height
-    }
-    if (nodes_count > 1) {
-      total_height += this.opts.vspace * (nodes_count - 1)
-    }
-    i = nodes_count
-    let middle_height = total_height / 2
-    while (i--) {
-      node = nodes[i]
-      node._data.layout.offset_y += middle_height
-    }
-    return total_height
+      layout.outer_height = Math.max(node.meta.view.height, layout.outer_height)
+      layout.offset_y = baseY + layout.outer_height / 2
+      layout.offset_x = this.opts.hspace * node.direction +
+        node.parent.meta.view.width * (node.parent.direction + node.direction) / 2
+      if (!node.parent.isroot) layout.offset_x += this.opts.pspace * node.direction
+      baseY = baseY + layout.outer_height + this.opts.vspace
+      totalHeight += layout.outer_height
+    })
+    totalHeight += this.opts.vspace * (nodes.length - 1)
+    nodes.forEach(node => {
+      node.meta.layout.offset_y -= totalHeight / 2
+    })
+    return totalHeight
   }
 
   // layout the y axis only, for collapse/expand a node
@@ -179,19 +146,19 @@ export default class JsMindLayout {
     let node_outer_height = 0
     let layout_data = null
     let base_y = 0
-    let pd = null // parent._data
+    let pd = null // parent.meta
     while (i--) {
       node = nodes[i]
-      layout_data = node._data.layout
+      layout_data = node.meta.layout
       if (pd == null) {
-        pd = node.parent._data
+        pd = node.parent.meta
       }
 
       node_outer_height = this._layout_offset_subnodes_height(node.children)
       if (!node.expanded) {
         node_outer_height = 0
       }
-      node_outer_height = Math.max(node._data.view.height, node_outer_height)
+      node_outer_height = Math.max(node.meta.view.height, node_outer_height)
 
       layout_data.outer_height = node_outer_height
       layout_data.offset_y = base_y - node_outer_height / 2
@@ -205,9 +172,9 @@ export default class JsMindLayout {
     let middle_height = total_height / 2
     while (i--) {
       node = nodes[i]
-      node._data.layout.offset_y += middle_height
+      node.meta.layout.offset_y += middle_height
       //logger.debug(node.topic)
-      //logger.debug(node._data.layout.offset_y)
+      //logger.debug(node.meta.layout.offset_y)
     }
     return total_height
   }
@@ -218,7 +185,7 @@ export default class JsMindLayout {
    * @returns {*}
    */
   get_node_offset (node) {
-    const layoutData = node._data.layout
+    const layoutData = node.meta.layout
     let offsetCache = null
     if (('_offset_' in layoutData) && this.cache_valid) {
       offsetCache = layoutData._offset_
@@ -241,11 +208,11 @@ export default class JsMindLayout {
   }
 
   get_node_point (node) {
-    let view_data = node._data.view
+    let view_data = node.meta.view
     let offset_p = this.get_node_offset(node)
     //logger.debug(offset_p)
     let p = {}
-    p.x = offset_p.x + view_data.width * (node._data.layout.direction - 1) / 2
+    p.x = offset_p.x + view_data.width * (node.meta.layout.direction - 1) / 2
     p.y = offset_p.y - view_data.height / 2
     //logger.debug(p)
     return p
@@ -266,8 +233,8 @@ export default class JsMindLayout {
    * @returns {{x: number, y: number}|null}
    */
   get_node_point_out (node) {
-    const layoutData = node._data.layout
-    const viewData = node._data.view
+    const layoutData = node.meta.layout
+    const viewData = node.meta.view
     let poutCache = null
     if (('_pout_' in layoutData) && this.cache_valid) {
       poutCache = layoutData._pout_
@@ -291,7 +258,7 @@ export default class JsMindLayout {
   get_expander_point (node) {
     let p = this.get_node_point_out(node)
     let ex_p = {}
-    if (node._data.layout.direction == JsMind.direction.right) {
+    if (node.meta.layout.direction == JsMind.direction.right) {
       ex_p.x = p.x - this.opts.pspace
     } else {
       ex_p.x = p.x
@@ -396,7 +363,7 @@ export default class JsMindLayout {
         }
         this.expand_to_depth(target_depth, node.children, depth + 1)
       }
-      if (depth == target_depth) {
+      if (depth === target_depth) {
         if (node.expanded) {
           this.collapse_node(node)
         }
@@ -407,12 +374,12 @@ export default class JsMindLayout {
   part_layout (node) {
     let root = this.jm.mind.root
     if (!!root) {
-      let root_layout_data = root._data.layout
+      let root_layout_data = root.meta.layout
       if (node.isroot) {
         root_layout_data.outer_height_right = this._layout_offset_subnodes_height(root_layout_data.right_nodes)
         root_layout_data.outer_height_left = this._layout_offset_subnodes_height(root_layout_data.left_nodes)
       } else {
-        if (node._data.layout.direction == JsMind.direction.right) {
+        if (node.meta.layout.direction === JsMind.direction.right) {
           root_layout_data.outer_height_right = this._layout_offset_subnodes_height(root_layout_data.right_nodes)
         } else {
           root_layout_data.outer_height_left = this._layout_offset_subnodes_height(root_layout_data.left_nodes)
@@ -431,14 +398,14 @@ export default class JsMindLayout {
     let layout_data = null
     while (i--) {
       node = nodes[i]
-      layout_data = node._data.layout
+      layout_data = node.meta.layout
       if (node.expanded) {
         this.set_visible(node.children, visible)
       } else {
         this.set_visible(node.children, false)
       }
       if (!node.isroot) {
-        node._data.layout.visible = visible
+        node.meta.layout.visible = visible
       }
     }
   }
@@ -448,7 +415,7 @@ export default class JsMindLayout {
   }
 
   is_visible (node) {
-    let layout_data = node._data.layout
+    let layout_data = node.meta.layout
     if (('visible' in layout_data) && !layout_data.visible) {
       return false
     } else {

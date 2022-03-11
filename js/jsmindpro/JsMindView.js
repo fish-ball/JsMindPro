@@ -174,7 +174,7 @@ export default class JsMindView {
       this.selected_node = null
     }
     if (this.editing_node != null && this.editing_node.id === node.id) {
-      node._data.view.element.removeChild(this.e_editor)
+      node.meta.view.element.removeChild(this.e_editor)
       this.editing_node = null
     }
     let children = node.children
@@ -182,18 +182,18 @@ export default class JsMindView {
     while (i--) {
       this.remove_node(children[i])
     }
-    if (node._data.view) {
-      const element = node._data.view.element
-      const expander = node._data.view.expander
+    if (node.meta.view) {
+      const element = node.meta.view.element
+      const expander = node.meta.view.expander
       this.e_nodes.removeChild(element)
       this.e_nodes.removeChild(expander)
-      node._data.view.element = null
-      node._data.view.expander = null
+      node.meta.view.element = null
+      node.meta.view.expander = null
     }
   }
 
   update_node (node) {
-    let view_data = node._data.view
+    let view_data = node.meta.view
     let element = view_data.element
     if (!!node.topic) {
       if (this.opts.support_html) {
@@ -243,7 +243,7 @@ export default class JsMindView {
       this.edit_node_end()
     }
     this.editing_node = node
-    let view_data = node._data.view
+    let view_data = node.meta.view
     let element = view_data.element
     let topic = node.topic
     let ncs = getComputedStyle(element)
@@ -260,7 +260,7 @@ export default class JsMindView {
     if (this.editing_node != null) {
       let node = this.editing_node
       this.editing_node = null
-      let view_data = node._data.view
+      let view_data = node.meta.view
       let element = view_data.element
       let topic = this.e_editor.value
       element.style.zIndex = 'auto'
@@ -341,7 +341,7 @@ export default class JsMindView {
   }
 
   save_location (node) {
-    let vd = node._data.view
+    let vd = node.meta.view
     vd._saved_location = {
       x: parseInt(vd.element.style.left) - this.e_panel.scrollLeft,
       y: parseInt(vd.element.style.top) - this.e_panel.scrollTop,
@@ -349,7 +349,7 @@ export default class JsMindView {
   }
 
   restore_location (node) {
-    let vd = node._data.view
+    let vd = node.meta.view
     this.e_panel.scrollLeft = parseInt(vd.element.style.left) - vd._saved_location.x
     this.e_panel.scrollTop = parseInt(vd.element.style.top) - vd._saved_location.y
   }
@@ -360,8 +360,8 @@ export default class JsMindView {
   clear_nodes () {
     if (!this.jm.mind) return
     this.jm.mind.nodes.forEach(node => {
-      node._data.view.element = null
-      node._data.view.expander = null
+      node.meta.view.element = null
+      node.meta.view.expander = null
     })
   }
 
@@ -372,7 +372,7 @@ export default class JsMindView {
     let _offset = this.get_view_offset()
     Object.keys(this.jm.mind.nodes).forEach(key => {
       const node = this.jm.mind.nodes[key]
-      const viewData = node._data.view
+      const viewData = node.meta.view
       const nodeElement = viewData.element
       const expander = viewData.expander
       // 不可见的话隐藏，完事
@@ -428,7 +428,7 @@ export default class JsMindView {
       // 根节点没有线
       if (node.isroot) return
       // 隐藏的节点没有线
-      if (('visible' in node._data.layout) && !node._data.layout.visible) return
+      if (('visible' in node.meta.layout) && !node.meta.layout.visible) return
       // 获取布局的入点坐标
       const pin = this.jm.layout.get_node_point_in(node)
       // 获取父节点布局的出点坐标
