@@ -509,7 +509,7 @@ export default class JsMind {
    */
   select_node (node) {
     node = this._sanitize_node(node)
-    if (!this.layout.is_visible(node)) return
+    if (!node.is_visible()) return
     this.mind.selected = node
     this.view.select_node(node)
   }
@@ -528,15 +528,6 @@ export default class JsMind {
   select_clear () {
     this.mind.selected = null
     this.view.select_clear()
-  }
-
-  /**
-   * 返回一个节点是否可见
-   * @param node {JsMindNode}
-   * @returns {boolean}
-   */
-  is_node_visible (node) {
-    return this.layout.is_visible(node)
   }
 
   /**
@@ -704,7 +695,7 @@ export default class JsMind {
   _show (mind) {
     // m 是数据
     let m = mind || JsMind.format.node_array.example
-    this.mind = this.data.load(m, this)
+    this.mind = this.data.load(m)
     this.view.load()
     this.layout.layout()
     this.view.show(true)

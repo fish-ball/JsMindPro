@@ -8,29 +8,26 @@ export default class JsMindData {
   }
 
   init () {
-    logger.debug('data.init')
   }
 
   reset () {
-    logger.debug('data.reset')
   }
 
   /**
    * 自动加载一个 mind 的配置数据（包含格式）
    * @param mind_data {Object}
-   * @param jm {JsMind}
    * @returns {JsMindMind}
    */
-  load (mind_data, jm) {
+  load (mind_data) {
     let format = typeof mind_data === 'object' ?
       (mind_data.format || 'node_tree') : 'freemind'
 
     if (format === 'node_array') {
-      return JsMind.format.node_array.get_mind(mind_data, jm)
+      return JsMind.format.node_array.get_mind(mind_data, this.jm)
     } else if (format === 'node_tree') {
-      return JsMind.format.node_tree.get_mind(mind_data, jm)
+      return JsMind.format.node_tree.get_mind(mind_data, this.jm)
     } else if (format === 'freemind') {
-      return JsMind.format.freemind.get_mind(mind_data, jm)
+      return JsMind.format.freemind.get_mind(mind_data, this.jm)
     }
     throw new Error('unsupported format')
   }

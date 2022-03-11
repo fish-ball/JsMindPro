@@ -1,9 +1,6 @@
 import 'jsmind'
 import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
-import JsMindNodeView from './JsMindNodeView'
-
-const logger = console
 
 ///////// Shortcut Functions /////////
 
@@ -37,6 +34,7 @@ export default class JsMindView {
    * 初始化一个 view
    */
   init () {
+    const jm = this.jm
     // https://stackoverflow.com/a/36894871/2544762
     this.container = (this.opts.container instanceof Element ||
       this.opts.container instanceof HTMLDocument) ? this.opts.container
@@ -46,31 +44,66 @@ export default class JsMindView {
     this.e_panel = document.createElement('div')
     this.e_canvas = document.createElement('canvas')
     this.e_nodes = document.createElement('jmnodes')
-    this.e_editor = document.createElement('input')
+    this.e_editor = document.createElement('textarea')
 
     this.e_panel.className = 'jsmind-inner'
     this.e_panel.appendChild(this.e_canvas)
     this.e_panel.appendChild(this.e_nodes)
 
     this.e_editor.className = 'jsmind-editor'
-    this.e_editor.type = 'text'
+    this.e_editor.style.resize = 'none'
+    this.e_editor.style.position = 'absolute'
+    this.e_editor.style.top = '0'
+    this.e_editor.style.left = '0'
+    this.e_editor.style.whiteSpace = 'nowrap'
+    this.e_editor.style.overflowY = 'hidden'
+    this.e_editor.style.overflowX = 'hidden'
+    // 根据内容自适应宽度
+    this.e_editor.addEventListener('input', e => {
+      // 用 canvas 计算实际宽度 https://stackoverflow.com/a/58705306/2544762
+      const element = jm.view.selected_node.meta.view.element
+      element.style.overflow = 'visible'
+      const elMeasure = element.cloneNode(false)
+      elMeasure.style.left = '0'
+      elMeasure.style.top = '0'
+      elMeasure.style.whitespace = 'pre'
+      elMeasure.innerText = this.e_editor.value
+      elMeasure.visibility = 'none'
+      element.parentNode.appendChild(elMeasure)
+      const style = getComputedStyle(elMeasure)
+      this.e_editor.style.padding = style.padding
+      this.e_editor.style.width = elMeasure.clientWidth + 'px'
+      this.e_editor.style.height = elMeasure.clientHeight + 'px'
+      elMeasure.parentNode.removeChild(elMeasure)
+      e.stopPropagation()
+    })
 
     this.actualZoom = 1
     this.zoomStep = 0.1
     this.minZoom = 0.5
     this.maxZoom = 2
 
-    let v = this
     // 结束标记的事件，TODO: 为啥要写在这种地方？
-    JsMindUtil.dom.add_event(this.e_editor, 'keydown', function (e) {
-      let evt = e || event
-      if (evt.keyCode === 13) {
-        v.edit_node_end()
-        evt.stopPropagation()
+    JsMindUtil.dom.add_event(this.e_editor, 'keydown', e => {
+      if (e.key === 'Enter') {
+        if (e.ctrlKey || e.altKey) {
+          const start = e.target.selectionStart
+          const end = e.target.selectionEnd
+          e.target.value = e.target.value.substr(0, start) + '\n'
+            + e.target.value.substr(end)
+          e.target.setSelectionRange(start, start)
+          e.target.dispatchEvent(new Event('input'))
+        } else {
+          this.edit_node_end()
+          e.preventDefault()
+        }
+      } else if (e.key === 'Escape') {
+        this.edit_node_end(true)
       }
+      e.stopPropagation()
     })
-    JsMindUtil.dom.add_event(this.e_editor, 'blur', function (e) {
-      v.edit_node_end()
+    JsMindUtil.dom.add_event(this.e_editor, 'blur', e => {
+      this.edit_node_end()
     })
 
     // 挂载控件
@@ -192,18 +225,23 @@ export default class JsMindView {
     }
   }
 
+  /**
+   * !! IMPORTANT !! 单节点渲染处理
+   * 更新一个节点的显示
+   * @param node {JsMindNode}
+   */
   update_node (node) {
-    let view_data = node.meta.view
-    let element = view_data.element
-    if (!!node.topic) {
-      if (this.opts.support_html) {
-        element.innerHTML = node.topic
-      } else {
-        $t(element, node.topic)
-      }
+    const view = node.meta.view
+    let elNode = view.element
+    if (this.opts.renderNode instanceof Function) {
+      this.opts.renderNode(elNode, this)
+    } else if (this.opts.support_html) {
+      elNode.innerHTML = node.topic
+    } else {
+      elNode.innerText = node.topic
     }
-    view_data.width = element.clientWidth
-    view_data.height = element.clientHeight
+    view.width = elNode.clientWidth
+    view.height = elNode.clientHeight
   }
 
   /**
@@ -226,55 +264,54 @@ export default class JsMindView {
     this.select_node(null)
   }
 
-  get_editing_node () {
-    return this.editing_node
-  }
-
+  /**
+   * 返回视图是否处于正在编辑的状态
+   * @returns {boolean}
+   */
   is_editing () {
-    return (!!this.editing_node)
+    return !!this.editing_node
   }
 
+  /**
+   * 触发开始编辑
+   * @param node
+   */
   edit_node_begin (node) {
-    if (!node.topic) {
-      logger.warn("don't edit image nodes")
-      return
-    }
-    if (this.editing_node != null) {
-      this.edit_node_end()
-    }
+    // 如果正在编辑另一个，先结束编辑
+    if (this.editing_node) this.edit_node_end()
     this.editing_node = node
-    let view_data = node.meta.view
-    let element = view_data.element
-    let topic = node.topic
-    let ncs = getComputedStyle(element)
-    this.e_editor.value = topic
-    this.e_editor.style.width = (element.clientWidth - parseInt(ncs.getPropertyValue('padding-left')) - parseInt(ncs.getPropertyValue('padding-right'))) + 'px'
-    element.innerHTML = ''
+    let element = node.meta.view.element
+    this.e_editor.value = node.topic
+    this.e_editor.dispatchEvent(new Event('input'))
+    // element.innerHTML = ''
     element.appendChild(this.e_editor)
     element.style.zIndex = 5
     this.e_editor.focus()
     this.e_editor.select()
   }
 
-  edit_node_end () {
-    if (this.editing_node != null) {
-      let node = this.editing_node
-      this.editing_node = null
-      let view_data = node.meta.view
-      let element = view_data.element
-      let topic = this.e_editor.value
-      element.style.zIndex = 'auto'
-      element.removeChild(this.e_editor)
-      if (JsMindUtil.text.is_empty(topic) || node.topic === topic) {
-        if (this.opts.support_html) {
-          element.innerHTML = node.topic
-        } else {
-          $t(element, node.topic)
-        }
-      } else {
-        this.jm.update_node(node.id, topic)
-      }
+  /**
+   * 触发节点编辑完成的
+   * @param cancel {Boolean} 取消操作
+   */
+  edit_node_end (cancel = false) {
+    // 如果不是正在编辑，退出
+    if (!this.editing_node) return
+    // 正式保存
+    let node = this.editing_node
+    this.editing_node = null
+    let view_data = node.meta.view
+    let element = view_data.element
+    let topic = this.e_editor.value
+    element.style.zIndex = 'auto'
+    element.removeChild(this.e_editor)
+    if (cancel || !topic) {
+      this.jm.update_node(node.id, node.topic)
+    } else {
+      this.jm.update_node(node.id, topic)
     }
+    // 编辑完成重新获得焦点
+    this.select_node(node)
   }
 
   /**
@@ -365,44 +402,49 @@ export default class JsMindView {
     })
   }
 
+  /**
+   * !! IMPORTANT !! 渲染所有节点
+   * 主要的渲染同步逻辑在这里
+   */
   show_nodes () {
     let p = null
-    let p_expander = null
-    let expander_text = '-'
-    let _offset = this.get_view_offset()
-    Object.keys(this.jm.mind.nodes).forEach(key => {
-      const node = this.jm.mind.nodes[key]
-      const viewData = node.meta.view
-      const nodeElement = viewData.element
-      const expander = viewData.expander
+    let expanderPoint = null
+    let expanderText = '-'
+    let offset = this.get_view_offset()
+    _.forEach(this.jm.mind.nodes, node => {
+      const view = node.meta.view
+      const elNode = view.element
+      const elExpander = view.expander
       // 不可见的话隐藏，完事
-      if (!this.jm.layout.is_visible(node)) {
-        nodeElement.style.display = 'none'
-        expander.style.display = 'none'
+      if (!node.is_visible()) {
+        elNode.style.display = 'none'
+        elExpander.style.display = 'none'
+        // elExpander.style.zIndex = '1'
+        // elExpander.style.position = 'relative'
         return
       }
       // 重置节点的自定义样式
       node.reset_node_custom_style()
       p = this.jm.layout.get_node_point(node)
-      viewData.abs_x = _offset.x + p.x
-      viewData.abs_y = _offset.y + p.y
-      nodeElement.style.left = (_offset.x + p.x) + 'px'
-      nodeElement.style.top = (_offset.y + p.y) + 'px'
-      nodeElement.style.display = ''
-      nodeElement.style.visibility = 'visible'
+      view.abs_x = offset.x + p.x
+      view.abs_y = offset.y + p.y
+      elNode.style.left = (offset.x + p.x) + 'px'
+      elNode.style.top = (offset.y + p.y) + 'px'
+      elNode.style.display = ''
+      elNode.style.visibility = 'visible'
       if (!node.isroot && node.children.length > 0) {
-        expander_text = node.expanded ? '-' : '+'
-        p_expander = this.jm.layout.get_expander_point(node)
-        expander.style.left = (_offset.x + p_expander.x) + 'px'
-        expander.style.top = (_offset.y + p_expander.y) + 'px'
-        expander.style.display = ''
-        expander.style.visibility = 'visible'
-        $t(expander, expander_text)
+        expanderText = node.expanded ? '-' : '+'
+        expanderPoint = this.jm.layout.get_expander_point(node)
+        elExpander.style.left = (offset.x + expanderPoint.x) + 'px'
+        elExpander.style.top = (offset.y + expanderPoint.y) + 'px'
+        elExpander.style.display = ''
+        elExpander.style.visibility = 'visible'
+        elExpander.innerText = expanderText
       }
       // hide expander while all children have been removed
       if (!node.isroot && node.children.length === 0) {
-        expander.style.display = 'none'
-        expander.style.visibility = 'hidden'
+        elExpander.style.display = 'none'
+        elExpander.style.visibility = 'hidden'
       }
     })
   }

@@ -188,7 +188,7 @@ class JsMindExtensionDraggable {
         if (nd.id === this.active_node.id) return null
       }
       // 不能移动到隐藏的节点下面
-      if (!this.jm.layout.is_visible(node)) return null
+      if (!node.is_visible()) return null
       const {w: nw, h: nh} = node.get_size()
       const {x: nx, y: ny} = node.get_location()
       if (direction === JsMind.direction.right) {

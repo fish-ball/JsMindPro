@@ -1,25 +1,24 @@
 import JsMind from './JsMind'
 import JsMindNodeLayout from './JsMindNodeLayout'
 
-const logger = console
-
 
 export default class JsMindLayout {
   constructor (jm, options) {
     this.opts = options
     this.jm = jm
     this.isside = this.opts.mode === 'side'
-    this.bounds = null
+    /** 布局的边界坐标值 North/South/West/East
+     * @type {{n: number, s: number, w: number, e: number}}
+     */
+    this.bounds = {n: 0, s: 0, w: 0, e: 0}
 
     this.cache_valid = false
   }
 
   init () {
-    logger.debug('layout.init')
   }
 
   reset () {
-    logger.debug('layout.reset')
     this.bounds = {n: 0, s: 0, w: 0, e: 0}
   }
 
@@ -29,35 +28,33 @@ export default class JsMindLayout {
   }
 
   /**
-   *
+   * 纯粹递归计算所有节点的 layout.direction 方向，
+   * 以及 side_index 分边序号
    * @private
    */
   _layout_direction_root () {
-    let node = this.jm.mind.root
+    let root = this.jm.mind.root
     // logger.debug(node)
-    let children = node.children
-    node.meta.layout.direction = JsMind.direction.center
-    node.meta.layout.side_index = 0
+    root.meta.layout.direction = JsMind.direction.center
+    root.meta.layout.side_index = 0
     if (this.isside) {
-      let i = node.children.length
-      while (i--) {
-        this._layout_direction_side(children[i], JsMind.direction.right, i)
-      }
+      // 纯右侧布局的处理
+      root.children.forEach((node, i) => {
+        this._layout_direction_side(node, JsMind.direction.right, i)
+      })
     } else {
-      let i = node.children.length
-      let subnode = null
+      // 双侧布局的处理
       let leftCount = 0
       let rightCount = 0
-      while (i--) {
-        subnode = children[i]
-        if (subnode.direction === JsMind.direction.left) {
-          this._layout_direction_side(subnode, JsMind.direction.left, leftCount)
+      root.children.forEach(node => {
+        if (node.direction === JsMind.direction.left) {
+          this._layout_direction_side(node, JsMind.direction.left, leftCount)
           leftCount += 1
         } else {
-          this._layout_direction_side(subnode, JsMind.direction.right, rightCount)
+          this._layout_direction_side(node, JsMind.direction.right, rightCount)
           rightCount += 1
         }
-      }
+      })
     }
   }
 
@@ -69,13 +66,11 @@ export default class JsMindLayout {
    * @private
    */
   _layout_direction_side (node, direction, sideIndex) {
-    let children = node.children
     node.meta.layout.direction = direction
-    node.meta.layout.sideIndex = sideIndex
-    let i = node.children.length
-    while (i--) {
-      this._layout_direction_side(children[i], direction, i)
-    }
+    node.meta.layout.side_index = sideIndex
+    node.children.forEach((child, i) => {
+      this._layout_direction_side(child, direction, i)
+    })
   }
 
   /**
@@ -83,14 +78,14 @@ export default class JsMindLayout {
    * @private
    */
   _layout_offset () {
-    let node = this.jm.mind.root
-    const layout = node.meta.layout
+    let root = this.jm.mind.root
+    const layout = root.meta.layout
     layout.offset_x = 0
     layout.offset_y = 0
     layout.outer_height = 0
     layout.left_nodes = []
     layout.right_nodes = []
-    node.children.forEach(child => {
+    root.children.forEach(child => {
       if (child.meta.layout.direction === JsMind.direction.right) {
         layout.right_nodes.push(child)
       } else {
@@ -99,15 +94,11 @@ export default class JsMindLayout {
     })
     layout.outer_height_left = this._layout_offset_subnodes(layout.left_nodes)
     layout.outer_height_right = this._layout_offset_subnodes(layout.right_nodes)
-    this.bounds.e = node.meta.view.width / 2
+    // 计算整个布局的东南西北边界
+    this.bounds.e = root.meta.view.width / 2
     this.bounds.w = 0 - this.bounds.e
-    //logger.debug(this.bounds.w)
     this.bounds.n = 0
     this.bounds.s = Math.max(layout.outer_height_left, layout.outer_height_right)
-  }
-
-  // layout both the x and y axis
-  _layout_offset_subnodes_1 (nodes) {
   }
 
   /**
@@ -185,40 +176,32 @@ export default class JsMindLayout {
   /**
    * 获取某个节点的偏移量
    * @param node {JsMindNode}
-   * @returns {*}
+   * @returns {{x: number, y: number}}
    */
   get_node_offset (node) {
-    const layoutData = node.meta.layout
-    let offsetCache = null
-    if (('_offset_' in layoutData) && this.cache_valid) {
-      offsetCache = layoutData._offset_
-    } else {
-      offsetCache = {x: -1, y: -1}
-      layoutData._offset_ = offsetCache
+    const layout = node.meta.layout
+    if (('offset' in layout) && this.cache_valid) return layout.offset
+    let x = layout.offset_x
+    let y = layout.offset_y
+    if (!node.isroot) {
+      const {x: dx, y: dy} = this.get_node_offset(node.parent)
+      x += dx
+      y += dy
     }
-    if (offsetCache.x === -1 || offsetCache.y === -1) {
-      let x = layoutData.offset_x
-      let y = layoutData.offset_y
-      if (!node.isroot) {
-        const offset = this.get_node_offset(node.parent)
-        x += offset.x
-        y += offset.y
-      }
-      offsetCache.x = x
-      offsetCache.y = y
-    }
-    return offsetCache
+    return {x, y}
   }
 
+  /**
+   * 获取节点的坐标
+   * @param node
+   * @returns {{x: Number, y: Number}}
+   */
   get_node_point (node) {
-    let view_data = node.meta.view
-    let offset_p = this.get_node_offset(node)
-    //logger.debug(offset_p)
-    let p = {}
-    p.x = offset_p.x + view_data.width * (node.meta.layout.direction - 1) / 2
-    p.y = offset_p.y - view_data.height / 2
-    //logger.debug(p)
-    return p
+    let offset = this.get_node_offset(node)
+    return {
+      x: offset.x + node.meta.view.width * (node.meta.layout.direction - 1) / 2,
+      y: offset.y - node.meta.view.height / 2
+    }
   }
 
   /**
@@ -261,7 +244,7 @@ export default class JsMindLayout {
   get_expander_point (node) {
     let p = this.get_node_point_out(node)
     let ex_p = {}
-    if (node.meta.layout.direction == JsMind.direction.right) {
+    if (node.meta.layout.direction === JsMind.direction.right) {
       ex_p.x = p.x - this.opts.pspace
     } else {
       ex_p.x = p.x
@@ -270,31 +253,29 @@ export default class JsMindLayout {
     return ex_p
   }
 
+  /**
+   * 获取当前画布的包裹大小
+   * @returns {{w: number, h: number}}
+   */
   get_min_size () {
-    let nodes = this.jm.mind.nodes
-    let node = null
-    let pout = null
-    for (let nodeid in nodes) {
-      node = nodes[nodeid]
-      pout = this.get_node_point_out(node)
-      //logger.debug(pout.x)
-      if (pout.x > this.bounds.e) {
-        this.bounds.e = pout.x
-      }
-      if (pout.x < this.bounds.w) {
-        this.bounds.w = pout.x
-      }
-    }
+    _.forEach(this.jm.mind.nodes, node => {
+      const pout = this.get_node_point_out(node)
+      this.bounds.e = Math.max(pout.x, this.bounds.e)
+      this.bounds.w = Math.min(pout.x, this.bounds.w)
+    })
     return {
       w: this.bounds.e - this.bounds.w,
       h: this.bounds.s - this.bounds.n
     }
   }
 
+  /**
+   * 切换节点的展开和折叠状态
+   * @param node {JsMindNode}
+   */
   toggle_node (node) {
-    if (node.isroot) {
-      return
-    }
+    // 根节点不允许折叠
+    if (node.isroot) return
     if (node.expanded) {
       this.collapse_node(node)
     } else {
@@ -302,12 +283,20 @@ export default class JsMindLayout {
     }
   }
 
+  /**
+   * 展开节点
+   * @param node {JsMindNode}
+   */
   expand_node (node) {
     node.expanded = true
     this.part_layout(node)
     this.set_visible(node.children, true)
   }
 
+  /**
+   * 折叠节点
+   * @param node {JsMindNode}
+   */
   collapse_node (node) {
     node.expanded = false
     this.part_layout(node)
@@ -374,55 +363,43 @@ export default class JsMindLayout {
     }
   }
 
+  /**
+   * 局部布局一个节点
+   * @param node {JsMindNode}
+   */
   part_layout (node) {
     let root = this.jm.mind.root
-    if (!!root) {
-      let root_layout_data = root.meta.layout
-      if (node.isroot) {
-        root_layout_data.outer_height_right = this._layout_offset_subnodes_height(root_layout_data.right_nodes)
-        root_layout_data.outer_height_left = this._layout_offset_subnodes_height(root_layout_data.left_nodes)
-      } else {
-        if (node.meta.layout.direction === JsMind.direction.right) {
-          root_layout_data.outer_height_right = this._layout_offset_subnodes_height(root_layout_data.right_nodes)
-        } else {
-          root_layout_data.outer_height_left = this._layout_offset_subnodes_height(root_layout_data.left_nodes)
-        }
-      }
-      this.bounds.s = Math.max(root_layout_data.outer_height_left, root_layout_data.outer_height_right)
-      this.cache_valid = false
+    let rootLayout = root.meta.layout
+    if (node.isroot) {
+      rootLayout.outer_height_right =
+        this._layout_offset_subnodes_height(rootLayout.right_nodes)
+      rootLayout.outer_height_left =
+        this._layout_offset_subnodes_height(rootLayout.left_nodes)
+    } else if (node.meta.layout.direction === JsMind.direction.right) {
+      rootLayout.outer_height_right =
+        this._layout_offset_subnodes_height(rootLayout.right_nodes)
     } else {
-      logger.warn('can not found root node')
+      rootLayout.outer_height_left =
+        this._layout_offset_subnodes_height(rootLayout.left_nodes)
     }
+    this.bounds.s = Math.max(rootLayout.outer_height_left, rootLayout.outer_height_right)
+    this.cache_valid = false
   }
 
+  /**
+   * 递归设置某批节点可见或者不可见
+   * @param nodes {JsMindNode[]}
+   * @param visible {Boolean}
+   */
   set_visible (nodes, visible) {
-    let i = nodes.length
-    let node = null
-    let layout_data = null
-    while (i--) {
-      node = nodes[i]
-      layout_data = node.meta.layout
+    nodes.forEach(node => {
       if (node.expanded) {
         this.set_visible(node.children, visible)
       } else {
         this.set_visible(node.children, false)
       }
-      if (!node.isroot) {
-        node.meta.layout.visible = visible
-      }
-    }
+      if (!node.isroot) node.meta.layout.visible = visible
+    })
   }
 
-  is_expand (node) {
-    return node.expanded
-  }
-
-  is_visible (node) {
-    let layout_data = node.meta.layout
-    if (('visible' in layout_data) && !layout_data.visible) {
-      return false
-    } else {
-      return true
-    }
-  }
 }

@@ -79,24 +79,21 @@ export default class JsMindNode {
       elParent.appendChild(elExpander)
       this.meta.view.expander = elExpander
     }
-    if (this.topic) {
-      if (jm.options.renderNode instanceof Function) {
-        // jm.options.renderNode.call(jm, elNode, node)
-        jm.options.renderNode(elNode, this)
-        // elNode.innerHTML = ''
-        // elNode.appendChild(jm.options.renderNode(document.createElement, this))
-      } else if (jm.options.support_html) {
-        elNode.innerHTML = this.topic
-      } else {
-        elNode.innerText = this.topic
-        // $t(elNode, this.topic)
-      }
-    }
     elNode.setAttribute('nodeid', this.id)
     elNode.style.visibility = 'hidden'
     this.reset_node_custom_style()
     elParent.appendChild(elNode)
     this.meta.view.element = elNode
+    // 刷新渲染状态
+    jm.view.update_node(this)
+  }
+
+  /**
+   * 返回当前节点是否可见
+   * @returns {Boolean}
+   */
+  is_visible() {
+    return this.meta.layout.visible
   }
 
   /**
@@ -140,30 +137,31 @@ export default class JsMindNode {
 
   /**
    * 重置节点的自定义样式
+   * TODO: 这个 API 又长又臭呢，还把 node.data 这么重要的生态位占了，没影响的话删掉算逑了
    */
   reset_node_custom_style () {
-    const nodeElement = this.meta.view.element
+    const elNode = this.meta.view.element
     const nodeData = this.data
     if ('background-color' in nodeData) {
-      nodeElement.style.backgroundColor = nodeData['background-color']
+      elNode.style.backgroundColor = nodeData['background-color']
     }
     if ('foreground-color' in nodeData) {
-      nodeElement.style.color = nodeData['foreground-color']
+      elNode.style.color = nodeData['foreground-color']
     }
     if ('width' in nodeData) {
-      nodeElement.style.width = nodeData['width'] + 'px'
+      elNode.style.width = nodeData['width'] + 'px'
     }
     if ('height' in nodeData) {
-      nodeElement.style.height = nodeData['height'] + 'px'
+      elNode.style.height = nodeData['height'] + 'px'
     }
     if ('font-size' in nodeData) {
-      nodeElement.style.fontSize = nodeData['font-size'] + 'px'
+      elNode.style.fontSize = nodeData['font-size'] + 'px'
     }
     if ('font-weight' in nodeData) {
-      nodeElement.style.fontWeight = nodeData['font-weight']
+      elNode.style.fontWeight = nodeData['font-weight']
     }
     if ('font-style' in nodeData) {
-      nodeElement.style.fontStyle = nodeData['font-style']
+      elNode.style.fontStyle = nodeData['font-style']
     }
     if ('background-image' in nodeData) {
       let backgroundImage = nodeData['background-image']
@@ -171,23 +169,23 @@ export default class JsMindNode {
         let img = new Image()
         img.onload = function () {
           let c = document.createElement('canvas')
-          c.width = nodeElement.clientWidth
-          c.height = nodeElement.clientHeight
+          c.width = elNode.clientWidth
+          c.height = elNode.clientHeight
           if (c.getContext) {
             let ctx = c.getContext('2d')
-            ctx.drawImage(this, 2, 2, nodeElement.clientWidth, nodeElement.clientHeight)
+            ctx.drawImage(this, 2, 2, elNode.clientWidth, elNode.clientHeight)
             let scaledImageData = c.toDataURL()
-            nodeElement.style.backgroundImage = 'url(' + scaledImageData + ')'
+            elNode.style.backgroundImage = 'url(' + scaledImageData + ')'
           }
         }
         img.src = backgroundImage
       } else {
-        nodeElement.style.backgroundImage = 'url(' + backgroundImage + ')'
+        elNode.style.backgroundImage = 'url(' + backgroundImage + ')'
       }
-      nodeElement.style.backgroundSize = '99%'
+      elNode.style.backgroundSize = '99%'
 
       if ('background-rotation' in nodeData) {
-        nodeElement.style.transform = 'rotate(' + nodeData['background-rotation'] + 'deg)'
+        elNode.style.transform = 'rotate(' + nodeData['background-rotation'] + 'deg)'
       }
     }
   }
