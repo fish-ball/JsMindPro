@@ -12,5 +12,17 @@ export default class JsMindNodeView {
     this.width = -1
     /** @type {number} */
     this.height = -1
+    /**
+     * @type {{x: number, y: number}}
+     * @private
+     */
+    this._saved_location = {x: 0, y: 0}
+  }
+
+  save_location (x, y) {
+    this._saved_location = {x, y}
+  }
+  restore_location () {
+    return this._saved_location
   }
 }

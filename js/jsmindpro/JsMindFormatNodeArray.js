@@ -31,7 +31,6 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
   }
 
   static get_data (mind) {
-    let df = JsMind.format.node_array
     let json = {}
     json.meta = {
       name: mind.name,
@@ -40,7 +39,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     }
     json.format = 'node_array'
     json.data = []
-    df._array(mind, json.data)
+    this._array(mind, json.data)
     return json
   }
 
@@ -120,6 +119,8 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
    * @private
    */
   static _extract_data (rawNode) {
+    // TODO: 为了实现更好的定制化，感觉这里可以加一个配置钩子负责用来做数据映射
+    if ('data' in rawNode) return rawNode.data
     let data = {}
     Object.keys(rawNode).forEach(k => {
       if (!/^id|topic|parentid|isroot|direction|expanded$/.test(k)) {
@@ -134,24 +135,22 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     df._array_node(mind.root, node_array)
   }
 
-  static _array_node (node, node_array) {
-    let df = JsMind.format.node_array
-    if (!(node instanceof JsMindNode)) {
-      return
-    }
+  /**
+   *
+   * @param node {JsMindNode}
+   * @param nodeArray {Array} 原始的节点对象数组
+   * @private
+   */
+  static _array_node (node, nodeArray) {
     let o = {
       id: node.id,
       topic: node.topic,
       expanded: node.expanded
     }
-    if (!!node.parent) {
-      o.parentid = node.parent.id
-    }
-    if (node.isroot) {
-      o.isroot = true
-    }
+    if (node.parent) o.parentid = node.parent.id
+    if (node.isroot) o.isroot = true
     if (!!node.parent && node.parent.isroot) {
-      o.direction = node.direction == JsMind.direction.left ? 'left' : 'right'
+      o.direction = node.direction === JsMind.direction.left ? 'left' : 'right'
     }
     if (node.data != null) {
       let node_data = node.data
@@ -159,10 +158,9 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
         o[k] = node_data[k]
       }
     }
-    node_array.push(o)
-    let ci = node.children.length
-    for (let i = 0; i < ci; i++) {
-      df._array_node(node.children[i], node_array)
-    }
+    nodeArray.push(o)
+    node.children.forEach(child => {
+      this._array_node(child, nodeArray)
+    })
   }
 }

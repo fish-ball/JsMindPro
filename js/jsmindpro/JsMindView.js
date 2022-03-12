@@ -67,7 +67,9 @@ export default class JsMindView {
       elMeasure.style.left = '0'
       elMeasure.style.top = '0'
       elMeasure.style.whitespace = 'pre'
-      elMeasure.innerText = this.e_editor.value
+      let measureText = this.e_editor.value
+      if (!measureText || measureText.endsWith('\n')) measureText += ' '
+      elMeasure.innerText = measureText
       elMeasure.visibility = 'none'
       element.parentNode.appendChild(elMeasure)
       const style = getComputedStyle(elMeasure)
@@ -91,7 +93,7 @@ export default class JsMindView {
           const end = e.target.selectionEnd
           e.target.value = e.target.value.substr(0, start) + '\n'
             + e.target.value.substr(end)
-          e.target.setSelectionRange(start, start)
+          e.target.setSelectionRange(start + 1, start + 1)
           e.target.dispatchEvent(new Event('input'))
         } else {
           this.edit_node_end()
@@ -377,18 +379,27 @@ export default class JsMindView {
     this._show()
   }
 
+  /**
+   * 保存当前的滚动位置
+   * @param node
+   */
   save_location (node) {
-    let vd = node.meta.view
-    vd._saved_location = {
-      x: parseInt(vd.element.style.left) - this.e_panel.scrollLeft,
-      y: parseInt(vd.element.style.top) - this.e_panel.scrollTop,
-    }
+    const view = node.meta.view
+    view.save_location(
+      parseInt(view.element.style.left) - this.e_panel.scrollLeft,
+      parseInt(view.element.style.top) - this.e_panel.scrollTop
+    )
   }
 
+  /**
+   * 恢复当前的滚动位置
+   * @param node
+   */
   restore_location (node) {
-    let vd = node.meta.view
-    this.e_panel.scrollLeft = parseInt(vd.element.style.left) - vd._saved_location.x
-    this.e_panel.scrollTop = parseInt(vd.element.style.top) - vd._saved_location.y
+    const view = node.meta.view
+    const {x, y} = view.restore_location()
+    this.e_panel.scrollLeft = parseInt(view.element.style.left) - x
+    this.e_panel.scrollTop = parseInt(view.element.style.top) - y
   }
 
   /**
@@ -419,8 +430,6 @@ export default class JsMindView {
       if (!node.is_visible()) {
         elNode.style.display = 'none'
         elExpander.style.display = 'none'
-        // elExpander.style.zIndex = '1'
-        // elExpander.style.position = 'relative'
         return
       }
       // 重置节点的自定义样式
