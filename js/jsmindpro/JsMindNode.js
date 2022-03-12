@@ -66,12 +66,14 @@ export default class JsMindNode {
    */
   createElement (elParent, jm) {
     // 创建 DOM 元素
-    const elNode = document.createElement('jmnode')
+    const elNode = document.createElement('div')
+    elNode.className = 'jmnode'
     if (this.isroot) {
-      elNode.className = 'root'
+      elNode.classList.add('root')
     } else {
       // 为父元素创建一个 expander
-      const elExpander = document.createElement('jmexpander')
+      const elExpander = document.createElement('div')
+      elExpander.className = 'jmexpander'
       // $t(elExpander, '-')
       elExpander.innerText = '-'
       elExpander.setAttribute('nodeid', this.id)
@@ -92,7 +94,7 @@ export default class JsMindNode {
    * 返回当前节点是否可见
    * @returns {Boolean}
    */
-  is_visible() {
+  is_visible () {
     return this.meta.layout.visible
   }
 
@@ -100,7 +102,7 @@ export default class JsMindNode {
    * 选中一个节点
    */
   select () {
-    this.meta.view.element.className += ' selected'
+    this.meta.view.element.classList.add('selected')
     this.clear_custom_style()
   }
 
@@ -108,8 +110,7 @@ export default class JsMindNode {
    * 取消选中一个节点
    */
   deselect () {
-    this.meta.view.element.className =
-      this.meta.view.element.className.replace(/\s*selected\b/i, '')
+    this.meta.view.element.classList.remove('selected')
     this.reset_node_custom_style()
   }
 

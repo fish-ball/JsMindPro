@@ -43,7 +43,8 @@ export default class JsMindView {
 
     this.e_panel = document.createElement('div')
     this.e_canvas = document.createElement('canvas')
-    this.e_nodes = document.createElement('jmnodes')
+    this.e_nodes = document.createElement('div')
+    this.e_nodes.className = 'jmnodes'
     this.e_editor = document.createElement('textarea')
 
     this.e_panel.className = 'jsmind-inner'
@@ -136,8 +137,14 @@ export default class JsMindView {
   get_binded_nodeid (element) {
     if (!element) return null
     let tagName = element.tagName.toLowerCase()
-    if (/^jmnodes|body|html$/.test(tagName)) return null
-    if (/^jmnode|jmexpander$/.test(tagName)) return Number(element.getAttribute('nodeid'))
+    if (tagName === 'body' || tagName === 'html' ||
+      element.classList.contains('jmnodes')) {
+      return null
+    }
+    if (element.classList.contains('jmnode') ||
+      element.classList.contains('jmexpander')) {
+      return Number(element.getAttribute('nodeid'))
+    }
     // 冒泡查找父标签
     return this.get_binded_nodeid(element.parentElement)
   }
@@ -156,8 +163,8 @@ export default class JsMindView {
    * 重设主题标记
    */
   reset_theme () {
-    let theme_name = this.jm.options.theme
-    this.e_nodes.className = theme_name ? 'theme-' + theme_name : ''
+    let themeName = this.jm.options.theme
+    this.e_nodes.className = themeName ? `jmnodes theme-${themeName}` : 'jmnodes'
   }
 
   /**

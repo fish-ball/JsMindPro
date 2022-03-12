@@ -109,10 +109,12 @@ class JsMindExtensionDraggable {
 
   /**
    * 创建拖动时的影子元素
+   * TODO: 这里的影子是写死的，自由拖动的时候会有区别
    * @private
    */
   _create_shadow () {
-    let s = document.createElement('jmnode')
+    const s = document.createElement('div')
+    s.className = 'jmnode'
     // 还没拖动，所以默认是隐藏的
     s.style.visibility = 'hidden'
     s.style.zIndex = '3'
@@ -264,7 +266,7 @@ class JsMindExtensionDraggable {
 
     let view = this.jm.view
     let el = e.target || event.srcElement
-    if (el.tagName.toLowerCase() !== 'jmnode') return
+    if (!el.classList.contains('jmnode')) return
     let nodeId = view.get_binded_nodeid(el)
     if (!nodeId) return
     let node = this.jm.get_node(nodeId)
