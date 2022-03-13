@@ -131,13 +131,12 @@ export default class JsMindView {
 
   /**
    * 获取当前元素绑定的节点 nodeId，可以冒泡寻找父节点
-   * @param element
+   * @param element {HTMLElement}
    * @returns {Integer|null}
    */
   get_binded_nodeid (element) {
     if (!element) return null
-    let tagName = element.tagName.toLowerCase()
-    if (tagName === 'body' || tagName === 'html' ||
+    if (/^body|html$/i.test(element.tagName) ||
       element.classList.contains('jmnodes')) {
       return null
     }
@@ -249,8 +248,8 @@ export default class JsMindView {
     } else {
       elNode.innerText = node.topic
     }
-    view.width = elNode.clientWidth
-    view.height = elNode.clientHeight
+    view.width = elNode.offsetWidth
+    view.height = elNode.offsetHeight
   }
 
   /**
@@ -518,8 +517,8 @@ export default class JsMindView {
    */
   _center_root () {
     // center root node
-    let outerW = this.e_panel.clientWidth
-    let outerH = this.e_panel.clientHeight
+    let outerW = this.e_panel.offsetWidth
+    let outerH = this.e_panel.offsetHeight
     if (this.size.w > outerW) {
       const offset = this.get_view_offset()
       this.e_panel.scrollLeft = offset.x - outerW / 2

@@ -55,8 +55,8 @@ export default class JsMindNode {
    */
   init_size () {
     let view = this.meta.view
-    view.width = view.element.clientWidth
-    view.height = view.element.clientHeight
+    view.width = view.element.offsetWidth
+    view.height = view.element.offsetHeight
   }
 
   /**
@@ -65,9 +65,15 @@ export default class JsMindNode {
    * @param jm {JsMind}
    */
   createElement (elParent, jm) {
-    // 创建 DOM 元素
+    // 添加 Node 的 DOM 元素
     const elNode = document.createElement('div')
     elNode.className = 'jmnode'
+    elNode.setAttribute('nodeid', this.id)
+    elNode.style.visibility = 'hidden'
+    this.reset_node_custom_style()
+    elParent.appendChild(elNode)
+    this.meta.view.element = elNode
+    // 添加折叠器 DOM
     if (this.isroot) {
       elNode.classList.add('root')
     } else {
@@ -81,11 +87,6 @@ export default class JsMindNode {
       elParent.appendChild(elExpander)
       this.meta.view.expander = elExpander
     }
-    elNode.setAttribute('nodeid', this.id)
-    elNode.style.visibility = 'hidden'
-    this.reset_node_custom_style()
-    elParent.appendChild(elNode)
-    this.meta.view.element = elNode
     // 刷新渲染状态
     jm.view.update_node(this)
   }

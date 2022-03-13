@@ -205,7 +205,7 @@ export default class JsMind {
   click_handle (e) {
     if (!this.options.default_event_handle['enable_click_handle']) return
     let element = e.target || event.srcElement
-    let isExpander = element.tagName.toLowerCase() === 'jmexpander'
+    let isExpander = element.classList.contains('jmexpander')
     // 仅处理展开器
     if (!isExpander) return
     let nodeId = this.view.get_binded_nodeid(element)

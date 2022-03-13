@@ -241,6 +241,10 @@ export default class JsMindLayout {
     return poutCache
   }
 
+  /**
+   * 计算折叠点空间的坐标
+   * @param node {JsMindNode}
+   */
   get_expander_point (node) {
     let p = this.get_node_point_out(node)
     let ex_p = {}
@@ -249,7 +253,7 @@ export default class JsMindLayout {
     } else {
       ex_p.x = p.x
     }
-    ex_p.y = p.y - Math.ceil(this.opts.pspace / 2)
+    ex_p.y = p.y - node.meta.view.expander.offsetHeight / 2
     return ex_p
   }
 
