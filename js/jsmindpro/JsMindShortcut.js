@@ -222,9 +222,7 @@ export default class JsMindShortcut {
       } else {
         node = selected_node.parent
       }
-      if (!!node) {
-        jm.select_node(node)
-      }
+      if (node) jm.select_node(node)
       evt.stopPropagation()
       evt.preventDefault()
     }

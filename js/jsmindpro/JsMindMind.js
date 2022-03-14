@@ -13,17 +13,13 @@ export default class JsMindMind {
     this.name = null
     this.author = null
     this.version = null
+    /** @type {JsMind} */
     this.jm = jm
     /**
      * 根节点
      * @type {JsMindNode|null}
      */
     this.root = null
-    /**
-     * 当前选中的节点
-     * @type {JsMindNode|null}
-     */
-    this.selected = null
     /**
      * 包含所有节点的字典，维护从 id 到 node 的映射
      * Contains the id -> node mapping relations for all nodes
@@ -195,7 +191,7 @@ export default class JsMindMind {
     node = this._sanitize_node(node)
     if (node.isroot) throw new Error('Cannot remove root node')
     // 如果删除的是当前选中节点，则置空选取
-    if (this.selected === node) this.selected = null
+    this.jm.view.select_clear()
     // 后序遍历，先递归清理所有子树节点
     let children = node.children
     node.children = []

@@ -15,13 +15,15 @@ export default class JsMindLayout {
     this.cache_valid = false
   }
 
-  init () {
-  }
-
   reset () {
     this.bounds = {n: 0, s: 0, w: 0, e: 0}
   }
 
+  /**
+   * 计算所有节点的界面布局位置，存放到 layout 逻辑对象中
+   * 暂时不渲染到 DOM
+   * 前置条件: node.meta.view 的宽度和高度已经被正确计算
+   */
   layout () {
     this._layout_direction_root()
     this._layout_offset()

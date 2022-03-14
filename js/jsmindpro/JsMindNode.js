@@ -42,15 +42,6 @@ export default class JsMindNode {
   }
 
   /**
-   * 清除节点的自定义样式
-   */
-  clear_custom_style () {
-    let el = this.meta.view.element
-    el.style.backgroundColor = ''
-    el.style.color = ''
-  }
-
-  /**
    * 加载元素的宽高，回写到 meta.view 对象中
    */
   init_size () {
@@ -70,7 +61,6 @@ export default class JsMindNode {
     elNode.className = 'jmnode'
     elNode.setAttribute('nodeid', this.id)
     elNode.style.visibility = 'hidden'
-    this.reset_node_custom_style()
     elParent.appendChild(elNode)
     this.meta.view.element = elNode
     // 添加折叠器 DOM
@@ -92,6 +82,20 @@ export default class JsMindNode {
   }
 
   /**
+   * 在 view 中销毁这个节点的元素
+   */
+  destroy () {
+    if (this.meta.view.element) {
+      this.meta.view.element.parentElement.removeChild(this.meta.view.element)
+      this.meta.view.element = null
+    }
+    if (this.meta.view.expander) {
+      this.meta.view.expander.parentElement.removeChild(this.meta.view.expander)
+      this.meta.view.expander = null
+    }
+  }
+
+  /**
    * 返回当前节点是否可见
    * @returns {Boolean}
    */
@@ -104,7 +108,6 @@ export default class JsMindNode {
    */
   select () {
     this.meta.view.element.classList.add('selected')
-    this.clear_custom_style()
   }
 
   /**
@@ -112,7 +115,6 @@ export default class JsMindNode {
    */
   deselect () {
     this.meta.view.element.classList.remove('selected')
-    this.reset_node_custom_style()
   }
 
   /**

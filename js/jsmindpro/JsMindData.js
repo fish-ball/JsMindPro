@@ -10,9 +10,6 @@ export default class JsMindData {
   init () {
   }
 
-  reset () {
-  }
-
   /**
    * 自动加载一个 mind 的配置数据（包含格式）
    * @param mind_data {Object}

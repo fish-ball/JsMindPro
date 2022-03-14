@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import 'jsmind'
 import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
@@ -88,6 +89,8 @@ export default class JsMindView {
 
     // 结束标记的事件，TODO: 为啥要写在这种地方？
     JsMindUtil.dom.add_event(this.e_editor, 'keydown', e => {
+      e.stopPropagation()
+      const node = this.editing_node
       if (e.key === 'Enter') {
         if (e.ctrlKey || e.altKey) {
           const start = e.target.selectionStart
@@ -97,16 +100,20 @@ export default class JsMindView {
           e.target.setSelectionRange(start + 1, start + 1)
           e.target.dispatchEvent(new Event('input'))
         } else {
-          this.edit_node_end()
           e.preventDefault()
+          this.edit_node_end()
+          this.select_node(node)
         }
       } else if (e.key === 'Escape') {
         this.edit_node_end(true)
+        // 编辑完成重新获得焦点
+        this.select_node(node)
       }
-      e.stopPropagation()
     })
     JsMindUtil.dom.add_event(this.e_editor, 'blur', e => {
       this.edit_node_end()
+      // 失去焦点的情况下，需要先反选原来选中的节点
+      if (this.selected_node) this.selected_node.deselect()
     })
 
     // 挂载控件
@@ -152,7 +159,6 @@ export default class JsMindView {
    * 重置一个 View
    */
   reset () {
-    this.selected_node = null
     this.clear_lines()
     this.clear_nodes()
     this.reset_theme()
@@ -163,7 +169,11 @@ export default class JsMindView {
    */
   reset_theme () {
     let themeName = this.jm.options.theme
-    this.e_nodes.className = themeName ? `jmnodes theme-${themeName}` : 'jmnodes'
+    const themeClass = _.find(this.e_nodes.classList, x => /^theme-/.test(x))
+    if (themeClass !== 'theme-' + themeName) {
+      this.e_nodes.classList.remove(themeClass)
+      this.e_nodes.classList.add('theme-' + themeName)
+    }
   }
 
   /**
@@ -175,10 +185,6 @@ export default class JsMindView {
     })
   }
 
-  load () {
-    this.init_nodes()
-  }
-
   /**
    * 展开到画布大小显示范围（缩放至显示全部）
    */
@@ -188,17 +194,6 @@ export default class JsMindView {
     let minHeight = minSize.h + this.opts.vmargin * 2
     this.size.w = Math.max(this.e_panel.clientWidth, minWidth)
     this.size.h = Math.max(this.e_panel.clientHeight, minHeight)
-  }
-
-  /**
-   * 初始化节点
-   */
-  init_nodes () {
-    let nodes = this.jm.mind.nodes
-    let fragment = document.createDocumentFragment()
-    _.forEach(nodes, node => node.createElement(fragment, this.jm))
-    this.e_nodes.appendChild(fragment)
-    _.forEach(nodes, node => node.init_size())
   }
 
   /**
@@ -259,12 +254,9 @@ export default class JsMindView {
    * @param node {JsMindNode|node}
    */
   select_node (node) {
-    if (node === this.selected_node) return
     if (this.selected_node) this.selected_node.deselect()
-    if (node) {
-      node.select()
-      this.selected_node = node
-    }
+    if (node) node.select()
+    this.selected_node = node
   }
 
   /**
@@ -320,8 +312,6 @@ export default class JsMindView {
     } else {
       this.jm.update_node(node.id, topic)
     }
-    // 编辑完成重新获得焦点
-    this.select_node(node)
   }
 
   /**
@@ -374,6 +364,7 @@ export default class JsMindView {
    * @param keepCenter {Boolean} 是否定位到中心
    */
   show (keepCenter) {
+    this.jm.layout.layout()
     this.expand_size()
     this._show()
     if (keepCenter) this._center_root()
@@ -415,9 +406,8 @@ export default class JsMindView {
    */
   clear_nodes () {
     if (!this.jm.mind) return
-    this.jm.mind.nodes.forEach(node => {
-      node.meta.view.element = null
-      node.meta.view.expander = null
+    _.forEach(this.jm.mind.nodes, node => {
+      node.destroy()
     })
   }
 
@@ -440,8 +430,7 @@ export default class JsMindView {
         elExpander.style.display = 'none'
         return
       }
-      // 重置节点的自定义样式
-      node.reset_node_custom_style()
+      // 计算坐标点并渲染到 DOM
       p = this.jm.layout.get_node_point(node)
       view.abs_x = offset.x + p.x
       view.abs_y = offset.y + p.y
@@ -528,6 +517,17 @@ export default class JsMindView {
     if (this.size.h > outerH) {
       this.e_panel.scrollTop = (this.size.h - outerH) / 2
     }
+  }
+
+  /**
+   * 初始化节点
+   */
+  init_nodes () {
+    let nodes = this.jm.mind.nodes
+    let fragment = document.createDocumentFragment()
+    _.forEach(nodes, node => node.createElement(fragment, this.jm))
+    this.e_nodes.appendChild(fragment)
+    _.forEach(nodes, node => node.init_size())
   }
 
   /**

@@ -108,7 +108,6 @@ export default class JsMind {
       vspace: opts.layout.vspace,
       pspace: opts.layout.pspace
     })
-    this.layout.init()
 
     // Init view
     this.view = new JsMindView(this, {
@@ -192,7 +191,7 @@ export default class JsMind {
     if (!!nodeId) {
       this.select_node(nodeId)
     } else {
-      this.select_clear()
+      this.view.select_clear()
     }
   }
 
@@ -377,9 +376,7 @@ export default class JsMind {
     this._require_editable()
     let node = this.mind.add_node(parentNode, nodeId, topic, data)
     this.view.add_node(node)
-    this.layout.layout()
     this.view.show(false)
-    node.reset_node_custom_style()
     this.expand_node(parentNode)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'add_node',
@@ -401,7 +398,6 @@ export default class JsMind {
     this._require_editable()
     let node = this.mind.insert_node_before(nodeBefore, nodeId, topic, data)
     this.view.add_node(node)
-    this.layout.layout()
     this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_before',
@@ -424,7 +420,6 @@ export default class JsMind {
     this._require_editable()
     let node = this.mind.insert_node_after(nodeAfter, nodeId, topic, data)
     this.view.add_node(node)
-    this.layout.layout()
     this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_after',
@@ -448,7 +443,6 @@ export default class JsMind {
     this.view.save_location(parent)
     this.view.remove_node(node)
     this.mind.remove_node(node)
-    this.layout.layout()
     this.view.show(false)
     this.view.restore_location(parent)
     this.invoke_event_handle(JsMind.event_type.edit, {
@@ -471,7 +465,6 @@ export default class JsMind {
     // 有修改
     node.topic = topic
     this.view.update_node(node)
-    this.layout.layout()
     this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'update_node', data: [nodeId, topic], node: nodeId
@@ -492,7 +485,6 @@ export default class JsMind {
     node = this.mind.move_node(node, nodeBefore, parent, direction)
     this.layout.expand_node(parent)
     this.view.update_node(node)
-    this.layout.layout()
     this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'move_node',
@@ -508,7 +500,6 @@ export default class JsMind {
   select_node (node) {
     node = this._sanitize_node(node)
     if (!node.is_visible()) return
-    this.mind.selected = node
     this.view.select_node(node)
   }
 
@@ -517,15 +508,7 @@ export default class JsMind {
    * @returns {JsMindNode}
    */
   get_selected_node () {
-    return this.mind.selected
-  }
-
-  /**
-   * 清除节点的选中状态
-   */
-  select_clear () {
-    this.mind.selected = null
-    this.view.select_clear()
+    return this.view.selected_node
   }
 
   /**
@@ -564,78 +547,6 @@ export default class JsMind {
       idx += 1
     }
     return idx > -1 ? node.parent.children[idx] : null
-  }
-
-  /**
-   * 设置某个指定 id 节点的颜色
-   * @param nodeId {Integer|String} 节点Id
-   * @param bgColor {String} 背景色
-   * @param fgColor {String} 前景色
-   */
-  set_node_color (nodeId, bgColor, fgColor) {
-    if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = this.mind.get_node(nodeId)
-    if (bgColor) node.data['background-color'] = bgColor
-    if (fgColor) node.data['foreground-color'] = fgColor
-    node.reset_node_custom_style()
-  }
-
-  /**
-   * 设置某个节点的字体样式
-   * @param nodeId {Integer|String}
-   * @param size {String}
-   * @param weight {String}
-   * @param style
-   */
-  set_node_font_style (nodeId, size, weight, style) {
-    if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = this.mind.get_node(nodeId)
-    if (size) node.data['font-size'] = size
-    if (weight) node.data['font-weight'] = weight
-    if (style) node.data['font-style'] = style
-    node.reset_node_custom_style()
-    this.view.update_node(node)
-    this.layout.layout()
-    this.view.show(false)
-  }
-
-  /**
-   * 设置某个节点的背景图
-   * @param nodeId {Integer|String}
-   * @param image {String}
-   * @param width
-   * @param height
-   * @param rotation
-   */
-  set_node_background_image (nodeId, image, width, height, rotation) {
-    if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = this.mind.get_node(nodeId)
-    if (image) node.data['background-image'] = image
-    if (width) node.data['width'] = width
-    if (height) node.data['height'] = height
-    if (rotation) node.data['background-rotation'] = rotation
-    node.reset_node_custom_style()
-    this.view.update_node(node)
-    this.layout.layout()
-    this.view.show(false)
-  }
-
-  /**
-   * 设置背景旋转
-   * @param nodeId {Integer}
-   * @param rotation {String}
-   */
-  set_node_background_rotation (nodeId, rotation) {
-    if (!this.get_editable()) throw new Error('This mind map is not editable')
-    let node = this.mind.get_node(nodeId)
-    if (!node.data['background-image']) {
-      throw new Error('Can only change rotation angle of node with background image')
-    }
-    node.data['background-rotation'] = rotation
-    node.reset_node_custom_style()
-    this.view.update_node(node)
-    this.layout.layout()
-    this.view.show(false)
   }
 
   /**
@@ -682,7 +593,6 @@ export default class JsMind {
   _reset () {
     this.view.reset()
     this.layout.reset()
-    this.data.reset()
   }
 
   /**
@@ -694,8 +604,7 @@ export default class JsMind {
     // m 是数据
     let m = mind || JsMind.format.node_array.example
     this.mind = this.data.load(m)
-    this.view.load()
-    this.layout.layout()
+    this.view.init_nodes()
     this.view.show(true)
     this.invoke_event_handle(JsMind.event_type.show, {
       data: [mind]
