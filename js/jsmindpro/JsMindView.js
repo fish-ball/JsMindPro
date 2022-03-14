@@ -241,8 +241,10 @@ export default class JsMindView {
   update_node (node) {
     const view = node.meta.view
     let elNode = view.element
-    if (this.opts.renderNode instanceof Function) {
-      this.opts.renderNode(elNode, this)
+    if (this.opts.render_node instanceof Function) {
+      // 注意在 render_node 实现里面，需要把原来的 el attributes 回填进去
+      elNode = this.opts.render_node(elNode, node)
+      node.meta.view.element = elNode
     } else if (this.opts.support_html) {
       elNode.innerHTML = node.topic
     } else {

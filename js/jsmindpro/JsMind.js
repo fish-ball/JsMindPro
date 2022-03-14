@@ -114,10 +114,8 @@ export default class JsMind {
     this.view = new JsMindView(this, {
       container: opts.container,
       support_html: opts.support_html,
-      hmargin: opts.view.hmargin,
-      vmargin: opts.view.vmargin,
-      line_width: opts.view.line_width,
-      line_color: opts.view.line_color
+      render_node: opts.render_node,
+      ...opts.view
     })
     this.view.init()
 
