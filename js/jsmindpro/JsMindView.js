@@ -62,7 +62,7 @@ export default class JsMindView {
     this.e_editor.style.overflowX = 'hidden'
     // 根据内容自适应宽度
     this.e_editor.addEventListener('input', e => {
-      // 用 canvas 计算实际宽度 https://stackoverflow.com/a/58705306/2544762
+      // 用 canvas 计算实际编辑框宽度 https://stackoverflow.com/a/58705306/2544762
       const element = jm.view.selected_node.meta.view.element
       element.style.overflow = 'visible'
       const elMeasure = element.cloneNode(false)
@@ -206,27 +206,39 @@ export default class JsMindView {
     node.init_size()
   }
 
-  remove_node (node) {
-    if (this.selected_node != null && this.selected_node.id === node.id) {
-      this.selected_node = null
+  /**
+   * 删除一个节点
+   * !! IMPORTANT !! 注意不要单独使用，用的话请用 jm.remove_node 而非 jm.view.remove_node
+   * 这个只负责删除节点视图，逻辑节点还需要调用 mind.remove_node，都删了才算闭环
+   * @param node {JsMindNode}
+   * @param cascade {Boolean} 是否被级联删除，默认 false，即直接删除
+   */
+  remove_node (node, cascade = false) {
+    // 如果当前选中的节点被删除，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
+    if (this.selected_node && this.selected_node === node) {
+      if (cascade) {
+        // 这个分支意味着当前选中节点的祖先节点被直接删除，自己是被连坐的，这样的话取消选中即可
+        this.select_clear()
+      } else {
+        // 这个分支就是直接删除当前选中的节点，按照优先级转移焦点
+        const parent = node.parent
+        const index = parent.children.indexOf(node)
+        if (index < parent.children.length - 1) {
+          this.select_node(parent.children[index + 1])
+        } else if (index > 0) {
+          this.select_node(parent.children[index - 1])
+        } else {
+          this.select_node(parent)
+        }
+      }
     }
-    if (this.editing_node != null && this.editing_node.id === node.id) {
+    if (this.editing_node && this.editing_node === node) {
       node.meta.view.element.removeChild(this.e_editor)
       this.editing_node = null
     }
-    let children = node.children
-    let i = children.length
-    while (i--) {
-      this.remove_node(children[i])
-    }
-    if (node.meta.view) {
-      const element = node.meta.view.element
-      const expander = node.meta.view.expander
-      this.e_nodes.removeChild(element)
-      this.e_nodes.removeChild(expander)
-      node.meta.view.element = null
-      node.meta.view.expander = null
-    }
+    // 后续遍历，先递归删除所有子节点
+    node.children.forEach(child => this.remove_node(child, true))
+    node.destroy()
   }
 
   /**
@@ -282,6 +294,7 @@ export default class JsMindView {
   edit_node_begin (node) {
     // 如果正在编辑另一个，先结束编辑
     if (this.editing_node) this.edit_node_end()
+    this.select_node(node)
     this.editing_node = node
     let element = node.meta.view.element
     this.e_editor.value = node.topic
@@ -369,6 +382,8 @@ export default class JsMindView {
     this.expand_size()
     this._show()
     if (keepCenter) this._center_root()
+    // 重新渲染一下选中，否则某些情况下会丢失焦点
+    this.select_node(this.selected_node)
   }
 
   /**
@@ -524,11 +539,23 @@ export default class JsMindView {
    * 初始化节点
    */
   init_nodes () {
-    let nodes = this.jm.mind.nodes
-    let fragment = document.createDocumentFragment()
+    const nodes = this.jm.mind.nodes
+    const fragment = document.createDocumentFragment()
     _.forEach(nodes, node => node.createElement(fragment, this.jm))
     this.e_nodes.appendChild(fragment)
     _.forEach(nodes, node => node.init_size())
+  }
+
+  /**
+   * 重新创建一个 node 的元素
+   * 产生了对象之后还需要调用 view.show() 来进行渲染
+   */
+  refresh_node (node) {
+    node.destroy()
+    const fragment = document.createDocumentFragment()
+    node.createElement(fragment, this.jm)
+    this.e_nodes.appendChild(fragment)
+    node.init_size()
   }
 
   /**

@@ -64,9 +64,11 @@ export default class JsMindShortcut {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
-    let node = jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    jm.select_node(node)
-    jm.begin_edit(node)
+    // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
+    // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
+    const node = jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    // 需要做插入之后的选中，暂时放在外部去做
+    // jm.begin_edit(node)
     e.preventDefault()
   }
 
@@ -79,9 +81,11 @@ export default class JsMindShortcut {
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     if (selectedNode.isroot) return this.handle_addchild(e)
-    let node = jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    jm.select_node(node)
-    jm.begin_edit(node)
+    // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
+    // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
+    const node = jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    // 需要做插入之后的选中，暂时放在外部去做
+    // jm.begin_edit(node)
     e.preventDefault()
   }
 
@@ -104,7 +108,6 @@ export default class JsMindShortcut {
     let selected_node = jm.get_selected_node()
     if (!selected_node) return
     if (selected_node.isroot) throw new Error('Cannot delete root node.')
-    jm.select_node(selected_node.parent)
     jm.remove_node(selected_node)
   }
 

@@ -416,7 +416,6 @@ export default class JsMind {
     this._require_editable()
     let node = this.mind.insert_node_after(nodeAfter, nodeId, topic, data)
     this.view.add_node(node)
-    this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_after',
       data: [JsMindUtil.to_node_id(nodeAfter), nodeId, topic, data],
@@ -436,6 +435,7 @@ export default class JsMind {
     let nodeId = node.id
     let parentId = node.parent.id
     let parent = this.get_node(parentId)
+    // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
     this.view.save_location(parent)
     this.view.remove_node(node)
     this.mind.remove_node(node)
@@ -563,6 +563,7 @@ export default class JsMind {
 
   /**
    * 触发一个事件处理
+   * TODO: event_handle 相关的都属于外部注入钩子，需要改成 async
    * @param type
    * @param data
    */

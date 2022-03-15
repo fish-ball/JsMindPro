@@ -48,7 +48,7 @@ export default class JsMindMind {
   rename_node (oldId, newId) {
     if (!(oldId) in this.nodes) return
     const node = this.nodes[oldId]
-    this.nodes[newId] = this.nodes[oldId]
+    this.nodes[newId] = node
     delete this.nodes[oldId]
     node.rename(newId)
   }
@@ -190,8 +190,6 @@ export default class JsMindMind {
   remove_node (node) {
     node = this._sanitize_node(node)
     if (node.isroot) throw new Error('Cannot remove root node')
-    // 如果删除的是当前选中节点，则置空选取
-    this.jm.view.select_clear()
     // 后序遍历，先递归清理所有子树节点
     let children = node.children
     node.children = []
