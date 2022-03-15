@@ -139,7 +139,7 @@ export default class JsMindView {
   /**
    * 获取当前元素绑定的节点 nodeId，可以冒泡寻找父节点
    * @param element {HTMLElement}
-   * @returns {Integer|null}
+   * @returns {Number|String|null}
    */
   get_binded_nodeid (element) {
     if (!element) return null
@@ -149,7 +149,8 @@ export default class JsMindView {
     }
     if (element.classList.contains('jmnode') ||
       element.classList.contains('jmexpander')) {
-      return Number(element.getAttribute('nodeid'))
+      const nodeId = element.getAttribute('nodeid')
+      return /^\d+$/.test(nodeId) ? Number(nodeId) : nodeId
     }
     // 冒泡查找父标签
     return this.get_binded_nodeid(element.parentElement)

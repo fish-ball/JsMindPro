@@ -63,14 +63,11 @@ export default class JsMindShortcut {
   handle_addchild (e) {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
-    if (!!selectedNode) {
-      let nodeid = JsMindUtil.uuid.newid()
-      let node = jm.add_node(selectedNode, nodeid, 'New Node')
-      if (!!node) {
-        jm.select_node(nodeid)
-        jm.begin_edit(nodeid)
-      }
-    }
+    if (!selectedNode) return
+    let node = jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    jm.select_node(node)
+    jm.begin_edit(node)
+    e.preventDefault()
   }
 
   /**
@@ -81,11 +78,10 @@ export default class JsMindShortcut {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
-    if (selectedNode.isroot) return this.handle_addchild(jm, e)
-    let nodeId = JsMindUtil.uuid.newid()
-    let node = jm.insert_node_after(selectedNode, nodeId, 'New Node')
-    jm.select_node(node.id)
-    jm.begin_edit(node.id)
+    if (selectedNode.isroot) return this.handle_addchild(e)
+    let node = jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    jm.select_node(node)
+    jm.begin_edit(node)
     e.preventDefault()
   }
 
@@ -143,9 +139,7 @@ export default class JsMindShortcut {
         up_node = np.children[np.children.length - 1]
       }
     }
-    if (!!up_node) {
-      jm.select_node(up_node)
-    }
+    if (up_node) jm.select_node(up_node)
     evt.stopPropagation()
     evt.preventDefault()
   }
@@ -166,9 +160,7 @@ export default class JsMindShortcut {
         down_node = np.children[0]
       }
     }
-    if (!!down_node) {
-      jm.select_node(down_node)
-    }
+    if (down_node) jm.select_node(down_node)
     evt.stopPropagation()
     evt.preventDefault()
   }
@@ -179,7 +171,6 @@ export default class JsMindShortcut {
    * @param e {KeyboardEvent}
    */
   handle_left (e) {
-    const jm = this.jm
     this._handle_direction(e, JsMind.direction.left)
   }
 
@@ -194,7 +185,7 @@ export default class JsMindShortcut {
   /**
    * 处理左或者右方向的按键响应
    * @param e {KeyboardEvent}
-   * @param d {Integer} 方向枚举值
+   * @param d {Number} 方向枚举值
    * @private
    */
   _handle_direction (e, d) {

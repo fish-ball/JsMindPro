@@ -206,9 +206,7 @@ export default class JsMind {
     // 仅处理展开器
     if (!isExpander) return
     let nodeId = this.view.get_binded_nodeid(element)
-    if (!!nodeId) {
-      this.toggle_node(nodeId)
-    }
+    if (nodeId) this.toggle_node(nodeId)
   }
 
   /**
@@ -219,16 +217,14 @@ export default class JsMind {
     if (!this.options.default_event_handle['enable_dblclick_handle']) return
     if (this.get_editable()) {
       let element = e.target || event.srcElement
-      let nodeid = this.view.get_binded_nodeid(element)
-      if (!!nodeid) {
-        this.begin_edit(nodeid)
-      }
+      let nodeId = this.view.get_binded_nodeid(element)
+      if (nodeId) this.begin_edit(nodeId)
     }
   }
 
   /**
    * 开始编辑一个节点
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    */
   begin_edit (node) {
     node = this._sanitize_node(node)
@@ -245,7 +241,7 @@ export default class JsMind {
 
   /**
    * 切换一个节点的折叠/展开状态
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    */
   toggle_node (node) {
     node = this._sanitize_node(node)
@@ -258,7 +254,7 @@ export default class JsMind {
 
   /**
    * 展开一个节点
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    */
   expand_node (node) {
     node = this._sanitize_node(node)
@@ -271,7 +267,7 @@ export default class JsMind {
 
   /**
    * 折叠一个节点
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    */
   collapse_node (node) {
     node = this._sanitize_node(node)
@@ -300,7 +296,7 @@ export default class JsMind {
 
   /**
    * 展开到指定的层级
-   * @param depth {Integer} 层级
+   * @param depth {Number} 层级
    */
   expand_to_depth (depth) {
     this.layout.expand_to_depth(depth)
@@ -348,7 +344,7 @@ export default class JsMind {
 
   /**
    * 在当前图内获取指定 id 的 node
-   * @param nodeId {Integer}
+   * @param nodeId {Number}
    * @returns {JsMindNode}
    */
   get_node (nodeId) {
@@ -366,8 +362,8 @@ export default class JsMind {
 
   /**
    * 根据输入值生成并添加一个节点
-   * @param parentNode {JsMindNode|Integer|String} 父节点的 ID
-   * @param nodeId {Integer|String} 加入节点的 ID
+   * @param parentNode {JsMindNode|Number|String} 父节点的 ID
+   * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
    * @returns {JsMindNode} 范围添加成功后的节点，操作失败返回 null
@@ -388,8 +384,8 @@ export default class JsMind {
 
   /**
    * 在指定的节点之前插入一个兄弟节点
-   * @param nodeBefore {JsMindNode|Integer|String} 参照节点或其ID
-   * @param nodeId {Integer|String} 加入节点的 ID
+   * @param nodeBefore {JsMindNode|Number|String} 参照节点或其ID
+   * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {JsMindNode}
@@ -410,8 +406,8 @@ export default class JsMind {
   /**
    * 在指定的节点之后插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeAfter {JsMindNode|Integer|String} 参照节点或其ID
-   * @param nodeId nodeId {Integer|String} 加入节点的 ID
+   * @param nodeAfter {JsMindNode|Number|String} 参照节点或其ID
+   * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {JsMindNode}
@@ -431,7 +427,7 @@ export default class JsMind {
 
   /**
    * 移除一个指定的节点
-   * @param node {JsMindNode|Integer|String} 待移除节点或者 ID
+   * @param node {JsMindNode|Number|String} 待移除节点或者 ID
    */
   remove_node (node) {
     node = this._sanitize_node(node)
@@ -453,7 +449,7 @@ export default class JsMind {
 
   /**
    * 修改一个节点的内容
-   * @param nodeId {Integer|String} 节点ID
+   * @param nodeId {Number|String} 节点ID
    * @param topic {String} 新的节点内容
    */
   update_node (nodeId, topic) {
@@ -473,11 +469,11 @@ export default class JsMind {
 
   /**
    * 移动一个节点
-   * @param node {JsMindNode|Integer|String} 待移动节点
-   * @param nodeBefore {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String} 待移动节点
+   * @param nodeBefore {JsMindNode|Number|String}
    *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
-   * @param parent {JsMindNode|Integer|String}
-   * @param direction {Integer} 如果目标位置是一级子节点，指定方向
+   * @param parent {JsMindNode|Number|String}
+   * @param direction {Number} 如果目标位置是一级子节点，指定方向
    */
   move_node (node, nodeBefore, parent, direction) {
     this._require_editable()
@@ -495,7 +491,7 @@ export default class JsMind {
 
   /**
    * 触发选中某个节点
-   * @param node {JsMindNode|Integer|String} 待选中的节点
+   * @param node {JsMindNode|Number|String} 待选中的节点
    */
   select_node (node) {
     node = this._sanitize_node(node)
@@ -513,7 +509,7 @@ export default class JsMind {
 
   /**
    * 返回指定节点的上一个节点（注意会穿越层级，也就是按↑键对应的节点）
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    * @returns {JsMindNode}
    */
   find_node_before (node) {
@@ -532,7 +528,7 @@ export default class JsMind {
 
   /**
    * 返回指定节点的下一个节点（注意会穿越层级，也就是按↓键对应的节点）
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    * @returns {JsMindNode}
    */
   find_node_after (node) {
@@ -623,7 +619,7 @@ export default class JsMind {
    * 返回一个 node 实例：
    * + 如果传入 nodeId，则返回对应的节点集内的 node，找不到返回 null
    * + 如果传入的是 node 实例，则查找是否在节点集内并一致，一致返回节点本身，否则返回 null
-   * @param node {JsMindNode|Integer}
+   * @param node {JsMindNode|Number}
    * @returns {JsMindNode}
    * @private
    */

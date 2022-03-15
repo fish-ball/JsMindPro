@@ -107,14 +107,18 @@ export default class JsMindNode {
    * 选中一个节点
    */
   select () {
-    this.meta.view.element.classList.add('selected')
+    if (this.meta.view.element) {
+      this.meta.view.element.classList.add('selected')
+    }
   }
 
   /**
    * 取消选中一个节点
    */
   deselect () {
-    this.meta.view.element.classList.remove('selected')
+    if (this.meta.view.element) {
+      this.meta.view.element.classList.remove('selected')
+    }
   }
 
   /**
