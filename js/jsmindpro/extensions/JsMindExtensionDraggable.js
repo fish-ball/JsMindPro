@@ -126,7 +126,7 @@ class JsMindExtensionDraggable {
   /**
    * 绘制到影子到的目标节点连接线
    * @param node {JsMindNode} 目标节点
-   * @param direction {Integer} 方向
+   * @param direction {Number} 方向
    * @param sp {{x, y}} ShadowPoint 连接点坐标
    * @param np {{x, y}} NodePoint 连接点坐标
    * @private

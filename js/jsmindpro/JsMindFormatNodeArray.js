@@ -63,7 +63,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
    * 解析出根节点
    * @param mind {JsMindMind}
    * @param nodeArray {[]}
-   * @returns {Integer|String} 返回根节点的 id
+   * @returns {Number|String} 返回根节点的 id
    * @private
    */
   static _extract_root (mind, nodeArray) {
@@ -83,7 +83,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
   /**
    * 从 node_array 里面解析并提取子节点到 parentId 的节点子集中
    * @param mind {JsMindMind}
-   * @param parentId {Integer|String}
+   * @param parentId {Number|String}
    * @param nodeArray {Object[]} 原始节点数据
    * @returns {Number}
    * @private

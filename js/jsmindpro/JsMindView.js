@@ -5,14 +5,6 @@ import JsMindUtil from './JsMindUtil'
 
 ///////// Shortcut Functions /////////
 
-let $t = function (n, t) {
-  if (n.hasChildNodes()) {
-    n.firstChild.nodeValue = t
-  } else {
-    n.appendChild(document.createTextNode(t))
-  }
-}
-
 export default class JsMindView {
   constructor (jm, options) {
     this.opts = options
@@ -267,9 +259,16 @@ export default class JsMindView {
    * @param node {JsMindNode|node}
    */
   select_node (node) {
-    if (this.selected_node) this.selected_node.deselect()
+    const lastNode = this.selected_node
+    if (lastNode) this.selected_node.deselect()
     if (node) node.select()
     this.selected_node = node
+    // 发出事件
+    if (node !== lastNode) {
+      this.jm.invoke_event_handle(JsMind.event_type.select, {
+        node: node && node.id
+      })
+    }
   }
 
   /**

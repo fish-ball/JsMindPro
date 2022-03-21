@@ -63,8 +63,8 @@ export default class JsMindLayout {
   /**
    * 布局一个节点到指定的方向
    * @param node {JsMindNode} 节点
-   * @param direction {Integer} 这个节点的布局方向
-   * @param sideIndex {Integer} 这个节点在指定方向的序号
+   * @param direction {Number} 这个节点的布局方向
+   * @param sideIndex {Number} 这个节点在指定方向的序号
    * @private
    */
   _layout_direction_side (node, direction, sideIndex) {

@@ -2,19 +2,19 @@ export default class JsMindNodeLayout {
   constructor () {
     /** @type {Boolean} */
     this.visible = true
-    /** @type {Integer} */
+    /** @type {Number} */
     this.direction = null
-    /** @type {Integer} */
+    /** @type {Number} */
     this.side_index = null
-    /** @type {Integer} */
+    /** @type {Number} */
     this.offset_x = null
-    /** @type {Integer} */
+    /** @type {Number} */
     this.offset_y = null
-    /** @type {Integer} */
+    /** @type {Number} */
     this.outer_height = null
-    /** @type {Integer} */
+    /** @type {Number} */
     this.outer_height_left = null
-    /** @type {Integer} */
+    /** @type {Number} */
     this.outer_height_right = null
     /** @type {JsMindNode[]} */
     this.left_nodes = []

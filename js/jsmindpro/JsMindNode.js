@@ -5,13 +5,13 @@ import JsMindNodeMeta from './JsMindNodeMeta'
 export default class JsMindNode {
   /**
    * 构造一个 JsMind 节点
-   * @param id {Integer|String}
-   * @param index {Integer}
+   * @param id {Number|String}
+   * @param index {Number}
    * @param topic {String}
    * @param data {{}}
    * @param isroot {Boolean}
    * @param parent {JsMindNode}
-   * @param direction {Integer}
+   * @param direction {Number}
    * @param expanded {Boolean}
    */
   constructor (id, index, topic, data, isroot, parent = null,

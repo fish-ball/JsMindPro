@@ -31,7 +31,7 @@ export default class JsMindMind {
   /**
    * 返回一个指定 id 的节点 Node 对象
    * Returns a node with given id.
-   * @param nodeId {Integer}
+   * @param nodeId {Number}
    * @returns {JsMindNode}
    */
   get_node (nodeId) {
@@ -55,7 +55,7 @@ export default class JsMindMind {
 
   /**
    * 根据输入的节点信息生成并设置根节点，只能执行一次，第二次忽略
-   * @param nodeId {Integer|String}
+   * @param nodeId {Number|String}
    * @param topic {String}
    * @param data {*}
    */
@@ -67,12 +67,12 @@ export default class JsMindMind {
 
   /**
    * 根据输入值生成并添加一个节点
-   * @param parentNode {JsMindNode|Integer|String} 父节点的 ID
-   * @param nodeId {Integer|String} 加入节点的 ID
+   * @param parentNode {JsMindNode|Number|String} 父节点的 ID
+   * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
-   * @param idx {Integer} 节点序号，默认放最后
-   * @param direction {Integer}
+   * @param idx {Number} 节点序号，默认放最后
+   * @param direction {Number}
    * @param expanded {Boolean}
    * @returns {JsMindNode} 范围添加成功后的节点，操作失败返回 null
    */
@@ -120,8 +120,8 @@ export default class JsMindMind {
   /**
    * 在指定的节点之前插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeBefore {JsMindNode|Integer|String} 参照节点或其ID
-   * @param nodeId nodeId {Integer|String} 加入节点的 ID
+   * @param nodeBefore {JsMindNode|Number|String} 参照节点或其ID
+   * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {JsMindNode}
@@ -134,7 +134,7 @@ export default class JsMindMind {
 
   /**
    * 获取指定节点的前一个兄弟节点
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    * @returns {JsMindNode}
    */
   get_node_before (node) {
@@ -147,8 +147,8 @@ export default class JsMindMind {
   /**
    * 在指定的节点之后插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeAfter {JsMindNode|Integer|String} 参照节点或其ID
-   * @param nodeId nodeId {Integer|String} 加入节点的 ID
+   * @param nodeAfter {JsMindNode|Number|String} 参照节点或其ID
+   * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {JsMindNode}
@@ -160,7 +160,7 @@ export default class JsMindMind {
 
   /**
    * 获取指定节点的后一个节点
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    * @returns {JsMindNode}
    */
   get_node_after (node) {
@@ -171,11 +171,11 @@ export default class JsMindMind {
 
   /**
    * 移动一个节点
-   * @param node {JsMindNode|Integer|String} 待移动节点
-   * @param nodeBefore {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String} 待移动节点
+   * @param nodeBefore {JsMindNode|Number|String}
    *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
-   * @param parent {JsMindNode|Integer|String}
-   * @param direction {Integer} 如果目标位置是一级子节点，指定方向
+   * @param parent {JsMindNode|Number|String}
+   * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {JsMindNode}
    */
   move_node (node, nodeBefore, parent, direction) {
@@ -185,7 +185,7 @@ export default class JsMindMind {
 
   /**
    * 移除一个节点
-   * @param node {JsMindNode|Integer|String} 待移除的节点
+   * @param node {JsMindNode|Number|String} 待移除的节点
    */
   remove_node (node) {
     node = this._sanitize_node(node)
@@ -204,7 +204,7 @@ export default class JsMindMind {
    * 返回一个 node 实例：
    * + 如果传入 nodeId，则返回对应的节点集内的 node，找不到返回 null
    * + 如果传入的是 node 实例，则查找是否在节点集内并一致，一致返回节点本身，否则返回 null
-   * @param node {JsMindNode|Integer}
+   * @param node {JsMindNode|Number}
    * @returns {JsMindNode}
    * @private
    */
@@ -216,11 +216,11 @@ export default class JsMindMind {
 
   /**
    * 执行实质移动一个节点
-   * @param node {JsMindNode|Integer|String} 待移动节点
-   * @param nodeBefore {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String} 待移动节点
+   * @param nodeBefore {JsMindNode|Number|String}
    *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
-   * @param parent {JsMindNode|Integer|String}
-   * @param direction {Integer} 如果目标位置是一级子节点，指定方向
+   * @param parent {JsMindNode|Number|String}
+   * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {JsMindNode}
    * @private
    */
@@ -246,8 +246,8 @@ export default class JsMindMind {
 
   /**
    * 递归修改某个节点的方向（递归修改子节点的方向）
-   * @param node {JsMindNode|Integer|String} 目标节点
-   * @param direction {Integer} 需要改变的方向，缺省则为跟从当前的方向
+   * @param node {JsMindNode|Number|String} 目标节点
+   * @param direction {Number} 需要改变的方向，缺省则为跟从当前的方向
    * @private
    */
   _flow_node_direction (node, direction = void 0) {
@@ -258,7 +258,7 @@ export default class JsMindMind {
   /**
    * 在同一个父节点内部移动一个节点
    * @param node
-   * @param nodeBefore {JsMindNode|Integer|String}
+   * @param nodeBefore {JsMindNode|Number|String}
    *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
    * @returns {JsMindNode|null}
    * @private
@@ -294,7 +294,7 @@ export default class JsMindMind {
 
   /**
    * 重整某个节点下的子节点的序号
-   * @param node {JsMindNode|Integer|String}
+   * @param node {JsMindNode|Number|String}
    * @private
    */
   _reindex (node) {

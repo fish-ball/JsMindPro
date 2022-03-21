@@ -9,8 +9,8 @@ export default class JsMindUtil {
 
   /**
    * 如果传入是节点，返回其 ID，否则返回其本身（假设其是一个 ID）
-   * @param node {JsMindNode|Integer|String}
-   * @returns {Integer|String}
+   * @param node {JsMindNode|Number|String}
+   * @returns {Number|String}
    */
   static to_node_id (node) {
     return this.is_node(node) ? node.id : node
