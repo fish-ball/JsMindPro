@@ -3,33 +3,33 @@ import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
 
 // shortcut provider
+// TODO: 热键防抖如何解决？
 export default class JsMindShortcut {
   constructor (jm, options) {
     this.jm = jm
     this.opts = options
-    this.mapping = options.mapping
-    this.handles = options.handles
+    // 绑定所有外置 handles 处理函数
+    this.handles = {}
+    _.forEach(options.handles, (func, key) => {
+      this.handles[key] = func
+    })
+    // 绑定所有内置 handle 处理函数 handle_xxx 到 this.handles.xxx
+    Object.getOwnPropertyNames(Object.getPrototypeOf(this)).forEach(key => {
+      if (!key.startsWith('handle_')) return
+      const handle = key.replace(/^handle_/, '')
+      this.handles[handle] = this[key]
+    })
+    // 加入映射
     this._mapping = {}
-  }
-
-  init () {
-    JsMindUtil.dom.add_event(document, 'keydown', this.handler.bind(this))
-
-    this.handles['addchild'] = this.handle_addchild
-    this.handles['addbrother'] = this.handle_addbrother
-    this.handles['editnode'] = this.handle_editnode
-    this.handles['delnode'] = this.handle_delnode
-    this.handles['toggle'] = this.handle_toggle
-    this.handles['up'] = this.handle_up
-    this.handles['down'] = this.handle_down
-    this.handles['left'] = this.handle_left
-    this.handles['right'] = this.handle_right
-
-    _.forEach(this.mapping, (key, handle) => {
-      if (handle in this.mapping && handle in this.handles) {
+    _.forEach(options.mapping, (handle, key) => {
+      if (handle instanceof Function) {
+        this._mapping[key] = handle
+      } else if (handle in this.handles) {
         this._mapping[key] = this.handles[handle]
       }
     })
+    // 绑定事件
+    JsMindUtil.dom.add_event(document, 'keydown', this.handler.bind(this))
   }
 
   enable_shortcut () {
@@ -47,12 +47,22 @@ export default class JsMindShortcut {
   handler (e) {
     // 编辑中状态不处理热键
     if (this.jm.view.is_editing()) return
-    let evt = e || event
+    e = e || event
     if (!this.opts.enable) return
-    let kc = evt.keyCode
-    if (kc in this._mapping) {
-      this._mapping[kc].call(this, e)
+    // 纯控制键不响应
+    if (/^Control|Shift|Alt|Meta$/.test(e.key)) return
+    const keys = []
+    if (e.ctrlKey) keys.push('Control')
+    if (e.shiftKey) keys.push('Shift')
+    if (e.altKey) keys.push('Alt')
+    if (e.metaKey) keys.push('Meta')
+    keys.push(e.code)
+    const keyName = keys.join('+')
+    if (keyName in this._mapping) {
+      this._mapping[keyName].apply(this, [e])
       e.preventDefault()
+    } else if ('default' in this.handles) {
+      this.handles.default.apply(this, [e, keyName])
     }
   }
 
@@ -67,7 +77,7 @@ export default class JsMindShortcut {
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
     const node = jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    // 需要做插入之后的选中，暂时放在外部去做
+    // TODO: 需要做插入之后的选中，暂时放在外部去做
     // jm.begin_edit(node)
     e.preventDefault()
   }
@@ -84,7 +94,7 @@ export default class JsMindShortcut {
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
     const node = jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    // 需要做插入之后的选中，暂时放在外部去做
+    // TODO: 需要做插入之后的选中，暂时放在外部去做
     // jm.begin_edit(node)
     e.preventDefault()
   }

@@ -45,15 +45,15 @@ let DEFAULT_OPTIONS = {
     enable: true,
     handles: {},
     mapping: {
-      addchild: 'Insert',
-      addbrother: 'Enter',
-      editnode: 'F2',
-      delnode: 'Delete',
-      toggle: 'Space',
-      left: 'ArrowLeft',
-      up: 'ArrowUp',
-      right: 'ArrowRight',
-      down: 'ArrowDown',
+      Tab: 'addchild',
+      Enter: 'addbrother',
+      F2: 'editnode',
+      Delete: 'delnode',
+      Space: 'toggle',
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      ArrowUp: 'up',
+      ArrowDown: 'down'
     }
   }
 }
@@ -120,7 +120,6 @@ export default class JsMind {
 
     // Init shortcut
     this.shortcut = new JsMindShortcut(this, opts.shortcut)
-    this.shortcut.init()
 
     this._event_bind()
 
