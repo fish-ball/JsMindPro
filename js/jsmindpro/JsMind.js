@@ -45,15 +45,15 @@ let DEFAULT_OPTIONS = {
     enable: true,
     handles: {},
     mapping: {
-      addchild: 45, // Insert
-      addbrother: 13, // Enter
-      editnode: 113,// F2
-      delnode: 46, // Delete
-      toggle: 32, // Space
-      left: 37, // Left
-      up: 38, // Up
-      right: 39, // Right
-      down: 40, // Down
+      addchild: 'Insert',
+      addbrother: 'Enter',
+      editnode: 'F2',
+      delnode: 'Delete',
+      toggle: 'Space',
+      left: 'ArrowLeft',
+      up: 'ArrowUp',
+      right: 'ArrowRight',
+      down: 'ArrowDown',
     }
   }
 }
@@ -255,14 +255,30 @@ export default class JsMind {
   /**
    * 展开一个节点
    * @param node {JsMindNode|Number|String}
+   * @param deep {boolean} 是否级联展开到最底层
    */
-  expand_node (node) {
+  expand_node (node, deep = false) {
     node = this._sanitize_node(node)
     if (node.isroot) return
     this.view.save_location(node)
-    this.layout.expand_node(node)
+    this.layout.expand_node(node, deep)
     this.view.relayout()
     this.view.restore_location(node)
+  }
+
+  /**
+   * 展开到指定的节点列表
+   * 将指定的列表到根节点的路径全部打开，其余全部关闭
+   * @param nodes {JsMindNode[]|Number[]|String[]}
+   */
+  expand_to_nodes (nodes) {
+    this.collapse_all()
+    nodes.forEach(node => {
+      node = this._sanitize_node(node)
+      if (node.isroot) return
+      this.layout.expand_node(node.parent)
+    })
+    this.view.relayout()
   }
 
   /**
@@ -274,6 +290,24 @@ export default class JsMind {
     if (node.isroot) return
     this.view.save_location(node)
     this.layout.collapse_node(node)
+    this.view.relayout()
+    this.view.restore_location(node)
+  }
+
+  /**
+   * 折叠除本节点外的其他节点
+   * @param node {JsMindNode|Number|String}
+   */
+  collapse_other (node) {
+    node = this._sanitize_node(node)
+    this.view.save_location(node)
+    // 从当前层级上溯，把所有其他兄弟节点折叠掉
+    while (!node.isroot) {
+      node.parent.children.forEach(child => {
+        if (child !== node) this.collapse_node(child)
+      })
+      node = node.parent
+    }
     this.view.relayout()
     this.view.restore_location(node)
   }

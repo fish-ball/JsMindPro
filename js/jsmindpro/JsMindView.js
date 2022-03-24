@@ -152,7 +152,7 @@ export default class JsMindView {
    * 重置一个 View
    */
   reset () {
-    this.clear_lines()
+    this._clear_lines()
     this.clear_nodes()
     this.reset_theme()
   }
@@ -346,30 +346,39 @@ export default class JsMindView {
     this.e_canvas.height = 1
     this.e_nodes.style.width = '1px'
     this.e_nodes.style.height = '1px'
-
     this.expand_size()
     this._show()
   }
 
+  /**
+   * 放大一档
+   * @returns {boolean} 返回是否设置成功（超限会返回 false）
+   */
   zoomIn () {
     return this.setZoom(this.actualZoom + this.zoomStep)
   }
 
+  /**
+   * 缩小一档
+   * @returns {boolean} 返回是否设置成功（超限会返回 false）
+   */
   zoomOut () {
     return this.setZoom(this.actualZoom - this.zoomStep)
   }
 
-  setZoom (zoom) {
-    if ((zoom < this.minZoom) || (zoom > this.maxZoom)) {
-      return false
-    }
+  /**
+   * 缩放到指定倍数
+   * @param zoom {Number} 缩放倍数值
+   * @returns {boolean} 返回是否设置成功（超限会返回 false）
+   */
+  setZoom (zoom = 1) {
+    if ((zoom < this.minZoom) || (zoom > this.maxZoom)) return false
     this.actualZoom = zoom
     for (let i = 0; i < this.e_panel.children.length; i++) {
       this.e_panel.children[i].style.transform = 'scale(' + zoom + ')'
     }
     this.show(true)
     return true
-
   }
 
   /**
@@ -427,10 +436,108 @@ export default class JsMindView {
   }
 
   /**
+   * 初始化节点
+   */
+  init_nodes () {
+    const nodes = this.jm.mind.nodes
+    const fragment = document.createDocumentFragment()
+    _.forEach(nodes, node => node.createElement(fragment, this.jm))
+    this.e_nodes.appendChild(fragment)
+    _.forEach(nodes, node => node.init_size())
+  }
+
+  /**
+   * 重新创建一个 node 的元素
+   * 产生了对象之后还需要调用 view.show() 来进行渲染
+   */
+  refresh_node (node) {
+    node.destroy()
+    const fragment = document.createDocumentFragment()
+    node.createElement(fragment, this.jm)
+    this.e_nodes.appendChild(fragment)
+    node.init_size()
+  }
+
+  //////// PRIVATE METHODS ////////
+
+  /**
+   * 定位到中心
+   * @private
+   */
+  _center_root () {
+    // center root node
+    let outerW = this.e_panel.offsetWidth
+    let outerH = this.e_panel.offsetHeight
+    if (this.size.w > outerW) {
+      const offset = this.get_view_offset()
+      this.e_panel.scrollLeft = offset.x - outerW / 2
+    }
+    if (this.size.h > outerH) {
+      this.e_panel.scrollTop = (this.size.h - outerH) / 2
+    }
+  }
+
+  /**
+   * 清除画布上的所有线条
+   * @param canvasContext
+   * @private
+   */
+  _clear_lines (canvasContext) {
+    let ctx = canvasContext || this.canvas_ctx
+    ctx.clearRect(0, 0, this.size.w, this.size.h)
+  }
+
+  /**
+   * 画一条连接线
+   * @param pin {{x,y}} 入点坐标
+   * @param pout {{x,y}} 出点坐标
+   * @param offset {{x,y}} 偏移量
+   * @param canvasCtx Canvas 对象
+   * @private
+   */
+  _draw_line (pin, pout, offset, canvasCtx) {
+    let ctx = canvasCtx || this.canvas_ctx
+    ctx.strokeStyle = this.opts.line_color
+    ctx.lineWidth = this.opts.line_width
+    ctx.lineCap = 'round'
+
+    JsMindUtil.canvas.bezierto(
+      ctx,
+      pin.x + offset.x,
+      pin.y + offset.y,
+      pout.x + offset.x,
+      pout.y + offset.y)
+  }
+
+  /**
+   * 绘制画布上的所有线条
+   * @param canvasContext
+   * @private
+   */
+  _show_lines (canvasContext) {
+    this._clear_lines(canvasContext)
+    let _offset = this.get_view_offset()
+    Object.keys(this.jm.mind.nodes).forEach(key => {
+      const node = this.jm.mind.nodes[key]
+      // 根节点没有线
+      if (node.isroot) return
+      // 隐藏的节点没有线
+      if (('visible' in node.meta.layout) && !node.meta.layout.visible) return
+      // 获取布局的入点坐标
+      const pin = this.jm.layout.get_node_point_in(node)
+      // 获取父节点布局的出点坐标
+      const pout = this.jm.layout.get_node_point_out(node.parent)
+      // 画线
+      this._draw_line(pout, pin, _offset, canvasContext)
+    })
+  }
+
+  /**
    * !! IMPORTANT !! 渲染所有节点
    * 主要的渲染同步逻辑在这里
+   * @private
    */
-  show_nodes () {
+  _show_nodes () {
     let p = null
     let expanderPoint = null
     let expanderText = '-'
@@ -471,93 +578,6 @@ export default class JsMindView {
   }
 
   /**
-   * 清除画布上的所有线条
-   * @param canvasContext
-   */
-  clear_lines (canvasContext) {
-    let ctx = canvasContext || this.canvas_ctx
-    ctx.clearRect(0, 0, this.size.w, this.size.h)
-  }
-
-  /**
-   * 绘制画布上的所有线条
-   * @param canvasContext
-   */
-  show_lines (canvasContext) {
-    this.clear_lines(canvasContext)
-    let _offset = this.get_view_offset()
-    Object.keys(this.jm.mind.nodes).forEach(key => {
-      const node = this.jm.mind.nodes[key]
-      // 根节点没有线
-      if (node.isroot) return
-      // 隐藏的节点没有线
-      if (('visible' in node.meta.layout) && !node.meta.layout.visible) return
-      // 获取布局的入点坐标
-      const pin = this.jm.layout.get_node_point_in(node)
-      // 获取父节点布局的出点坐标
-      const pout = this.jm.layout.get_node_point_out(node.parent)
-      // 画线
-      this.draw_line(pout, pin, _offset, canvasContext)
-    })
-  }
-
-  draw_line (pin, pout, offset, canvas_ctx) {
-    let ctx = canvas_ctx || this.canvas_ctx
-    ctx.strokeStyle = this.opts.line_color
-    ctx.lineWidth = this.opts.line_width
-    ctx.lineCap = 'round'
-
-    JsMindUtil.canvas.bezierto(
-      ctx,
-      pin.x + offset.x,
-      pin.y + offset.y,
-      pout.x + offset.x,
-      pout.y + offset.y)
-  }
-
-  //////// PRIVATE METHODS ////////
-
-  /**
-   * 定位到中心
-   * @private
-   */
-  _center_root () {
-    // center root node
-    let outerW = this.e_panel.offsetWidth
-    let outerH = this.e_panel.offsetHeight
-    if (this.size.w > outerW) {
-      const offset = this.get_view_offset()
-      this.e_panel.scrollLeft = offset.x - outerW / 2
-    }
-    if (this.size.h > outerH) {
-      this.e_panel.scrollTop = (this.size.h - outerH) / 2
-    }
-  }
-
-  /**
-   * 初始化节点
-   */
-  init_nodes () {
-    const nodes = this.jm.mind.nodes
-    const fragment = document.createDocumentFragment()
-    _.forEach(nodes, node => node.createElement(fragment, this.jm))
-    this.e_nodes.appendChild(fragment)
-    _.forEach(nodes, node => node.init_size())
-  }
-
-  /**
-   * 重新创建一个 node 的元素
-   * 产生了对象之后还需要调用 view.show() 来进行渲染
-   */
-  refresh_node (node) {
-    node.destroy()
-    const fragment = document.createDocumentFragment()
-    node.createElement(fragment, this.jm)
-    this.e_nodes.appendChild(fragment)
-    node.init_size()
-  }
-
-  /**
    * 执行一次渲染
    * @private
    */
@@ -566,8 +586,8 @@ export default class JsMindView {
     this.e_canvas.height = this.size.h
     this.e_nodes.style.width = this.size.w + 'px'
     this.e_nodes.style.height = this.size.h + 'px'
-    this.show_nodes()
-    this.show_lines()
+    this._show_nodes()
+    this._show_lines()
     this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
   }
 

@@ -19,9 +19,10 @@
 }
 
 .jmnodes.theme-xmind .jmnode.selected {
-  /*background-color: #11f;*/
-  /*color: #fff;*/
-  outline: 3px solid #C5D8E6;
+
+  -webkit-box-shadow: 0 0 0 3px #C5D8E6;
+  -moz-box-shadow: 0 0 0 3px #C5D8E6;
+  box-shadow: 0 0 0 3px #C5D8E6;
 }
 
 .jmnodes.theme-xmind .jmnode.root {

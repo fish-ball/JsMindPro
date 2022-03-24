@@ -292,11 +292,18 @@ export default class JsMindLayout {
   /**
    * 展开节点
    * @param node {JsMindNode}
+   * @param deep {Boolean} 是否级联展开
    */
-  expand_node (node) {
+  expand_node (node, deep = false) {
     node.expanded = true
     this.part_layout(node)
     this.set_visible(node.children, true)
+    // 级联展开的操作
+    if (deep) {
+      node.children.forEach(child => {
+        this.expand_node(child, true)
+      })
+    }
   }
 
   /**
@@ -345,28 +352,23 @@ export default class JsMindLayout {
     }
   }
 
-  expand_to_depth (target_depth, curr_nodes, curr_depth) {
-    if (target_depth < 1) {
-      return
-    }
-    let nodes = curr_nodes || this.jm.mind.root.children
-    let depth = curr_depth || 1
-    let i = nodes.length
-    let node = null
-    while (i--) {
-      node = nodes[i]
-      if (depth < target_depth) {
-        if (!node.expanded) {
-          this.expand_node(node)
-        }
-        this.expand_to_depth(target_depth, node.children, depth + 1)
+  /**
+   * 将某个子节点展开到指定深度
+   * @param targetDepth
+   * @param nodes
+   * @param depth
+   */
+  expand_to_depth (targetDepth, nodes=null, depth=1) {
+    if (targetDepth < 1) return
+    nodes = nodes || this.jm.mind.root.children
+    nodes.forEach(node => {
+      if (depth < targetDepth) {
+        if (!node.expanded) this.expand_node(node)
+        this.expand_to_depth(targetDepth, node.children, depth + 1)
+      } else if (depth === targetDepth) {
+        if (node.expanded) this.collapse_node(node)
       }
-      if (depth === target_depth) {
-        if (node.expanded) {
-          this.collapse_node(node)
-        }
-      }
-    }
+    })
   }
 
   /**
