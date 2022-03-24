@@ -231,7 +231,7 @@ class JsMindExtensionDraggable {
     let container = this.jm.view.container
     JsMindUtil.dom.add_event(container, 'mousedown', function (e) {
       let evt = e || event
-      jd.dragStart.call(jd, evt)
+      jd.drag_start.call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'mousemove', function (e) {
       let evt = e || event
@@ -239,11 +239,11 @@ class JsMindExtensionDraggable {
     })
     JsMindUtil.dom.add_event(container, 'mouseup', function (e) {
       let evt = e || event
-      jd.dragEnd.call(jd, evt)
+      jd.drag_end.call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'touchstart', function (e) {
       let evt = e || event
-      jd.dragStart.call(jd, evt)
+      jd.drag_start.call(jd, evt)
     })
     JsMindUtil.dom.add_event(container, 'touchmove', function (e) {
       let evt = e || event
@@ -251,7 +251,7 @@ class JsMindExtensionDraggable {
     })
     JsMindUtil.dom.add_event(container, 'touchend', function (e) {
       let evt = e || event
-      jd.dragEnd.call(jd, evt)
+      jd.drag_end.call(jd, evt)
     })
   }
 
@@ -259,7 +259,7 @@ class JsMindExtensionDraggable {
    * 开始拖动
    * @param e {MouseEvent|TouchEvent}
    */
-  dragStart (e) {
+  drag_start (e) {
     if (!this.jm.get_editable()) return
     if (this.capture) return
     this.active_node = null
@@ -271,7 +271,7 @@ class JsMindExtensionDraggable {
     if (!nodeId) return
     let node = this.jm.get_node(nodeId)
     if (node.isroot) return
-    this._cleanCapturing()
+    this._clean_capturing()
     this._timer_capturing = setTimeout(() => {
       this._timer_capturing = 0
       this.reset_shadow(el)
@@ -307,8 +307,8 @@ class JsMindExtensionDraggable {
    * 拖动结束的处理
    * @param e
    */
-  dragEnd (e) {
-    this._cleanCapturing()
+  drag_end (e) {
+    this._clean_capturing()
     if (!this.jm.get_editable() || !this.capture || !this.moved) return
     this._clear_lines()
     this.hide_shadow()
@@ -363,7 +363,7 @@ class JsMindExtensionDraggable {
    * 清理捕捉状态
    * @private
    */
-  _cleanCapturing () {
+  _clean_capturing () {
     if (this._timer_capturing) {
       clearTimeout(this._timer_capturing)
       this._timer_capturing = 0
