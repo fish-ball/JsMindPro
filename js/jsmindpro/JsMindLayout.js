@@ -30,152 +30,6 @@ export default class JsMindLayout {
   }
 
   /**
-   * 纯粹递归计算所有节点的 layout.direction 方向，
-   * 以及 side_index 分边序号
-   * @private
-   */
-  _layout_direction_root () {
-    let root = this.jm.mind.root
-    // logger.debug(node)
-    root.meta.layout.direction = JsMind.direction.center
-    root.meta.layout.side_index = 0
-    if (this.isside) {
-      // 纯右侧布局的处理
-      root.children.forEach((node, i) => {
-        this._layout_direction_side(node, JsMind.direction.right, i)
-      })
-    } else {
-      // 双侧布局的处理
-      let leftCount = 0
-      let rightCount = 0
-      root.children.forEach(node => {
-        if (node.direction === JsMind.direction.left) {
-          this._layout_direction_side(node, JsMind.direction.left, leftCount)
-          leftCount += 1
-        } else {
-          this._layout_direction_side(node, JsMind.direction.right, rightCount)
-          rightCount += 1
-        }
-      })
-    }
-  }
-
-  /**
-   * 布局一个节点到指定的方向
-   * @param node {JsMindNode} 节点
-   * @param direction {Number} 这个节点的布局方向
-   * @param sideIndex {Number} 这个节点在指定方向的序号
-   * @private
-   */
-  _layout_direction_side (node, direction, sideIndex) {
-    node.meta.layout.direction = direction
-    node.meta.layout.side_index = sideIndex
-    node.children.forEach((child, i) => {
-      this._layout_direction_side(child, direction, i)
-    })
-  }
-
-  /**
-   * 调整全部节点的布局定位
-   * @private
-   */
-  _layout_offset () {
-    let root = this.jm.mind.root
-    const layout = root.meta.layout
-    layout.offset_x = 0
-    layout.offset_y = 0
-    layout.outer_height = 0
-    layout.left_nodes = []
-    layout.right_nodes = []
-    root.children.forEach(child => {
-      if (child.meta.layout.direction === JsMind.direction.right) {
-        layout.right_nodes.push(child)
-      } else {
-        layout.left_nodes.push(child)
-      }
-    })
-    layout.outer_height_left = this._layout_offset_subnodes(layout.left_nodes)
-    layout.outer_height_right = this._layout_offset_subnodes(layout.right_nodes)
-    // 计算整个布局的东南西北边界
-    this.bounds.e = root.meta.view.width / 2
-    this.bounds.w = 0 - this.bounds.e
-    this.bounds.n = 0
-    this.bounds.s = Math.max(layout.outer_height_left, layout.outer_height_right)
-  }
-
-  /**
-   * 调整一系列子节点的布局定位
-   * @param nodes {JsMindNode[]}
-   * @private
-   */
-  _layout_offset_subnodes (nodes) {
-    let totalHeight = 0
-    let baseY = 0
-    nodes.forEach(node => {
-      const layout = node.meta.layout
-      layout.outer_height = this._layout_offset_subnodes(node.children)
-      if (!node.expanded) {
-        layout.outer_height = 0
-        this.set_visible(node.children, false)
-      }
-      layout.outer_height = Math.max(node.meta.view.height, layout.outer_height)
-      layout.offset_y = baseY + layout.outer_height / 2
-      layout.offset_x = this.opts.hspace * node.direction +
-        node.parent.meta.view.width * (node.parent.direction + node.direction) / 2
-      if (!node.parent.isroot) layout.offset_x += this.opts.pspace * node.direction
-      baseY = baseY + layout.outer_height + this.opts.vspace
-      totalHeight += layout.outer_height
-    })
-    totalHeight += this.opts.vspace * (nodes.length - 1)
-    nodes.forEach(node => {
-      node.meta.layout.offset_y -= totalHeight / 2
-    })
-    return totalHeight
-  }
-
-  // layout the y axis only, for collapse/expand a node
-  _layout_offset_subnodes_height (nodes) {
-    let total_height = 0
-    let nodes_count = nodes.length
-    let i = nodes_count
-    let node = null
-    let node_outer_height = 0
-    let layout_data = null
-    let base_y = 0
-    let pd = null // parent.meta
-    while (i--) {
-      node = nodes[i]
-      layout_data = node.meta.layout
-      if (pd == null) {
-        pd = node.parent.meta
-      }
-
-      node_outer_height = this._layout_offset_subnodes_height(node.children)
-      if (!node.expanded) {
-        node_outer_height = 0
-      }
-      node_outer_height = Math.max(node.meta.view.height, node_outer_height)
-
-      layout_data.outer_height = node_outer_height
-      layout_data.offset_y = base_y - node_outer_height / 2
-      base_y = base_y - node_outer_height - this.opts.vspace
-      total_height += node_outer_height
-    }
-    if (nodes_count > 1) {
-      total_height += this.opts.vspace * (nodes_count - 1)
-    }
-    i = nodes_count
-    let middle_height = total_height / 2
-    while (i--) {
-      node = nodes[i]
-      node.meta.layout.offset_y += middle_height
-      //logger.debug(node.topic)
-      //logger.debug(node.meta.layout.offset_y)
-    }
-    return total_height
-  }
-
-  /**
    * 获取某个节点的偏移量
    * @param node {JsMindNode}
    * @returns {{x: number, y: number}}
@@ -248,6 +102,7 @@ export default class JsMindLayout {
    * @param node {JsMindNode}
    */
   get_expander_point (node) {
+    console.log('get_expander_point', node.data.name)
     let p = this.get_node_point_out(node)
     let ex_p = {}
     if (node.meta.layout.direction === JsMind.direction.right) {
@@ -358,7 +213,7 @@ export default class JsMindLayout {
    * @param nodes
    * @param depth
    */
-  expand_to_depth (targetDepth, nodes=null, depth=1) {
+  expand_to_depth (targetDepth, nodes = null, depth = 1) {
     if (targetDepth < 1) return
     nodes = nodes || this.jm.mind.root.children
     nodes.forEach(node => {
@@ -408,6 +263,142 @@ export default class JsMindLayout {
       }
       if (!node.isroot) node.meta.layout.visible = visible
     })
+  }
+
+  /**
+   * 纯粹递归计算所有节点的 layout.direction 方向，
+   * 以及 side_index 分边序号
+   * @private
+   */
+  _layout_direction_root () {
+    let root = this.jm.mind.root
+    // logger.debug(node)
+    root.meta.layout.direction = JsMind.direction.center
+    root.meta.layout.side_index = 0
+    if (this.isside) {
+      // 纯右侧布局的处理
+      root.children.forEach((node, i) => {
+        this._layout_direction_side(node, JsMind.direction.right, i)
+      })
+    } else {
+      // 双侧布局的处理
+      let leftCount = 0
+      let rightCount = 0
+      root.children.forEach(node => {
+        if (node.direction === JsMind.direction.left) {
+          this._layout_direction_side(node, JsMind.direction.left, leftCount)
+          leftCount += 1
+        } else {
+          this._layout_direction_side(node, JsMind.direction.right, rightCount)
+          rightCount += 1
+        }
+      })
+    }
+  }
+
+  /**
+   * 布局一个节点到指定的方向
+   * @param node {JsMindNode} 节点
+   * @param direction {Number} 这个节点的布局方向
+   * @param sideIndex {Number} 这个节点在指定方向的序号
+   * @private
+   */
+  _layout_direction_side (node, direction, sideIndex) {
+    node.meta.layout.direction = direction
+    node.meta.layout.side_index = sideIndex
+    node.children.forEach((child, i) => {
+      this._layout_direction_side(child, direction, i)
+    })
+  }
+
+  /**
+   * 调整全部节点的布局定位
+   * @private
+   */
+  _layout_offset () {
+    let root = this.jm.mind.root
+    const layout = root.meta.layout
+    layout.offset_x = 0
+    layout.offset_y = 0
+    layout.outer_height = 0
+    layout.left_nodes = []
+    layout.right_nodes = []
+    root.children.forEach(child => {
+      if (child.meta.layout.direction === JsMind.direction.right) {
+        layout.right_nodes.push(child)
+      } else {
+        layout.left_nodes.push(child)
+      }
+    })
+    layout.outer_height_left = this._layout_offset_subnodes(layout.left_nodes)
+    layout.outer_height_right = this._layout_offset_subnodes(layout.right_nodes)
+    // 计算整个布局的东南西北边界
+    this.bounds.e = root.meta.view.width / 2
+    this.bounds.w = 0 - this.bounds.e
+    this.bounds.n = 0
+    this.bounds.s = Math.max(layout.outer_height_left, layout.outer_height_right)
+  }
+
+  /**
+   * 调整一系列子节点的布局定位
+   * @param nodes {JsMindNode[]}
+   * @private
+   */
+  _layout_offset_subnodes (nodes) {
+    let totalHeight = 0
+    let baseY = 0
+    nodes.forEach(node => {
+      const layout = node.meta.layout
+      layout.outer_height = this._layout_offset_subnodes(node.children)
+      if (!node.expanded) {
+        layout.outer_height = 0
+        this.set_visible(node.children, false)
+      }
+      layout.outer_height = Math.max(node.meta.view.height, layout.outer_height)
+      layout.offset_y = baseY + layout.outer_height / 2
+      layout.offset_x = this.opts.hspace * node.direction +
+        node.parent.meta.view.width * (node.parent.direction + node.direction) / 2
+      if (!node.parent.isroot) layout.offset_x += this.opts.pspace * node.direction
+      baseY = baseY + layout.outer_height + this.opts.vspace
+      totalHeight += layout.outer_height
+    })
+    totalHeight += this.opts.vspace * (nodes.length - 1)
+    nodes.forEach(node => {
+      node.meta.layout.offset_y -= totalHeight / 2
+    })
+    return totalHeight
+  }
+
+  // layout the y axis only, for collapse/expand a node
+  /**
+   * 布局一组 nodes（应该为某个节点的所有 children，根节点左右分布除外）
+   * 并返回布局的高度
+   * @param nodes
+   * @returns {number}
+   * @private
+   */
+  _layout_offset_subnodes_height (nodes) {
+    let totalHeight = 0
+    let base_y = 0
+    nodes.forEach(node => {
+      let outerHeight = this._layout_offset_subnodes_height(node.children)
+      if (!node.expanded) outerHeight = 0
+      outerHeight = Math.max(node.meta.view.height, outerHeight)
+
+      node.meta.layout.outer_height = outerHeight
+      node.meta.layout.offset_y = base_y - outerHeight / 2
+      base_y = base_y - outerHeight - this.opts.vspace
+      totalHeight += outerHeight
+    })
+    if (nodes.length > 1) {
+      totalHeight += this.opts.vspace * (nodes.length - 1)
+    }
+    nodes.forEach(node => {
+      node.meta.layout.offset_y += totalHeight / 2
+    })
+    //logger.debug(node.topic)
+    //logger.debug(node.meta.layout.offset_y)
+    return totalHeight
   }
 
 }

@@ -273,9 +273,11 @@ export default class JsMind {
   expand_to_nodes (nodes) {
     this.collapse_all()
     nodes.forEach(node => {
-      node = this._sanitize_node(node)
-      if (node.isroot) return
-      this.layout.expand_node(node.parent)
+      node = this._sanitize_node(node).parent
+      while (node && !node.isroot && !node.expanded) {
+        this.layout.expand_node(node)
+        node = node.parent
+      }
     })
     this.view.relayout()
   }
