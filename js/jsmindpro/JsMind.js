@@ -47,6 +47,7 @@ let DEFAULT_OPTIONS = {
     mapping: {
       Tab: 'addchild',
       Enter: 'addbrother',
+      NumpadEnter: 'addbrother',
       F2: 'editnode',
       Delete: 'delnode',
       Space: 'toggle',

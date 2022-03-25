@@ -369,9 +369,9 @@ export default class JsMindLayout {
     return totalHeight
   }
 
-  // layout the y axis only, for collapse/expand a node
   /**
    * 布局一组 nodes（应该为某个节点的所有 children，根节点左右分布除外）
+   * layout the y axis only, for collapse/expand a node
    * 并返回布局的高度
    * @param nodes
    * @returns {number}
@@ -384,17 +384,16 @@ export default class JsMindLayout {
       let outerHeight = this._layout_offset_subnodes_height(node.children)
       if (!node.expanded) outerHeight = 0
       outerHeight = Math.max(node.meta.view.height, outerHeight)
-
       node.meta.layout.outer_height = outerHeight
-      node.meta.layout.offset_y = base_y - outerHeight / 2
-      base_y = base_y - outerHeight - this.opts.vspace
+      node.meta.layout.offset_y = base_y + outerHeight / 2
+      base_y = base_y + outerHeight + this.opts.vspace
       totalHeight += outerHeight
     })
     if (nodes.length > 1) {
       totalHeight += this.opts.vspace * (nodes.length - 1)
     }
     nodes.forEach(node => {
-      node.meta.layout.offset_y += totalHeight / 2
+      node.meta.layout.offset_y -= totalHeight / 2
     })
     //logger.debug(node.topic)
     //logger.debug(node.meta.layout.offset_y)
