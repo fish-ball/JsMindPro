@@ -29,7 +29,7 @@ export default class JsMindShortcut {
       }
     })
     // 绑定事件
-    JsMindUtil.dom.add_event(document, 'keydown', this.handler.bind(this))
+    this.jm.view.e_panel.addEventListener('keydown', this.handler.bind(this))
   }
 
   enable_shortcut () {

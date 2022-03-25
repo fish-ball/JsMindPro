@@ -41,6 +41,7 @@ export default class JsMindView {
     this.e_editor = document.createElement('textarea')
 
     this.e_panel.className = 'jsmind-inner'
+    this.e_panel.tabIndex = 0
     this.e_panel.appendChild(this.e_canvas)
     this.e_panel.appendChild(this.e_nodes)
 
