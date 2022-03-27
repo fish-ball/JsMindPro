@@ -492,15 +492,19 @@ export default class JsMind {
     this._require_editable()
     if (JsMindUtil.text.is_empty(topic)) throw new Error('topic can not be empty')
     let node = this.get_node(nodeId)
-    // 没有修改
-    if (node.topic === topic) return this.view.update_node(node)
-    // 有修改
-    node.topic = topic
-    this.view.update_node(node)
-    this.view.show(false)
-    this.invoke_event_handle(JsMind.event_type.edit, {
-      evt: 'update_node', data: [nodeId, topic], node: nodeId
-    })
+    if (node.topic === topic) {
+      // 没有修改
+      this.view.update_node(node)
+    } else {
+      // 有修改
+      node.topic = topic
+      this.view.update_node(node)
+      this.view.show(false)
+      this.invoke_event_handle(JsMind.event_type.edit, {
+        evt: 'update_node', data: [nodeId, topic], node: nodeId
+      })
+    }
+    this.view.e_panel.focus()
   }
 
   /**

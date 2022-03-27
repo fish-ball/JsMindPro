@@ -102,7 +102,6 @@ export default class JsMindLayout {
    * @param node {JsMindNode}
    */
   get_expander_point (node) {
-    console.log('get_expander_point', node.data.name)
     let p = this.get_node_point_out(node)
     let ex_p = {}
     if (node.meta.layout.direction === JsMind.direction.right) {
