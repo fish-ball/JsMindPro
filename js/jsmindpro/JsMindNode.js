@@ -52,15 +52,16 @@ export default class JsMindNode {
 
   /**
    * 为当前的 node 对象创建一个 DOM 节点，挂载到 elParent 中
-   * @param elParent {HTMLElement}
+   * @param elParent {ParentNode}
    * @param jm {JsMind}
+   * @returns {Promise<void>}
    */
-  createElement (elParent, jm) {
+  async create_element (elParent, jm) {
     // 添加 Node 的 DOM 元素
     const elNode = document.createElement('div')
     elNode.className = 'jmnode'
     elNode.setAttribute('nodeid', this.id)
-    elNode.style.visibility = 'hidden'
+    // elNode.style.visibility = 'hidden'
     elParent.appendChild(elNode)
     this.meta.view.element = elNode
     // 添加折叠器 DOM
@@ -73,12 +74,12 @@ export default class JsMindNode {
       // $t(elExpander, '-')
       elExpander.innerText = '-'
       elExpander.setAttribute('nodeid', this.id)
-      elExpander.style.visibility = 'hidden'
+      // elExpander.style.visibility = 'hidden'
       elParent.appendChild(elExpander)
       this.meta.view.expander = elExpander
     }
     // 刷新渲染状态
-    jm.view.update_node(this)
+    await jm.view.update_node(this)
   }
 
   /**

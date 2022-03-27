@@ -46,13 +46,7 @@ export default class JsMindView {
     this.e_panel.appendChild(this.e_nodes)
 
     this.e_editor.className = 'jsmind-editor'
-    this.e_editor.style.resize = 'none'
-    this.e_editor.style.position = 'absolute'
-    this.e_editor.style.top = '0'
-    this.e_editor.style.left = '0'
-    this.e_editor.style.whiteSpace = 'nowrap'
-    this.e_editor.style.overflowY = 'hidden'
-    this.e_editor.style.overflowX = 'hidden'
+    this.e_editor.wrap = 'hard'
     // 根据内容自适应宽度
     this.e_editor.addEventListener('input', e => {
       // 用 canvas 计算实际编辑框宽度 https://stackoverflow.com/a/58705306/2544762
@@ -69,8 +63,8 @@ export default class JsMindView {
       element.parentNode.appendChild(elMeasure)
       const style = getComputedStyle(elMeasure)
       this.e_editor.style.padding = style.padding
-      this.e_editor.style.width = elMeasure.clientWidth + 'px'
-      this.e_editor.style.height = elMeasure.clientHeight + 'px'
+      this.e_editor.style.width = `${elMeasure.clientWidth + 4}px`
+      this.e_editor.style.height = `${elMeasure.clientHeight}px`
       elMeasure.parentNode.removeChild(elMeasure)
       e.stopPropagation()
     })
@@ -193,9 +187,10 @@ export default class JsMindView {
   /**
    * 添加一个 node
    * @param node {JsMindNode}
+   * @returns {Promise<void>}
    */
-  add_node (node) {
-    node.createElement(this.e_nodes, this.jm)
+  async add_node (node) {
+    await node.create_element(this.e_nodes, this.jm)
     node.init_size()
   }
 
@@ -238,21 +233,21 @@ export default class JsMindView {
    * !! IMPORTANT !! 单节点渲染处理
    * 更新一个节点的显示
    * @param node {JsMindNode}
+   * @returns {Promise<void>}
    */
-  update_node (node) {
+  async update_node (node) {
     const view = node.meta.view
     let elNode = view.element
     if (this.opts.render_node instanceof Function) {
       // 注意在 render_node 实现里面，需要把原来的 el attributes 回填进去
-      elNode = this.opts.render_node(elNode, node)
+      elNode = await this.opts.render_node(elNode, node)
       node.meta.view.element = elNode
     } else if (this.opts.support_html) {
       elNode.innerHTML = node.topic
     } else {
       elNode.innerText = node.topic
     }
-    view.width = elNode.offsetWidth
-    view.height = elNode.offsetHeight
+    node.init_size()
   }
 
   /**
@@ -438,24 +433,25 @@ export default class JsMindView {
 
   /**
    * 初始化节点
+   * @returns {Promise<void>}
    */
-  init_nodes () {
+  async init_nodes () {
     const nodes = this.jm.mind.nodes
-    const fragment = document.createDocumentFragment()
-    _.forEach(nodes, node => node.createElement(fragment, this.jm))
-    this.e_nodes.appendChild(fragment)
-    _.forEach(nodes, node => node.init_size())
+    await Promise.all(_.map(
+      nodes,
+      node => node.create_element(this.e_nodes, this.jm)
+    ))
+    // _.forEach(nodes, node => node.init_size())
   }
 
   /**
    * 重新创建一个 node 的元素
    * 产生了对象之后还需要调用 view.show() 来进行渲染
+   * @returns {Promise<void>}
    */
-  refresh_node (node) {
+  async refresh_node (node) {
     node.destroy()
-    const fragment = document.createDocumentFragment()
-    node.createElement(fragment, this.jm)
-    this.e_nodes.appendChild(fragment)
+    await node.create_element(this.e_nodes, this.jm)
     node.init_size()
   }
 

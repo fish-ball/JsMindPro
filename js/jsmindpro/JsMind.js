@@ -402,12 +402,12 @@ export default class JsMind {
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
-   * @returns {JsMindNode} 范围添加成功后的节点，操作失败返回 null
+   * @returns {Promise<JsMindNode>} 范围添加成功后的节点，操作失败返回 null
    */
-  add_node (parentNode, nodeId, topic, data = null) {
+  async add_node (parentNode, nodeId, topic, data = null) {
     this._require_editable()
     let node = this.mind.add_node(parentNode, nodeId, topic, data)
-    this.view.add_node(node)
+    await this.view.add_node(node)
     this.view.show(false)
     this.expand_node(parentNode)
     this.invoke_event_handle(JsMind.event_type.edit, {
@@ -424,12 +424,12 @@ export default class JsMind {
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
-   * @returns {JsMindNode}
+   * @returns {Promise<JsMindNode>}
    */
-  insert_node_before (nodeBefore, nodeId, topic, data) {
+  async insert_node_before (nodeBefore, nodeId, topic, data) {
     this._require_editable()
     let node = this.mind.insert_node_before(nodeBefore, nodeId, topic, data)
-    this.view.add_node(node)
+    await this.view.add_node(node)
     this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_before',
@@ -446,12 +446,12 @@ export default class JsMind {
    * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
-   * @returns {JsMindNode}
+   * @returns {Promise<JsMindNode>}
    */
-  insert_node_after (nodeAfter, nodeId, topic, data) {
+  async insert_node_after (nodeAfter, nodeId, topic, data) {
     this._require_editable()
     let node = this.mind.insert_node_after(nodeAfter, nodeId, topic, data)
-    this.view.add_node(node)
+    await this.view.add_node(node)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_after',
       data: [JsMindUtil.to_node_id(nodeAfter), nodeId, topic, data],
@@ -487,18 +487,19 @@ export default class JsMind {
    * 修改一个节点的内容
    * @param nodeId {Number|String} 节点ID
    * @param topic {String} 新的节点内容
+   * @returns {Promise<void>}
    */
-  update_node (nodeId, topic) {
+  async update_node (nodeId, topic) {
     this._require_editable()
     if (JsMindUtil.text.is_empty(topic)) throw new Error('topic can not be empty')
     let node = this.get_node(nodeId)
     if (node.topic === topic) {
       // 没有修改
-      this.view.update_node(node)
+      await this.view.update_node(node)
     } else {
       // 有修改
       node.topic = topic
-      this.view.update_node(node)
+      await this.view.update_node(node)
       this.view.show(false)
       this.invoke_event_handle(JsMind.event_type.edit, {
         evt: 'update_node', data: [nodeId, topic], node: nodeId
@@ -514,13 +515,14 @@ export default class JsMind {
    *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
    * @param parent {JsMindNode|Number|String}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
+   * @returns {Promise<void>}
    */
-  move_node (node, nodeBefore, parent, direction) {
+  async move_node (node, nodeBefore, parent, direction) {
     this._require_editable()
     parent = this._sanitize_node(parent)
     node = this.mind.move_node(node, nodeBefore, parent, direction)
     this.layout.expand_node(parent)
-    this.view.update_node(node)
+    await this.view.update_node(node)
     this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'move_node',
@@ -635,13 +637,14 @@ export default class JsMind {
   /**
    * 展示一个思维导图
    * @param mind {Object} 加载的思维导图数据
+   * @returns {Promise<void>}
    * @private
    */
-  _show (mind) {
+  async _show (mind) {
     // m 是数据
     let m = mind || JsMind.format.node_array.example
     this.mind = this.data.load(m)
-    this.view.init_nodes()
+    await this.view.init_nodes()
     this.view.show(true)
     this.invoke_event_handle(JsMind.event_type.show, {
       data: [mind]

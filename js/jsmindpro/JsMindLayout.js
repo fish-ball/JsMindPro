@@ -260,7 +260,13 @@ export default class JsMindLayout {
       } else {
         this.set_visible(node.children, false)
       }
-      if (!node.isroot) node.meta.layout.visible = visible
+      if (!node.isroot) {
+        node.meta.layout.visible = visible
+        // 如果某节点被设置为不可见，手动夺取焦点
+        if (!visible && node === this.jm.get_selected_node()) {
+          this.jm.view.select_clear()
+        }
+      }
     })
   }
 

@@ -69,34 +69,38 @@ export default class JsMindShortcut {
   /**
    * 处理添加一个子节点
    * @param e {KeyboardEvent}
+   * @returns {Promise<void>}
    */
-  handle_addchild (e) {
+  async handle_addchild (e) {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
+    // 在 await 之前先阻断默认事件
+    e.preventDefault()
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
-    const node = jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    const node = await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
     // TODO: 需要做插入之后的选中，暂时放在外部去做
     // jm.begin_edit(node)
-    e.preventDefault()
   }
 
   /**
    * 处理添加一个兄弟节点
    * @param e {KeyboardEvent}
+   * @returns {Promise<void>}
    */
-  handle_addbrother (e) {
+  async handle_addbrother (e) {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     if (selectedNode.isroot) return this.handle_addchild(e)
+    // 在 await 之前先阻断默认事件
+    e.preventDefault()
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
-    const node = jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    const node = await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
     // TODO: 需要做插入之后的选中，暂时放在外部去做
     // jm.begin_edit(node)
-    e.preventDefault()
   }
 
   /**

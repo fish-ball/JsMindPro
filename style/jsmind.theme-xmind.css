@@ -1,4 +1,13 @@
 /* xmind theme */
+.jmnodes.theme-xmind {
+  /*position: absolute;*/
+  /*left: 0;*/
+  /*right: 0;*/
+  /*height: 0;*/
+  /*bottom: 0;*/
+  min-width: 800px;
+}
+
 .jmnodes.theme-xmind .jmnode {
   background-color: #DCE6F2;
   color: #376092;
@@ -8,8 +17,25 @@
   box-shadow: none;
   font-size: 14px;
   padding: 5px 8px;
-  white-space: pre;
-  max-width: none;
+  /*white-space: pre;*/
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-overflow: initial;
+  /*max-width: none;*/
+}
+
+.jmnodes.theme-xmind .jmnode textarea.jsmind-editor {
+  max-width: inherit;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: hidden;
+  resize: none;
+  position: absolute;
+  padding: inherit;
+  border: 1px solid #E0E0E0;
+  border-radius: inherit;
+  top: 0;
+  left: 0;
 }
 
 .jmnodes.theme-xmind .jmnode:hover {
