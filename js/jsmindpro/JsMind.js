@@ -343,10 +343,10 @@ export default class JsMind {
    * 渲染一个数据，相当于重置之后再渲染
    * @param mind {Object} 加载的思维导图数据
    */
-  show (mind) {
+  async show (mind) {
     this.init()
     this._reset()
-    this._show(mind)
+    await this._show(mind)
   }
 
   /**
@@ -430,7 +430,7 @@ export default class JsMind {
     this._require_editable()
     let node = this.mind.insert_node_before(nodeBefore, nodeId, topic, data)
     await this.view.add_node(node)
-    this.view.show(false)
+    await this.view.show(false)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'insert_node_before',
       data: [JsMindUtil.to_node_id(nodeBefore), nodeId, topic, data],
@@ -463,8 +463,9 @@ export default class JsMind {
   /**
    * 移除一个指定的节点
    * @param node {JsMindNode|Number|String} 待移除节点或者 ID
+   * @returns {Promise<Boolean>}
    */
-  remove_node (node) {
+  async remove_node (node) {
     node = this._sanitize_node(node)
     this._require_editable()
     if (node.isroot) throw new Error('Can not remove root node')
@@ -473,9 +474,9 @@ export default class JsMind {
     let parent = this.get_node(parentId)
     // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
     this.view.save_location(parent)
-    this.view.remove_node(node)
+    await this.view.remove_node(node)
     this.mind.remove_node(node)
-    this.view.show(false)
+    await this.view.show(false)
     this.view.restore_location(parent)
     this.invoke_event_handle(JsMind.event_type.edit, {
       evt: 'remove_node', data: [nodeId], node: parentId
@@ -681,9 +682,9 @@ export default class JsMind {
    * @param mind {Object} JSMind 内容数据
    * @returns {JsMind}
    */
-  static show (options, mind) {
+  static async show (options, mind) {
     let jm = new JsMind(options)
-    jm.show(mind)
+    await jm.show(mind)
     return jm
   }
 

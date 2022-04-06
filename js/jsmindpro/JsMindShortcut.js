@@ -116,13 +116,14 @@ export default class JsMindShortcut {
   /**
    * 处理一个删除节点事件
    * @param e {KeyboardEvent}
+   * @returns {Promise<void>}
    */
-  handle_delnode (e) {
+  async handle_delnode (e) {
     const jm = this.jm
     let selected_node = jm.get_selected_node()
     if (!selected_node) return
     if (selected_node.isroot) throw new Error('Cannot delete root node.')
-    jm.remove_node(selected_node)
+    await jm.remove_node(selected_node)
   }
 
   /**

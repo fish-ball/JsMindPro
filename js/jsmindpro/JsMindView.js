@@ -200,8 +200,9 @@ export default class JsMindView {
    * 这个只负责删除节点视图，逻辑节点还需要调用 mind.remove_node，都删了才算闭环
    * @param node {JsMindNode}
    * @param cascade {Boolean} 是否被级联删除，默认 false，即直接删除
+   * @returns {Promise<void>}
    */
-  remove_node (node, cascade = false) {
+  async remove_node (node, cascade = false) {
     // 如果当前选中的节点被删除，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
     if (this.selected_node && this.selected_node === node) {
       if (cascade) {
@@ -224,8 +225,9 @@ export default class JsMindView {
       node.meta.view.element.removeChild(this.e_editor)
       this.editing_node = null
     }
-    // 后续遍历，先递归删除所有子节点
-    node.children.forEach(child => this.remove_node(child, true))
+    // 后序遍历，先递归删除所有子节点
+    await Promise.all(node.children.map(child => this.remove_node(child, true)))
+    // 再销毁自身
     node.destroy()
   }
 
