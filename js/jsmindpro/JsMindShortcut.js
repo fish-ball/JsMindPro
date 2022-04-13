@@ -60,7 +60,7 @@ export default class JsMindShortcut {
     const keyName = keys.join('+')
     if (keyName in this._mapping) {
       this._mapping[keyName].apply(this, [e])
-      e.preventDefault()
+      if (e) e.preventDefault()
     } else if ('default' in this.handles) {
       this.handles.default.apply(this, [e, keyName])
     }
@@ -76,7 +76,6 @@ export default class JsMindShortcut {
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     // 在 await 之前先阻断默认事件
-    e.preventDefault()
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
     const node = await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
@@ -95,7 +94,6 @@ export default class JsMindShortcut {
     if (!selectedNode) return
     if (selectedNode.isroot) return this.handle_addchild(e)
     // 在 await 之前先阻断默认事件
-    e.preventDefault()
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
     const node = await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
@@ -132,12 +130,9 @@ export default class JsMindShortcut {
    */
   handle_toggle (e) {
     const jm = this.jm
-    let evt = e || event
     let selected_node = jm.get_selected_node()
     if (!!selected_node) {
       jm.toggle_node(selected_node.id)
-      evt.stopPropagation()
-      evt.preventDefault()
     }
   }
 
@@ -158,8 +153,6 @@ export default class JsMindShortcut {
       }
     }
     if (up_node) jm.select_node(up_node)
-    evt.stopPropagation()
-    evt.preventDefault()
   }
 
   /**
@@ -179,8 +172,6 @@ export default class JsMindShortcut {
       }
     }
     if (down_node) jm.select_node(down_node)
-    evt.stopPropagation()
-    evt.preventDefault()
   }
 
 
@@ -232,8 +223,6 @@ export default class JsMindShortcut {
         node = selected_node.parent
       }
       if (node) jm.select_node(node)
-      evt.stopPropagation()
-      evt.preventDefault()
     }
   }
 }
