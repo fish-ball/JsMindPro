@@ -230,28 +230,28 @@ class JsMindExtensionDraggable {
     let jd = this
     let container = this.jm.view.container
     JsMindUtil.dom.add_event(container, 'mousedown', function (e) {
-      let evt = e || event
-      jd.drag_start.call(jd, evt)
+      if (!jd.jm.options.editable) return // 必须支持编辑才响应
+      jd.drag_start.call(jd, e || event)
     })
     JsMindUtil.dom.add_event(container, 'mousemove', function (e) {
-      let evt = e || event
-      _.debounce(jd.drag).call(jd, evt)
+      if (!jd.jm.options.editable) return // 必须支持编辑才响应
+      _.debounce(jd.drag).call(jd, e || event)
     })
     JsMindUtil.dom.add_event(container, 'mouseup', function (e) {
-      let evt = e || event
-      jd.drag_end.call(jd, evt)
+      if (!jd.jm.options.editable) return // 必须支持编辑才响应
+      jd.drag_end.call(jd, e || event)
     })
     JsMindUtil.dom.add_event(container, 'touchstart', function (e) {
-      let evt = e || event
-      jd.drag_start.call(jd, evt)
+      if (!jd.jm.options.editable) return // 必须支持编辑才响应
+      jd.drag_start.call(jd, e || event)
     })
     JsMindUtil.dom.add_event(container, 'touchmove', function (e) {
-      let evt = e || event
-      _.debounce(jd.drag).call(jd, evt)
+      if (!jd.jm.options.editable) return // 必须支持编辑才响应
+      _.debounce(jd.drag).call(jd, e || event)
     })
     JsMindUtil.dom.add_event(container, 'touchend', function (e) {
-      let evt = e || event
-      jd.drag_end.call(jd, evt)
+      if (!jd.jm.options.editable) return // 必须支持编辑才响应
+      jd.drag_end.call(jd, e || event)
     })
   }
 
