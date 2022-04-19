@@ -1,7 +1,6 @@
 import _ from 'lodash'
-import 'jsmind'
-import JsMind from './JsMind'
 import JsMindUtil from './JsMindUtil'
+import {EVENT_TYPE} from './JsMind'
 
 ///////// Shortcut Functions /////////
 
@@ -165,15 +164,6 @@ export default class JsMindView {
   }
 
   /**
-   * 重设所有节点的自定义样式
-   */
-  reset_custom_style () {
-    Object.keys(this.jm.mind.nodes).forEach(key => {
-      this.jm.mind.nodes[key].reset_custom_style()
-    })
-  }
-
-  /**
    * 展开到画布大小显示范围（缩放至显示全部）
    */
   expand_size () {
@@ -197,7 +187,7 @@ export default class JsMindView {
   /**
    * 删除一个节点
    * !! IMPORTANT !! 注意不要单独使用，用的话请用 jm.remove_node 而非 jm.view.remove_node
-   * 这个只负责删除节点视图，逻辑节点还需要调用 mind.remove_node，都删了才算闭环
+   * 这个只负责删除节点视图，逻辑节点还需要调用 model.remove_node，都删了才算闭环
    * @param node {JsMindNode}
    * @param cascade {Boolean} 是否被级联删除，默认 false，即直接删除
    * @returns {Promise<void>}
@@ -263,7 +253,7 @@ export default class JsMindView {
     this.selected_node = node
     // 发出事件
     if (node !== lastNode) {
-      this.jm.invoke_event_handle(JsMind.event_type.select, {
+      this.jm.invoke_event_handle(EVENT_TYPE.select, {
         node: node && node.id
       })
     }
@@ -427,8 +417,8 @@ export default class JsMindView {
    * 清理所有的 dom 节点
    */
   clear_nodes () {
-    if (!this.jm.mind) return
-    _.forEach(this.jm.mind.nodes, node => {
+    if (!this.jm.model) return
+    _.forEach(this.jm.model.nodes, node => {
       node.destroy()
     })
   }
@@ -438,7 +428,7 @@ export default class JsMindView {
    * @returns {Promise<void>}
    */
   async init_nodes () {
-    const nodes = this.jm.mind.nodes
+    const nodes = this.jm.model.nodes
     await Promise.all(_.map(
       nodes,
       node => node.create_element(this.e_nodes, this.jm)
@@ -516,8 +506,8 @@ export default class JsMindView {
   _show_lines (canvasContext) {
     this._clear_lines(canvasContext)
     let _offset = this.get_view_offset()
-    Object.keys(this.jm.mind.nodes).forEach(key => {
-      const node = this.jm.mind.nodes[key]
+    Object.keys(this.jm.model.nodes).forEach(key => {
+      const node = this.jm.model.nodes[key]
       // 根节点没有线
       if (node.isroot) return
       // 隐藏的节点没有线
@@ -541,7 +531,7 @@ export default class JsMindView {
     let expanderPoint = null
     let expanderText = '-'
     let offset = this.get_view_offset()
-    _.forEach(this.jm.mind.nodes, node => {
+    _.forEach(this.jm.model.nodes, node => {
       const view = node.meta.view
       const elNode = view.element
       const elExpander = view.expander
@@ -587,7 +577,7 @@ export default class JsMindView {
     this.e_nodes.style.height = this.size.h + 'px'
     this._show_nodes()
     this._show_lines()
-    this.jm.invoke_event_handle(JsMind.event_type.resize, {data: []})
+    this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []})
   }
 
 }

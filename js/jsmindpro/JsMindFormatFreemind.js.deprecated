@@ -2,7 +2,7 @@
  * TODO: 尚未进行异步化重构，暂时别用
  */
 import JsMind from './JsMind'
-import JsMindMind from './JsMindMind'
+import JsMindModel from './JsMindModel'
 import JsMindFormatBase from './JsMindFormatBase'
 
 export default class JsMindFormatFreemind extends JsMindFormatBase {
@@ -18,7 +18,7 @@ export default class JsMindFormatFreemind extends JsMindFormatBase {
 
   static get_mind (source, jm) {
     let df = JsMind.format.freemind
-    let mind = new JsMindMind(jm)
+    let mind = new JsMindModel(jm)
     mind.name = source.meta.name
     mind.author = source.meta.author
     mind.version = source.meta.version

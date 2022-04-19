@@ -1,6 +1,5 @@
-import JsMind from './JsMind'
-import JsMindNodeView from './JsMindNodeView'
 import JsMindNodeMeta from './JsMindNodeMeta'
+import {DIRECTION} from './JsMind'
 
 export default class JsMindNode {
   /**
@@ -15,7 +14,7 @@ export default class JsMindNode {
    * @param expanded {Boolean}
    */
   constructor (id, index, topic, data, isroot, parent = null,
-               direction = JsMind.direction.center, expanded = true) {
+               direction = DIRECTION.center, expanded = true) {
     if (!id) throw new Error('Invalid node id')
     if (typeof index !== 'number') throw new Error('Invalid node index')
     this.id = id
@@ -52,7 +51,7 @@ export default class JsMindNode {
 
   /**
    * 为当前的 node 对象创建一个 DOM 节点，挂载到 elParent 中
-   * @param elParent {ParentNode}
+   * @param elParent {Node}
    * @param jm {JsMind}
    * @returns {Promise<void>}
    */
@@ -141,61 +140,6 @@ export default class JsMindNode {
     return {
       w: this.meta.view.width,
       h: this.meta.view.height
-    }
-  }
-
-  /**
-   * 重置节点的自定义样式
-   * TODO: 这个 API 又长又臭呢，还把 node.data 这么重要的生态位占了，没影响的话删掉算逑了
-   */
-  reset_node_custom_style () {
-    const elNode = this.meta.view.element
-    const nodeData = this.data
-    if ('background-color' in nodeData) {
-      elNode.style.backgroundColor = nodeData['background-color']
-    }
-    if ('foreground-color' in nodeData) {
-      elNode.style.color = nodeData['foreground-color']
-    }
-    if ('width' in nodeData) {
-      elNode.style.width = nodeData['width'] + 'px'
-    }
-    if ('height' in nodeData) {
-      elNode.style.height = nodeData['height'] + 'px'
-    }
-    if ('font-size' in nodeData) {
-      elNode.style.fontSize = nodeData['font-size'] + 'px'
-    }
-    if ('font-weight' in nodeData) {
-      elNode.style.fontWeight = nodeData['font-weight']
-    }
-    if ('font-style' in nodeData) {
-      elNode.style.fontStyle = nodeData['font-style']
-    }
-    if ('background-image' in nodeData) {
-      let backgroundImage = nodeData['background-image']
-      if (backgroundImage.startsWith('data') && nodeData['width'] && nodeData['height']) {
-        let img = new Image()
-        img.onload = function () {
-          let c = document.createElement('canvas')
-          c.width = elNode.clientWidth
-          c.height = elNode.clientHeight
-          if (c.getContext) {
-            let ctx = c.getContext('2d')
-            ctx.drawImage(this, 2, 2, elNode.clientWidth, elNode.clientHeight)
-            let scaledImageData = c.toDataURL()
-            elNode.style.backgroundImage = 'url(' + scaledImageData + ')'
-          }
-        }
-        img.src = backgroundImage
-      } else {
-        elNode.style.backgroundImage = 'url(' + backgroundImage + ')'
-      }
-      elNode.style.backgroundSize = '99%'
-
-      if ('background-rotation' in nodeData) {
-        elNode.style.transform = 'rotate(' + nodeData['background-rotation'] + 'deg)'
-      }
     }
   }
 

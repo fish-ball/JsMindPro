@@ -1,5 +1,4 @@
-import JsMind from './JsMind'
-import JsMindNodeLayout from './JsMindNodeLayout'
+import {DIRECTION} from './JsMind'
 
 
 export default class JsMindLayout {
@@ -107,7 +106,7 @@ export default class JsMindLayout {
   get_expander_point (node) {
     let p = this.get_node_point_out(node)
     let ex_p = {}
-    if (node.meta.layout.direction === JsMind.direction.right) {
+    if (node.meta.layout.direction === DIRECTION.right) {
       ex_p.x = p.x - this.opts.pspace
     } else {
       ex_p.x = p.x
@@ -121,7 +120,7 @@ export default class JsMindLayout {
    * @returns {{w: number, h: number}}
    */
   get_min_size () {
-    _.forEach(this.jm.mind.nodes, node => {
+    _.forEach(this.jm.model.nodes, node => {
       const pout = this.get_node_point_out(node)
       this.bounds.e = Math.max(pout.x, this.bounds.e)
       this.bounds.w = Math.min(pout.x, this.bounds.w)
@@ -174,7 +173,7 @@ export default class JsMindLayout {
   }
 
   expand_all () {
-    let nodes = this.jm.mind.nodes
+    let nodes = this.jm.model.nodes
     let c = 0
     let node
     for (let nodeid in nodes) {
@@ -185,14 +184,14 @@ export default class JsMindLayout {
       }
     }
     if (c > 0) {
-      let root = this.jm.mind.root
+      let root = this.jm.model.root
       this.part_layout(root)
       this.set_visible(root.children, true)
     }
   }
 
   collapse_all () {
-    let nodes = this.jm.mind.nodes
+    let nodes = this.jm.model.nodes
     let c = 0
     let node
     for (let nodeid in nodes) {
@@ -203,7 +202,7 @@ export default class JsMindLayout {
       }
     }
     if (c > 0) {
-      let root = this.jm.mind.root
+      let root = this.jm.model.root
       this.part_layout(root)
       this.set_visible(root.children, true)
     }
@@ -217,7 +216,7 @@ export default class JsMindLayout {
    */
   expand_to_depth (targetDepth, nodes = null, depth = 1) {
     if (targetDepth < 1) return
-    nodes = nodes || this.jm.mind.root.children
+    nodes = nodes || this.jm.model.root.children
     nodes.forEach(node => {
       if (depth < targetDepth) {
         if (!node.expanded) this.expand_node(node)
@@ -233,14 +232,14 @@ export default class JsMindLayout {
    * @param node {JsMindNode}
    */
   part_layout (node) {
-    let root = this.jm.mind.root
+    let root = this.jm.model.root
     let rootLayout = root.meta.layout
     if (node.isroot) {
       rootLayout.outer_height_right =
         this._layout_offset_subnodes_height(rootLayout.right_nodes)
       rootLayout.outer_height_left =
         this._layout_offset_subnodes_height(rootLayout.left_nodes)
-    } else if (node.meta.layout.direction === JsMind.direction.right) {
+    } else if (node.meta.layout.direction === DIRECTION.right) {
       rootLayout.outer_height_right =
         this._layout_offset_subnodes_height(rootLayout.right_nodes)
     } else {
@@ -279,25 +278,25 @@ export default class JsMindLayout {
    * @private
    */
   _layout_direction_root () {
-    let root = this.jm.mind.root
+    let root = this.jm.model.root
     // logger.debug(node)
-    root.meta.layout.direction = JsMind.direction.center
+    root.meta.layout.direction = DIRECTION.center
     root.meta.layout.side_index = 0
     if (this.isside) {
       // 纯右侧布局的处理
       root.children.forEach((node, i) => {
-        this._layout_direction_side(node, JsMind.direction.right, i)
+        this._layout_direction_side(node, DIRECTION.right, i)
       })
     } else {
       // 双侧布局的处理
       let leftCount = 0
       let rightCount = 0
       root.children.forEach(node => {
-        if (node.direction === JsMind.direction.left) {
-          this._layout_direction_side(node, JsMind.direction.left, leftCount)
+        if (node.direction === DIRECTION.left) {
+          this._layout_direction_side(node, DIRECTION.left, leftCount)
           leftCount += 1
         } else {
-          this._layout_direction_side(node, JsMind.direction.right, rightCount)
+          this._layout_direction_side(node, DIRECTION.right, rightCount)
           rightCount += 1
         }
       })
@@ -324,7 +323,7 @@ export default class JsMindLayout {
    * @private
    */
   _layout_offset () {
-    let root = this.jm.mind.root
+    let root = this.jm.model.root
     const layout = root.meta.layout
     layout.offset_x = 0
     layout.offset_y = 0
@@ -332,7 +331,7 @@ export default class JsMindLayout {
     layout.left_nodes = []
     layout.right_nodes = []
     root.children.forEach(child => {
-      if (child.meta.layout.direction === JsMind.direction.right) {
+      if (child.meta.layout.direction === DIRECTION.right) {
         layout.right_nodes.push(child)
       } else {
         layout.left_nodes.push(child)

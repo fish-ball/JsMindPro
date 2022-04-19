@@ -1,4 +1,5 @@
 import JsMind from '../JsMind'
+import {DIRECTION, EVENT_TYPE} from '../JsMind'
 import JsMindNode from '../JsMindNode'
 import JsMindUtil from '../JsMindUtil'
 import JsMindPlugin from '../JsMindPlugin'
@@ -171,9 +172,9 @@ class JsMindExtensionDraggable {
     // 影子在根节点的左边还是右边
     // 不左不右直接断链
     if (rx + rw > sx && sx > rx - sw) return null
-    const direction = sx > rx + rw ? JsMind.direction.right : JsMind.direction.left
+    const direction = sx > rx + rw ? DIRECTION.right : DIRECTION.left
     // 如果设置是有指定方向 options.mode=side，则不允许放到另一边
-    if (this.jm.options.mode === 'side' && direction !== JsMind.direction.right) {
+    if (this.jm.options.mode === 'side' && direction !== DIRECTION.right) {
       return null
     }
     let minDistance = Number.MAX_VALUE
@@ -181,7 +182,7 @@ class JsMindExtensionDraggable {
     let closestNode = null
     let nodePoint = null
     let shadowPoint = null
-    _.forEach(this.jm.mind.nodes, node => {
+    _.forEach(this.jm.model.nodes, node => {
       let np, sp
       // 忽略另一边的节点
       if (!node.isroot && node.direction !== direction) return null
@@ -193,12 +194,12 @@ class JsMindExtensionDraggable {
       if (!node.is_visible()) return null
       const {w: nw, h: nh} = node.get_size()
       const {x: nx, y: ny} = node.get_location()
-      if (direction === JsMind.direction.right) {
+      if (direction === DIRECTION.right) {
         if (sx < nx + nw) return null
         distance = Math.hypot(sx - nx - nw, sy + sh / 2 - ny - nh / 2)
         np = {x: nx + nw - options.line_width, y: ny + nh / 2}
         sp = {x: sx + options.line_width, y: sy + sh / 2}
-      } else if (direction === JsMind.direction.left) {
+      } else if (direction === DIRECTION.left) {
         if (sx + sw > nx) return null
         distance = Math.hypot(sx + sw - nx, sy + sh / 2 - ny - nh / 2)
         np = {x: nx + options.line_width, y: ny + nh / 2}
@@ -356,7 +357,7 @@ class JsMindExtensionDraggable {
    * @param data
    */
   jm_event_handle (type, data) {
-    if (type === JsMind.event_type.resize) this.resize()
+    if (type === EVENT_TYPE.resize) this.resize()
   }
 
   /**

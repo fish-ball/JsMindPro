@@ -1,42 +1,17 @@
-import JsMind from './JsMind'
-import JsMindMind from './JsMindMind'
+import {DIRECTION} from './JsMind'
+import JsMindModel from './JsMindModel'
 import JsMindFormatBase from './JsMindFormatBase'
 
 export default class JsMindFormatNodeArray extends JsMindFormatBase {
   static example = {
-    "meta": {
-      "name": 'Albert Einstein',
-      "author": 'fish-ball',
-      "version": '1.0'
-    },
     "format": "node_array",
     "data": [
       {"id": "root", "topic": "jsMind Example", "isroot": true}
     ]
   }
 
-  /**
-   * 用指定的数据源生成一个 JsMindMind 对象
-   * @param source {Object} 数据源
-   * @param jm {JsMind} JsMind 实例
-   * @returns {JsMindMind}
-   */
-  static get_mind (source, jm) {
-    let mind = new JsMindMind(jm)
-    mind.name = source.meta.name
-    mind.author = source.meta.author
-    mind.version = source.meta.version
-    this._parse(mind, source.data)
-    return mind
-  }
-
   static get_data (mind) {
     let json = {}
-    json.meta = {
-      name: mind.name,
-      author: mind.author,
-      version: mind.version
-    }
     json.format = 'node_array'
     json.data = []
     this._array(mind, json.data)
@@ -44,12 +19,12 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
   }
 
   /**
-   * 从 node_array 中展开输入填入 mind
-   * @param mind
+   * 从 node_array 中展开输入填入 model
+   * @param mind {JsMindModel}
    * @param nodeArray {Object[]}
    * @private
    */
-  static _parse (mind, nodeArray) {
+  static parse (mind, nodeArray) {
     // 切片复制一份
     const arr = nodeArray.slice(0)
     // 翻转一下快点
@@ -61,7 +36,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
 
   /**
    * 解析出根节点
-   * @param mind {JsMindMind}
+   * @param mind {JsMindModel}
    * @param nodeArray {[]}
    * @returns {Number|String} 返回根节点的 id
    * @private
@@ -82,7 +57,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
 
   /**
    * 从 node_array 里面解析并提取子节点到 parentId 的节点子集中
-   * @param mind {JsMindMind}
+   * @param mind {JsMindModel}
    * @param parentId {Number|String}
    * @param nodeArray {Object[]} 原始节点数据
    * @returns {Number}
@@ -96,8 +71,8 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
       if (rawNode.parentid !== parentId) continue
       const data = this._extract_data(rawNode)
       const direction = {
-        left: JsMind.direction.left,
-        right: JsMind.direction.right
+        left: DIRECTION.left,
+        right: DIRECTION.right
       }[rawNode.direction]
       mind.add_node(
         parentId, rawNode.id, rawNode.topic, data, void 0, direction, rawNode.expanded)
@@ -131,7 +106,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
   }
 
   static _array (mind, node_array) {
-    let df = JsMind.format.node_array
+    let df = JsMindFormatBase.node_array
     df._array_node(mind.root, node_array)
   }
 
@@ -150,7 +125,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     if (node.parent) o.parentid = node.parent.id
     if (node.isroot) o.isroot = true
     if (!!node.parent && node.parent.isroot) {
-      o.direction = node.direction === JsMind.direction.left ? 'left' : 'right'
+      o.direction = node.direction === DIRECTION.left ? 'left' : 'right'
     }
     if (node.data != null) {
       let node_data = node.data

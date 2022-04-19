@@ -1,20 +1,17 @@
 /**
  * TODO: direction 的处理还是有问题
  */
-import JsMind from './JsMind'
 import JsMindNode from './JsMindNode'
-import JsMindUtil from './JsMindUtil'
+import JsMindFormat from './JsMindFormat'
+import {DIRECTION} from './JsMind'
 
-export default class JsMindMind {
-  /**
-   * @param jm {JsMind}
+export default class JsMindModel {
+
+  /** 构造一个 JsMindModel 对象
+   * @param format {String} 暂时只支持 node_array
+   * @param options {Object} mode: both/side
    */
-  constructor (jm) {
-    this.name = null
-    this.author = null
-    this.version = null
-    /** @type {JsMind} */
-    this.jm = jm
+  constructor (format, options = {mode: 'both'}) {
     /**
      * 根节点
      * @type {JsMindNode|null}
@@ -26,6 +23,33 @@ export default class JsMindMind {
      * @type {{JsMindNode}}
      */
     this.nodes = {}
+    /**
+     * 获取对应格式的 JsMindFormat 对象
+     */
+    this.formatter = JsMindFormat[format]
+    if (!this.formatter) throw new Error(`Format not supported: ${format}.`)
+    /**
+     * 带入所有的配置项
+     */
+    this.options = options
+  }
+
+  /**
+   * 自动加载一个 model 的配置数据（包含格式）
+   * @param data {Object}
+   * @returns {JsMindModel}
+   */
+  load (data) {
+    return this.formatter.parse(this, data)
+  }
+
+  /**
+   * 返回
+   * @param data_format
+   * @returns {*}
+   */
+  get_data (data_format) {
+    return this.formatter.get_data(this)
   }
 
   /**
@@ -87,23 +111,23 @@ export default class JsMindMind {
     // 父亲为根节点的话，还要看方向
     if (parentNode.isroot) {
       // 如果入参未指定方向，则按照实际计算方向较少那边平衡补位
-      if ((this.jm.options.mode || 'both') === 'both') {
+      if ((this.options.mode || 'both') === 'both') {
         if (direction === null || isNaN(direction)) {
           let children = parentNode.children
           let r = 0
           for (let i = 0; i < children.length; i++) {
-            if (children[i].direction === JsMind.direction.left) {
+            if (children[i].direction === DIRECTION.left) {
               r--
             } else {
               r++
             }
           }
-          direction = (children.length > 1 && r > 0) ? JsMind.direction.left : JsMind.direction.right
+          direction = (children.length > 1 && r > 0) ? DIRECTION.left : DIRECTION.right
         }
-      } else if (this.jm.options.mode === 'side') {
-        direction = JsMind.direction.right
+      } else if (this.options.mode === 'side') {
+        direction = DIRECTION.right
       } else {
-        throw new Error(`Unsupported options mode=[${this.jsm.options.mode}]`)
+        throw new Error(`Unsupported options mode=[${this.options.mode}]`)
       }
       node = new JsMindNode(nodeId, idx, topic, data, false, parentNode, direction, expanded)
     } else {
@@ -209,7 +233,7 @@ export default class JsMindMind {
    * @private
    */
   _sanitize_node (node) {
-    if (!JsMindUtil.is_node(node)) return this.get_node(node)
+    if (!(node instanceof JsMindNode)) return this.get_node(node)
     if (this.nodes[node.id] === node) return node
     throw new Error('The node is not defined inside the current tree.')
   }
@@ -224,7 +248,7 @@ export default class JsMindMind {
    * @returns {JsMindNode}
    * @private
    */
-  _move_node (node, nodeBefore, parent, direction = JsMind.direction.right) {
+  _move_node (node, nodeBefore, parent, direction = DIRECTION.right) {
     node = this._sanitize_node(node)
     parent = this._sanitize_node(parent)
     if (!node || !parent) return null

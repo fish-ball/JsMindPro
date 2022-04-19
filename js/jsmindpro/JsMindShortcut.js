@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import JsMind from './JsMind'
+import {DIRECTION} from './JsMind'
 import JsMindUtil from './JsMindUtil'
 
 // shortcut provider
@@ -180,7 +180,7 @@ export default class JsMindShortcut {
    * @param e {KeyboardEvent}
    */
   handle_left (e) {
-    this._handle_direction(e, JsMind.direction.left)
+    this._handle_direction(e, DIRECTION.left)
   }
 
   /**
@@ -188,7 +188,7 @@ export default class JsMindShortcut {
    * @param e {KeyboardEvent}
    */
   handle_right (e) {
-    this._handle_direction(e, JsMind.direction.right)
+    this._handle_direction(e, DIRECTION.right)
   }
 
   /**
