@@ -100,7 +100,6 @@ export default class JsMind {
 
     // create instance of function provider
     this.data = new JsMindData(this)
-    this.data.init()
 
     // Init layout
     this.layout = new JsMindLayout(this, {
@@ -180,47 +179,6 @@ export default class JsMind {
     }
   }
 
-  /**
-   * 处理鼠标按下事件
-   * @param e {Event}
-   */
-  mousedown_handle (e) {
-    if (!this.options.default_event_handle['enable_mousedown_handle']) return
-    let element = e.target || event.srcElement
-    let nodeId = this.view.get_binded_nodeid(element)
-    if (!!nodeId) {
-      this.select_node(nodeId)
-    } else {
-      this.view.select_clear()
-    }
-  }
-
-  /**
-   * 点击事件处理器
-   * @param e {Event}
-   */
-  click_handle (e) {
-    if (!this.options.default_event_handle['enable_click_handle']) return
-    let element = e.target || event.srcElement
-    let isExpander = element.classList.contains('jmexpander')
-    // 仅处理展开器
-    if (!isExpander) return
-    let nodeId = this.view.get_binded_nodeid(element)
-    if (nodeId) this.toggle_node(nodeId)
-  }
-
-  /**
-   * 双击事件处理器
-   * @param e {Event}
-   */
-  dblclick_handle (e) {
-    if (!this.options.default_event_handle['enable_dblclick_handle']) return
-    if (this.get_editable()) {
-      let element = e.target || event.srcElement
-      let nodeId = this.view.get_binded_nodeid(element)
-      if (nodeId) this.begin_edit(nodeId)
-    }
-  }
 
   /**
    * 开始编辑一个节点
@@ -345,7 +303,8 @@ export default class JsMind {
    */
   async show (mind) {
     this.init()
-    this._reset()
+    this.view.reset()
+    this.layout.reset()
     await this._show(mind)
   }
 
@@ -614,26 +573,60 @@ export default class JsMind {
     this.event_handles.forEach(handler => handler(type, data))
   }
 
-  // >>>>>>>> static methods >>>>>>>>
+  // >>>>>>>> private methods >>>>>>>>
 
   /**
    * 绑定思维导图的主要事件（鼠标按下、点击、双击）
    * @private
    */
   _event_bind () {
-    this.view.add_event(this, 'mousedown', this.mousedown_handle)
-    this.view.add_event(this, 'click', this.click_handle)
-    this.view.add_event(this, 'dblclick', this.dblclick_handle)
+    this.view.add_event(this, 'mousedown', this._mousedown_handle)
+    this.view.add_event(this, 'click', this._click_handle)
+    this.view.add_event(this, 'dblclick', this._dblclick_handle)
   }
 
   /**
-   * 全部重置
-   * @private
+   * 处理鼠标按下事件
+   * @param e {Event}
    */
-  _reset () {
-    this.view.reset()
-    this.layout.reset()
+  _mousedown_handle (e) {
+    if (!this.options.default_event_handle['enable_mousedown_handle']) return
+    let element = e.target || event.srcElement
+    let nodeId = this.view.get_binded_nodeid(element)
+    if (!!nodeId) {
+      this.select_node(nodeId)
+    } else {
+      this.view.select_clear()
+    }
   }
+
+  /**
+   * 点击事件处理器
+   * @param e {Event}
+   */
+  _click_handle (e) {
+    if (!this.options.default_event_handle['enable_click_handle']) return
+    let element = e.target || event.srcElement
+    let isExpander = element.classList.contains('jmexpander')
+    // 仅处理展开器
+    if (!isExpander) return
+    let nodeId = this.view.get_binded_nodeid(element)
+    if (nodeId) this.toggle_node(nodeId)
+  }
+
+  /**
+   * 双击事件处理器
+   * @param e {Event}
+   */
+  _dblclick_handle (e) {
+    if (!this.options.default_event_handle['enable_dblclick_handle']) return
+    if (this.get_editable()) {
+      let element = e.target || event.srcElement
+      let nodeId = this.view.get_binded_nodeid(element)
+      if (nodeId) this.begin_edit(nodeId)
+    }
+  }
+
 
   /**
    * 展示一个思维导图

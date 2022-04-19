@@ -7,15 +7,18 @@ export default class JsMindLayout {
     this.opts = options
     this.jm = jm
     this.isside = this.opts.mode === 'side'
-    /** 布局的边界坐标值 North/South/West/East
-     * @type {{n: number, s: number, w: number, e: number}}
-     */
-    this.bounds = {n: 0, s: 0, w: 0, e: 0}
+    this.reset()
 
     this.cache_valid = false
   }
 
+  /**
+   * 重设参数边界
+   */
   reset () {
+    /** 布局的边界坐标值 North/South/West/East
+     * @type {{n: number, s: number, w: number, e: number}}
+     */
     this.bounds = {n: 0, s: 0, w: 0, e: 0}
   }
 

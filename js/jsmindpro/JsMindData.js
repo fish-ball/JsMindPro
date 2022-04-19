@@ -7,9 +7,6 @@ export default class JsMindData {
     this.jm = jm
   }
 
-  init () {
-  }
-
   /**
    * 自动加载一个 mind 的配置数据（包含格式）
    * @param mind_data {Object}
