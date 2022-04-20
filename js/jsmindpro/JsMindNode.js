@@ -104,7 +104,7 @@ export default class JsMindNode {
   }
 
   /**
-   * 选中一个节点
+   * 选中一个节点（更新其 css class）
    */
   select () {
     if (this.meta.view.element) {
@@ -113,7 +113,7 @@ export default class JsMindNode {
   }
 
   /**
-   * 取消选中一个节点
+   * 取消选中一个节点（更新其 css class）
    */
   deselect () {
     if (this.meta.view.element) {
@@ -123,7 +123,7 @@ export default class JsMindNode {
 
   /**
    * 获取当前节点的 view 坐标值
-   * @returns {{x: *, y: *}}
+   * @returns {{x: Number, y: Number}}
    */
   get_location () {
     return {
@@ -134,7 +134,7 @@ export default class JsMindNode {
 
   /**
    * 获取当前节点的 view 尺寸（宽高）
-   * @returns {{w: number, h: number}}
+   * @returns {{w: Number, h: Number}}
    */
   get_size () {
     return {
@@ -143,26 +143,13 @@ export default class JsMindNode {
     }
   }
 
-  //////// STATIC METHODS ////
-
-  static inherited (pnode, node) {
-    if (!!pnode && !!node) {
-      if (pnode.id === node.id) {
-        return true
-      }
-      if (pnode.isroot) {
-        return true
-      }
-      let pid = pnode.id
-      let p = node
-      while (!p.isroot) {
-        p = p.parent
-        if (p.id === pid) {
-          return true
-        }
-      }
-    }
-    return false
+  /**
+   * 判断当前节点是否为另一个节点的祖先（或其本身）
+   * @param node {JsMindNode}
+   * @returns {boolean}
+   */
+  is_ancestor_of (node) {
+    return !!node && (node === this || this.is_ancestor_of(node.parent))
   }
 
 }

@@ -24,6 +24,11 @@ export default class JsMindModel {
      */
     this.nodes = {}
     /**
+     * 当前逻辑上选中的节点
+     * @type {JsMindNode|null}
+     */
+    this.selected_node = null
+    /**
      * 获取对应格式的 JsMindFormat 对象
      */
     this.formatter = JsMindFormat[format]

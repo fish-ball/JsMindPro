@@ -320,12 +320,12 @@ export default class JsMind {
   async render (format, data) {
     // 执行初始化（）
     this._initialized = false
-    this.init()
-    this.view.reset()
-    this.layout.reset()
     // 加载数据以及 JsMindModel 模型
     this.model = new JsMindModel(format, this.options)
     this.model.load(data)
+    this.init()
+    this.view.reset()
+    this.layout.reset()
     await this.view.init_nodes()
     this.view.show(true)
     this.invoke_event_handle(EVENT_TYPE.show, {
@@ -515,11 +515,18 @@ export default class JsMind {
   }
 
   /**
+   * 触发清除选中
+   */
+  select_clear () {
+    this.view.select_clear()
+  }
+
+  /**
    * 获取当前选中的节点
    * @returns {JsMindNode}
    */
   get_selected_node () {
-    return this.view.selected_node
+    return this.model.selected_node
   }
 
   /**

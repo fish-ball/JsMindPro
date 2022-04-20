@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import _ from 'lodash-es'
 import JsMindUtil from './JsMindUtil'
 import {EVENT_TYPE} from './JsMind'
 
@@ -9,6 +9,7 @@ export default class JsMindView {
     this.opts = options
     /** @type JsMind */
     this.jm = jm
+    this.model = jm.model
 
     this.container = null
     this.e_panel = null
@@ -18,6 +19,7 @@ export default class JsMindView {
     this.canvas_ctx = null
     this.size = {w: 0, h: 0}
 
+    // TODO: selected_node 逻辑应该挪到 model 里面去
     this.selected_node = null
     this.editing_node = null
   }
@@ -26,7 +28,6 @@ export default class JsMindView {
    * 初始化一个 view
    */
   init () {
-    const jm = this.jm
     // https://stackoverflow.com/a/36894871/2544762
     this.container = (this.opts.container instanceof Element ||
       this.opts.container instanceof HTMLDocument) ? this.opts.container
@@ -49,8 +50,9 @@ export default class JsMindView {
     // 根据内容自适应宽度
     this.e_editor.addEventListener('input', e => {
       // 用 canvas 计算实际编辑框宽度 https://stackoverflow.com/a/58705306/2544762
-      const element = jm.view.selected_node.meta.view.element
+      const element = this.model.selected_node.meta.view.element
       element.style.overflow = 'visible'
+      /** @type {HTMLElement} */
       const elMeasure = element.cloneNode(false)
       elMeasure.style.left = '0'
       elMeasure.style.top = '0'
@@ -99,7 +101,7 @@ export default class JsMindView {
     JsMindUtil.dom.add_event(this.e_editor, 'blur', e => {
       this.edit_node_end()
       // 失去焦点的情况下，需要先反选原来选中的节点
-      if (this.selected_node) this.selected_node.deselect()
+      if (this.model.selected_node) this.model.selected_node.deselect()
     })
 
     // 挂载控件
@@ -194,7 +196,7 @@ export default class JsMindView {
    */
   async remove_node (node, cascade = false) {
     // 如果当前选中的节点被删除，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
-    if (this.selected_node && this.selected_node === node) {
+    if (this.model.selected_node && this.model.selected_node === node) {
       if (cascade) {
         // 这个分支意味着当前选中节点的祖先节点被直接删除，自己是被连坐的，这样的话取消选中即可
         this.select_clear()
@@ -244,13 +246,14 @@ export default class JsMindView {
 
   /**
    * 选择一个节点
+   * TODO: 对模型的职责应该从 view 中剥离，不要让 view 写入 model
    * @param node {JsMindNode|node}
    */
   select_node (node) {
-    const lastNode = this.selected_node
-    if (lastNode) this.selected_node.deselect()
+    const lastNode = this.model.selected_node
+    if (lastNode) this.model.selected_node.deselect()
     if (node) node.select()
-    this.selected_node = node
+    this.model.selected_node = node
     // 发出事件
     if (node !== lastNode) {
       this.jm.invoke_event_handle(EVENT_TYPE.select, {
@@ -379,7 +382,7 @@ export default class JsMindView {
     this._show()
     if (keepCenter) this._center_root()
     // 重新渲染一下选中，否则某些情况下会丢失焦点
-    this.select_node(this.selected_node)
+    this.select_node(this.model.selected_node)
   }
 
   /**

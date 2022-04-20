@@ -22,7 +22,6 @@ export default class JsMindNodeLayout {
     this.right_nodes = []
     /** 偏移值缓存
      * @type {{x: Number, y: Number}}
-     * @private
      */
     this.offset = {x: -1, y: -1}
   }

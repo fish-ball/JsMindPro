@@ -4,6 +4,7 @@ export default class JsMindNodeView {
     this.element = null
     /** @type {HTMLElement|null} */
     this.expander = null
+
     /** @type {number} */
     this.abs_x = 0
     /** @type {number} */
@@ -12,6 +13,7 @@ export default class JsMindNodeView {
     this.width = -1
     /** @type {number} */
     this.height = -1
+
     /**
      * @type {{x: number, y: number}}
      * @private
@@ -22,6 +24,7 @@ export default class JsMindNodeView {
   save_location (x, y) {
     this._saved_location = {x, y}
   }
+
   restore_location () {
     return this._saved_location
   }

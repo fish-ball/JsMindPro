@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import _ from 'lodash-es'
 import {DIRECTION} from './JsMind'
 import JsMindUtil from './JsMindUtil'
 

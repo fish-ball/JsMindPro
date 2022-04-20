@@ -1,10 +1,17 @@
+import _ from 'lodash-es'
 import {DIRECTION} from './JsMind'
 
-
+/**
+ * JsMind布局类，主要用于布局的定位计算
+ */
 export default class JsMindLayout {
   constructor (jm, options) {
     this.opts = options
+
     this.jm = jm
+    this.view = this.jm.view
+    this.model = this.jm.model
+
     this.isside = this.opts.mode === 'side'
     this.reset()
 
@@ -172,47 +179,11 @@ export default class JsMindLayout {
     this.set_visible(node.children, false)
   }
 
-  expand_all () {
-    let nodes = this.jm.model.nodes
-    let c = 0
-    let node
-    for (let nodeid in nodes) {
-      node = nodes[nodeid]
-      if (!node.expanded) {
-        node.expanded = true
-        c++
-      }
-    }
-    if (c > 0) {
-      let root = this.jm.model.root
-      this.part_layout(root)
-      this.set_visible(root.children, true)
-    }
-  }
-
-  collapse_all () {
-    let nodes = this.jm.model.nodes
-    let c = 0
-    let node
-    for (let nodeid in nodes) {
-      node = nodes[nodeid]
-      if (node.expanded && !node.isroot) {
-        node.expanded = false
-        c++
-      }
-    }
-    if (c > 0) {
-      let root = this.jm.model.root
-      this.part_layout(root)
-      this.set_visible(root.children, true)
-    }
-  }
-
   /**
    * 将某个子节点展开到指定深度
-   * @param targetDepth
-   * @param nodes
-   * @param depth
+   * @param targetDepth {Number} 目标深度，从当前节点算起
+   * @param nodes {JsMindNode[]|null}
+   * @param depth {Number} 当前深度
    */
   expand_to_depth (targetDepth, nodes = null, depth = 1) {
     if (targetDepth < 1) return
@@ -225,6 +196,20 @@ export default class JsMindLayout {
         if (node.expanded) this.collapse_node(node)
       }
     })
+  }
+
+  /**
+   * 全部展开所有节点
+   */
+  expand_all () {
+    this.expand_node(this.jm.get_root(), true)
+  }
+
+  /**
+   * 全部折叠所有节点
+   */
+  collapse_all () {
+    this.expand_to_depth(1)
   }
 
   /**
@@ -265,8 +250,10 @@ export default class JsMindLayout {
       if (!node.isroot) {
         node.meta.layout.visible = visible
         // 如果某节点被设置为不可见，手动夺取焦点
-        if (!visible && node === this.jm.get_selected_node()) {
-          this.jm.view.select_clear()
+        if (!visible && node === this.model.selected_node) {
+          // TODO: 这里还没有能够刷新到具体的节点 class
+          this.model.selected_node = null
+          node.deselect()
         }
       }
     })

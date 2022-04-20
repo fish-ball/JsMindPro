@@ -319,14 +319,14 @@ class JsMindExtensionDraggable {
   }
 
   /**
-   * 执行逻辑逻辑节点移动
+   * 执行逻辑节点移动
    * @param srcNode
    * @param targetNode
    * @param targetDirection
    */
   move_node (srcNode, targetNode, targetDirection) {
     let shadowH = this.shadow.offsetTop
-    if (!targetNode || !srcNode || JsMindNode.inherited(srcNode, targetNode)) return
+    if (!targetNode || !srcNode || srcNode.is_ancestor_of(targetNode)) return
     // lookup before_node
     let sibling_nodes = targetNode.children
     let node = null
