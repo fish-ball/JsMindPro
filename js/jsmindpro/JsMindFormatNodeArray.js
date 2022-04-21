@@ -1,141 +1,61 @@
-import {DIRECTION} from './JsMind'
-import JsMindModel from './JsMindModel'
+import _ from 'lodash-es'
 import JsMindFormatBase from './JsMindFormatBase'
+import JsMindNode from './JsMindNode'
 
 export default class JsMindFormatNodeArray extends JsMindFormatBase {
   static example = {
     "format": "node_array",
     "data": [
-      {"id": "root", "topic": "jsMind Example", "isroot": true}
+      // 没有 parent 就是 root
+      {"id": "root", "topic": "jsMind Example"}
     ]
-  }
-
-  static get_data (mind) {
-    let json = {}
-    json.format = 'node_array'
-    json.data = []
-    this._array(mind, json.data)
-    return json
   }
 
   /**
    * 从 node_array 中展开输入填入 model
-   * @param mind {JsMindModel}
-   * @param nodeArray {Object[]}
+   * @param model {JsMindModel}
+   * @param arr {Object[]}
    * @private
    */
-  static parse (mind, nodeArray) {
-    // 切片复制一份
-    const arr = nodeArray.slice(0)
-    // 翻转一下快点
-    arr.reverse()
-    const rootId = this._extract_root(mind, arr)
-    if (!rootId) throw new Error('root node can not be found')
-    this._extract_subnode(mind, rootId, arr)
-  }
-
-  /**
-   * 解析出根节点
-   * @param mind {JsMindModel}
-   * @param nodeArray {[]}
-   * @returns {Number|String} 返回根节点的 id
-   * @private
-   */
-  static _extract_root (mind, nodeArray) {
-    let i = nodeArray.length
-    while (i--) {
-      if (nodeArray[i].isroot) {
-        let rawNode = nodeArray[i]
-        let data = this._extract_data(rawNode)
-        mind.set_root(rawNode.id, rawNode.topic, data)
-        nodeArray.splice(i, 1)
-        return rawNode.id
-      }
-    }
-    return null
-  }
-
-  /**
-   * 从 node_array 里面解析并提取子节点到 parentId 的节点子集中
-   * @param mind {JsMindModel}
-   * @param parentId {Number|String}
-   * @param nodeArray {Object[]} 原始节点数据
-   * @returns {Number}
-   * @private
-   */
-  static _extract_subnode (mind, parentId, nodeArray) {
-    let i = nodeArray.length
-    let extract_count = 0
-    while (i--) {
-      const rawNode = nodeArray[i]
-      if (rawNode.parentid !== parentId) continue
-      const data = this._extract_data(rawNode)
-      const direction = {
-        left: DIRECTION.left,
-        right: DIRECTION.right
-      }[rawNode.direction]
-      mind.add_node(
-        parentId, rawNode.id, rawNode.topic, data, void 0, direction, rawNode.expanded)
-      nodeArray.splice(i, 1)
-      extract_count++
-      let sub_extract_count = this._extract_subnode(mind, rawNode.id, nodeArray)
-      if (sub_extract_count > 0) {
-        // reset loop index after extract subordinate node
-        i = nodeArray.length
-        extract_count += sub_extract_count
-      }
-    }
-    return extract_count
-  }
-
-  /**
-   * 整理一个原始数据，剔除一些保留字段之后产生一个剩余字段的对象作为原始对象
-   * @param rawNode {Object}
-   * @private
-   */
-  static _extract_data (rawNode) {
-    // TODO: 为了实现更好的定制化，感觉这里可以加一个配置钩子负责用来做数据映射
-    if ('data' in rawNode) return rawNode.data
-    let data = {}
-    Object.keys(rawNode).forEach(k => {
-      if (!/^id|topic|parentid|isroot|direction|expanded$/.test(k)) {
-        data[k] = rawNode[k]
+  static load (model, arr) {
+    // 重置模型数据
+    model.root = null
+    model.nodes = {}
+    // 先创建所有节点
+    arr.forEach(node => {
+      model.nodes[node.id] = new JsMindNode(
+        node.id, -1, node.topic, node.data, null,
+        null, node.expanded)
+      // 遇到根节点的话将其设置
+      if (!node.parentid) {
+        if (model.root) throw new Error('More than one root node.')
+        model.root = model.nodes[node.id]
       }
     })
-    return data
-  }
-
-  static _array (mind, node_array) {
-    let df = JsMindFormatBase.node_array
-    df._array_node(mind.root, node_array)
+    // 没有根节点报错
+    if (!model.root) throw new Error('No root node found.')
+    arr.forEach(node => {
+      if (!node.parentid) return
+      const childNode = model.nodes[node.id]
+      const parentNode = model.nodes[node.parentid]
+      if (!parentNode) throw new Error(`Parent with id=${node.parentid} not found.`)
+      childNode.parent = parentNode
+      parentNode.children.push(childNode)
+    })
+    // 整理 model
+    model.arrange()
   }
 
   /**
-   *
-   * @param node {JsMindNode}
-   * @param nodeArray {Array} 原始的节点对象数组
-   * @private
+   * 获取某个 JsMindModel 的 node_array JSON 对象接口格式
+   * @param model {JsMindModel}
+   * @returns {{format:String, data:Object[]}}
    */
-  static _array_node (node, nodeArray) {
-    let o = {
-      id: node.id,
-      topic: node.topic,
-      expanded: node.expanded
+  static dump (model) {
+    return {
+      format: 'node_array',
+      data: _.forEach(model.nodes, node => node.serialize())
     }
-    if (node.parent) o.parentid = node.parent.id
-    if (node.isroot) o.isroot = true
-    if (!!node.parent && node.parent.isroot) {
-      o.direction = node.direction === DIRECTION.left ? 'left' : 'right'
-    }
-    if (node.data != null) {
-      let node_data = node.data
-      for (let k in node_data) {
-        o[k] = node_data[k]
-      }
-    }
-    nodeArray.push(o)
-    node.children.forEach(child => {
-      this._array_node(child, nodeArray)
-    })
   }
+
 }

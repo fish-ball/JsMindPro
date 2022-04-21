@@ -8,12 +8,11 @@ export default class JsMindNode {
    * @param index {Number}
    * @param topic {String}
    * @param data {{}}
-   * @param isroot {Boolean}
    * @param parent {JsMindNode}
    * @param direction {Number}
    * @param expanded {Boolean}
    */
-  constructor (id, index, topic, data, isroot, parent = null,
+  constructor (id, index, topic, data, parent = null,
                direction = DIRECTION.center, expanded = true) {
     if (!id) throw new Error('Invalid node id')
     if (typeof index !== 'number') throw new Error('Invalid node index')
@@ -21,13 +20,33 @@ export default class JsMindNode {
     this.index = index
     this.topic = topic
     this.data = data || {}
-    this.isroot = isroot
     this.parent = parent
     this.direction = direction
     this.expanded = expanded
     this.children = []
     /** @type {JsMindNodeMeta} */
     this.meta = new JsMindNodeMeta()
+  }
+
+  /**
+   * 转换为串行化的节点 Object
+   * @returns {Object}
+   */
+  serialize () {
+    return {
+      id: this.id,
+      topic: this.topic,
+      parentid: this.parent && this.parent.id,
+      data: JSON.parse(JSON.stringify(this.data))
+    }
+  }
+
+  /**
+   * 返回一个节点是否根节点
+   * @returns {boolean}
+   */
+  is_root () {
+    return !this.parent
   }
 
   /**
@@ -64,7 +83,7 @@ export default class JsMindNode {
     elParent.appendChild(elNode)
     this.meta.view.element = elNode
     // 添加折叠器 DOM
-    if (this.isroot) {
+    if (this.is_root()) {
       elNode.classList.add('root')
     } else {
       // 为父元素创建一个 expander

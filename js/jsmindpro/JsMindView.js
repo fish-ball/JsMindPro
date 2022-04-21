@@ -19,9 +19,12 @@ export default class JsMindView {
     this.canvas_ctx = null
     this.size = {w: 0, h: 0}
 
-    // TODO: selected_node 逻辑应该挪到 model 里面去
-    this.selected_node = null
-    this.editing_node = null
+    /**
+     * 当前正在编辑的节点
+     * @type {null}
+     * @private
+     */
+    this._editing_node = null
   }
 
   /**
@@ -29,9 +32,7 @@ export default class JsMindView {
    */
   init () {
     // https://stackoverflow.com/a/36894871/2544762
-    this.container = (this.opts.container instanceof Element ||
-      this.opts.container instanceof HTMLDocument) ? this.opts.container
-      : document.getElementById(this.opts.container)
+    this.container = (this.opts.container instanceof Element || this.opts.container instanceof HTMLDocument) ? this.opts.container : document.getElementById(this.opts.container)
     if (!this.container) throw new Error('the options.view.container was not be found in dom')
 
     this.e_panel = document.createElement('div')
@@ -78,13 +79,12 @@ export default class JsMindView {
     // 结束标记的事件，TODO: 为啥要写在这种地方？
     JsMindUtil.dom.add_event(this.e_editor, 'keydown', e => {
       e.stopPropagation()
-      const node = this.editing_node
-      if (e.key === 'Enter') {
+      const node = this._editing_node
+      if (/^Enter|Tab$/.test(e.key)) {
         if (e.ctrlKey || e.altKey) {
           const start = e.target.selectionStart
           const end = e.target.selectionEnd
-          e.target.value = e.target.value.substr(0, start) + '\n'
-            + e.target.value.substr(end)
+          e.target.value = e.target.value.substr(0, start) + '\n' + e.target.value.substr(end)
           e.target.setSelectionRange(start + 1, start + 1)
           e.target.dispatchEvent(new Event('input'))
         } else {
@@ -131,12 +131,10 @@ export default class JsMindView {
    */
   get_binded_nodeid (element) {
     if (!element) return null
-    if (/^body|html$/i.test(element.tagName) ||
-      element.classList.contains('jmnodes')) {
+    if (/^body|html$/i.test(element.tagName) || element.classList.contains('jmnodes')) {
       return null
     }
-    if (element.classList.contains('jmnode') ||
-      element.classList.contains('jmexpander')) {
+    if (element.classList.contains('jmnode') || element.classList.contains('jmexpander')) {
       const nodeId = element.getAttribute('nodeid')
       return /^\d+$/.test(nodeId) ? Number(nodeId) : nodeId
     }
@@ -213,9 +211,9 @@ export default class JsMindView {
         }
       }
     }
-    if (this.editing_node && this.editing_node === node) {
+    if (this._editing_node && this._editing_node === node) {
       node.meta.view.element.removeChild(this.e_editor)
-      this.editing_node = null
+      this._editing_node = null
     }
     // 后序遍历，先递归删除所有子节点
     await Promise.all(node.children.map(child => this.remove_node(child, true)))
@@ -274,7 +272,7 @@ export default class JsMindView {
    * @returns {boolean}
    */
   is_editing () {
-    return !!this.editing_node
+    return !!this._editing_node
   }
 
   /**
@@ -283,9 +281,9 @@ export default class JsMindView {
    */
   edit_node_begin (node) {
     // 如果正在编辑另一个，先结束编辑
-    if (this.editing_node) this.edit_node_end()
+    if (this._editing_node) this.edit_node_end()
     this.select_node(node)
-    this.editing_node = node
+    this._editing_node = node
     let element = node.meta.view.element
     this.e_editor.value = node.topic
     this.e_editor.dispatchEvent(new Event('input'))
@@ -302,10 +300,10 @@ export default class JsMindView {
    */
   edit_node_end (cancel = false) {
     // 如果不是正在编辑，退出
-    if (!this.editing_node) return
+    if (!this._editing_node) return
     // 正式保存
-    let node = this.editing_node
-    this.editing_node = null
+    let node = this._editing_node
+    this._editing_node = null
     let view_data = node.meta.view
     let element = view_data.element
     let topic = this.e_editor.value
@@ -399,10 +397,7 @@ export default class JsMindView {
    */
   save_location (node) {
     const view = node.meta.view
-    view.save_location(
-      parseInt(view.element.style.left) - this.e_panel.scrollLeft,
-      parseInt(view.element.style.top) - this.e_panel.scrollTop
-    )
+    view.save_location(parseInt(view.element.style.left) - this.e_panel.scrollLeft, parseInt(view.element.style.top) - this.e_panel.scrollTop)
   }
 
   /**
@@ -432,10 +427,7 @@ export default class JsMindView {
    */
   async init_nodes () {
     const nodes = this.jm.model.nodes
-    await Promise.all(_.map(
-      nodes,
-      node => node.create_element(this.e_nodes, this.jm)
-    ))
+    await Promise.all(_.map(nodes, node => node.create_element(this.e_nodes, this.jm)))
     // _.forEach(nodes, node => node.init_size())
   }
 
@@ -493,12 +485,7 @@ export default class JsMindView {
     ctx.lineWidth = this.opts.line_width
     ctx.lineCap = 'round'
 
-    JsMindUtil.canvas.bezierto(
-      ctx,
-      pin.x + offset.x,
-      pin.y + offset.y,
-      pout.x + offset.x,
-      pout.y + offset.y)
+    JsMindUtil.canvas.bezierto(ctx, pin.x + offset.x, pin.y + offset.y, pout.x + offset.x, pout.y + offset.y)
   }
 
   /**
@@ -512,7 +499,7 @@ export default class JsMindView {
     Object.keys(this.jm.model.nodes).forEach(key => {
       const node = this.jm.model.nodes[key]
       // 根节点没有线
-      if (node.isroot) return
+      if (node.is_root()) return
       // 隐藏的节点没有线
       if (('visible' in node.meta.layout) && !node.meta.layout.visible) return
       // 获取布局的入点坐标
@@ -552,7 +539,7 @@ export default class JsMindView {
       elNode.style.top = (offset.y + p.y) + 'px'
       elNode.style.display = ''
       elNode.style.visibility = 'visible'
-      if (!node.isroot && node.children.length > 0) {
+      if (!node.is_root() && node.children.length > 0) {
         expanderText = node.expanded ? '-' : '+'
         expanderPoint = this.jm.layout.get_expander_point(node)
         elExpander.style.left = (offset.x + expanderPoint.x) + 'px'
@@ -562,7 +549,7 @@ export default class JsMindView {
         elExpander.innerText = expanderText
       }
       // hide expander while all children have been removed
-      if (!node.isroot && node.children.length === 0) {
+      if (!node.is_root() && node.children.length === 0) {
         elExpander.style.display = 'none'
         elExpander.style.visibility = 'hidden'
       }

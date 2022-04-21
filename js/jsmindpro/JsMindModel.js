@@ -45,7 +45,7 @@ export default class JsMindModel {
    * @returns {JsMindModel}
    */
   load (data) {
-    return this.formatter.parse(this, data)
+    return this.formatter.load(this, data)
   }
 
   /**
@@ -83,15 +83,20 @@ export default class JsMindModel {
   }
 
   /**
-   * 根据输入的节点信息生成并设置根节点，只能执行一次，第二次忽略
-   * @param nodeId {Number|String}
-   * @param topic {String}
-   * @param data {*}
+   * 重新整理整个 mind 的 node 数据
+   * 包括更新 index 以及 direction
    */
-  set_root (nodeId, topic, data) {
-    if (this.root) throw new Error('Cannot set root more than once.')
-    this.root = new JsMindNode(nodeId, 0, topic, data, true)
-    this._put_node(this.root)
+  arrange (node = null) {
+    node = node || this.root
+    // 先重排下标
+    node.children.forEach((child, i) => {
+      child.direction = node.is_root() ? {
+        both: [DIRECTION.right, DIRECTION.left][i % 2],
+        side: DIRECTION.right
+      }[this.options.mode || 'both'] : node.direction
+      child.index = i
+      this.arrange(child)
+    })
   }
 
   /**
@@ -101,48 +106,22 @@ export default class JsMindModel {
    * @param topic {String} 节点标题
    * @param data {*}
    * @param idx {Number} 节点序号，默认放最后
-   * @param direction {Number}
-   * @param expanded {Boolean}
    * @returns {JsMindNode} 范围添加成功后的节点，操作失败返回 null
    */
-  add_node (parentNode, nodeId, topic, data, idx = -1,
-            direction = null, expanded = false) {
+  add_node (parentNode, nodeId,
+            topic, data, idx = -1) {
     // 如果传入对象并非 JsMindNode，查找并返回这个 node
     parentNode = this._sanitize_node(parentNode)
-    if (!parentNode) return null
     // 不传入位置的话，放在末尾
     if (idx < 0) idx = parentNode.children.length
-    let node = null
-    // 父亲为根节点的话，还要看方向
-    if (parentNode.isroot) {
-      // 如果入参未指定方向，则按照实际计算方向较少那边平衡补位
-      if ((this.options.mode || 'both') === 'both') {
-        if (direction === null || isNaN(direction)) {
-          let children = parentNode.children
-          let r = 0
-          for (let i = 0; i < children.length; i++) {
-            if (children[i].direction === DIRECTION.left) {
-              r--
-            } else {
-              r++
-            }
-          }
-          direction = (children.length > 1 && r > 0) ? DIRECTION.left : DIRECTION.right
-        }
-      } else if (this.options.mode === 'side') {
-        direction = DIRECTION.right
-      } else {
-        throw new Error(`Unsupported options mode=[${this.options.mode}]`)
-      }
-      node = new JsMindNode(nodeId, idx, topic, data, false, parentNode, direction, expanded)
-    } else {
-      // 非一级节点方向从父
-      node = new JsMindNode(nodeId, idx, topic, data, false, parentNode, parentNode.direction, expanded)
-    }
-    // 尝试将创建好的节点置入，如果 id 冲突的话事实上是会失败的
+    // 创建并置入节点
+    const node = new JsMindNode(nodeId, idx, topic, data, parentNode, parentNode.direction)
     this._put_node(node)
     parentNode.children.push(node)
+    // 尝试将创建好的节点置入，如果 id 冲突的话事实上是会失败的
     this._reindex(parentNode)
+    // 父亲为根节点的话，重整方向
+    if (parentNode.is_root()) this.arrange()
     return node
   }
 
@@ -168,7 +147,7 @@ export default class JsMindModel {
    */
   get_node_before (node) {
     node = this._sanitize_node(node)
-    if (!node || node.isroot) return null
+    if (!node || node.is_root()) return null
     let idx = node.index - 1
     return idx > -1 ? node.parent.children[idx] : null
   }
@@ -218,7 +197,7 @@ export default class JsMindModel {
    */
   remove_node (node) {
     node = this._sanitize_node(node)
-    if (node.isroot) throw new Error('Cannot remove root node')
+    if (node.is_root()) throw new Error('Cannot remove root node')
     // 后序遍历，先递归清理所有子树节点
     let children = node.children
     node.children = []
@@ -266,7 +245,7 @@ export default class JsMindModel {
       node.parent = parent
     }
     // 根节点
-    node.direction = node.parent.isroot ? direction : node.parent.direction
+    node.direction = node.parent.is_root() ? direction : node.parent.direction
     // 同一个父节点内部移动
     this._move_node_internal(node, nodeBefore)
     this._flow_node_direction(node)

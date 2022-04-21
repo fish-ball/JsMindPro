@@ -47,7 +47,6 @@ export default class JsMindShortcut {
   handler (e) {
     // 编辑中状态不处理热键
     if (this.jm.view.is_editing()) return
-    e = e || event
     if (!this.opts.enable) return
     // 纯控制键不响应
     if (/^Control|Shift|Alt|Meta$/.test(e.key)) return
@@ -68,10 +67,9 @@ export default class JsMindShortcut {
 
   /**
    * 处理添加一个子节点
-   * @param e {KeyboardEvent}
    * @returns {Promise<void>}
    */
-  async handle_addchild (e) {
+  async handle_addchild () {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
@@ -85,14 +83,13 @@ export default class JsMindShortcut {
 
   /**
    * 处理添加一个兄弟节点
-   * @param e {KeyboardEvent}
    * @returns {Promise<void>}
    */
-  async handle_addbrother (e) {
+  async handle_addbrother () {
     const jm = this.jm
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
-    if (selectedNode.isroot) return this.handle_addchild(e)
+    if (selectedNode.is_root()) return this.handle_addchild()
     // 在 await 之前先阻断默认事件
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
@@ -103,9 +100,8 @@ export default class JsMindShortcut {
 
   /**
    * 触发编辑一个节点
-   * @param e {KeyboardEvent}
    */
-  handle_editnode (e) {
+  handle_editnode () {
     const jm = this.jm
     let selected_node = jm.get_selected_node()
     if (selected_node) jm.begin_edit(selected_node)
@@ -113,22 +109,20 @@ export default class JsMindShortcut {
 
   /**
    * 处理一个删除节点事件
-   * @param e {KeyboardEvent}
    * @returns {Promise<void>}
    */
-  async handle_delnode (e) {
+  async handle_delnode () {
     const jm = this.jm
     let selected_node = jm.get_selected_node()
     if (!selected_node) return
-    if (selected_node.isroot) throw new Error('Cannot delete root node.')
+    if (selected_node.is_root()) throw new Error('Cannot delete root node.')
     await jm.remove_node(selected_node)
   }
 
   /**
    * 处理展开和折叠节点
-   * @param e {KeyboardEvent}
    */
-  handle_toggle (e) {
+  handle_toggle () {
     const jm = this.jm
     let selected_node = jm.get_selected_node()
     if (!!selected_node) {
@@ -138,13 +132,11 @@ export default class JsMindShortcut {
 
   /**
    * 处理↑按键
-   * @param e {KeyboardEvent}
    */
-  handle_up (e) {
+  handle_up () {
     const jm = this.jm
-    let evt = e || event
     let selected_node = jm.get_selected_node()
-    if (!selected_node || selected_node.isroot) return
+    if (!selected_node || selected_node.is_root()) return
     let up_node = jm.find_node_before(selected_node)
     if (!up_node) {
       let np = jm.find_node_before(selected_node.parent)
@@ -157,13 +149,11 @@ export default class JsMindShortcut {
 
   /**
    * 处理↓键的响应
-   * @param e {KeyboardEvent}
    */
-  handle_down (e) {
+  handle_down () {
     const jm = this.jm
-    let evt = e || event
     let selected_node = jm.get_selected_node()
-    if (!selected_node || selected_node.isroot) return
+    if (!selected_node || selected_node.is_root()) return
     let down_node = jm.find_node_after(selected_node)
     if (!down_node) {
       let np = jm.find_node_after(selected_node.parent)
@@ -177,52 +167,39 @@ export default class JsMindShortcut {
 
   /**
    * 处理按键←的响应
-   * @param e {KeyboardEvent}
    */
-  handle_left (e) {
-    this._handle_direction(e, DIRECTION.left)
+  handle_left () {
+    this._handle_direction(DIRECTION.left)
   }
 
   /**
    * 处理按键右的响应
-   * @param e {KeyboardEvent}
    */
-  handle_right (e) {
-    this._handle_direction(e, DIRECTION.right)
+  handle_right () {
+    this._handle_direction(DIRECTION.right)
   }
 
   /**
    * 处理左或者右方向的按键响应
-   * @param e {KeyboardEvent}
    * @param d {Number} 方向枚举值
    * @private
    */
-  _handle_direction (e, d) {
+  _handle_direction (d) {
     const jm = this.jm
-    let evt = e || event
-    let selected_node = jm.get_selected_node()
+    let selectedNode = jm.get_selected_node()
+    if (!selectedNode) return
     let node = null
-    if (!!selected_node) {
-      if (selected_node.isroot) {
-        let c = selected_node.children
-        let children = []
-        for (let i = 0; i < c.length; i++) {
-          if (c[i].direction === d) {
-            children.push(i)
-          }
-        }
-        node = c[children[Math.floor((children.length - 1) / 2)]]
-      }
-      else if (selected_node.direction === d) {
-        let children = selected_node.children
-        let childrencount = children.length
-        if (childrencount > 0) {
-          node = children[Math.floor((childrencount - 1) / 2)]
-        }
-      } else {
-        node = selected_node.parent
-      }
-      if (node) jm.select_node(node)
+    if (selectedNode.is_root()) {
+      // 跳到指定方向中间的那个节点
+      const children = selectedNode.children.filter(c => c.direction === d)
+      node = children[children[Math.floor((children.length - 1) / 2)]]
+    } else if (selectedNode.direction === d) {
+      // 同方向的左右，找到中间的儿子节点
+      const children = selectedNode.children
+      node = children[Math.floor((children.length - 1) / 2)]
+    } else {
+      node = selectedNode.parent
     }
+    if (node) jm.select_node(node)
   }
 }

@@ -185,7 +185,7 @@ class JsMindExtensionDraggable {
     _.forEach(this.jm.model.nodes, node => {
       let np, sp
       // 忽略另一边的节点
-      if (!node.isroot && node.direction !== direction) return null
+      if (!node.is_root() && node.direction !== direction) return null
       // 不能移动到自己或自己的子节点
       for (let nd = node; nd; nd = nd.parent) {
         if (nd.id === this.active_node.id) return null
@@ -271,7 +271,7 @@ class JsMindExtensionDraggable {
     let nodeId = view.get_binded_nodeid(el)
     if (!nodeId) return
     let node = this.jm.get_node(nodeId)
-    if (node.isroot) return
+    if (node.is_root()) return
     this._clean_capturing()
     this._timer_capturing = setTimeout(() => {
       this._timer_capturing = 0

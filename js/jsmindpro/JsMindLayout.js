@@ -6,13 +6,13 @@ import {DIRECTION} from './JsMind'
  */
 export default class JsMindLayout {
   constructor (jm, options) {
-    this.opts = options
+    this.options = options
 
     this.jm = jm
     this.view = this.jm.view
     this.model = this.jm.model
 
-    this.isside = this.opts.mode === 'side'
+    this.isside = this.options.mode === 'side'
     this.reset()
 
     this.cache_valid = false
@@ -48,7 +48,7 @@ export default class JsMindLayout {
     if (('offset' in layout) && this.cache_valid) return layout.offset
     let x = layout.offset_x
     let y = layout.offset_y
-    if (!node.isroot) {
+    if (!node.is_root()) {
       const {x: dx, y: dy} = this.get_node_offset(node.parent)
       x += dx
       y += dy
@@ -94,12 +94,12 @@ export default class JsMindLayout {
       layoutData._pout_ = poutCache
     }
     if (poutCache.x === -1 || poutCache.y === -1) {
-      if (node.isroot) {
+      if (node.is_root()) {
         poutCache.x = 0
         poutCache.y = 0
       } else {
         const offset = this.get_node_offset(node)
-        poutCache.x = offset.x + (viewData.width + this.opts.pspace) * layoutData.direction
+        poutCache.x = offset.x + (viewData.width + this.options.pspace) * layoutData.direction
         poutCache.y = offset.y
       }
     }
@@ -114,7 +114,7 @@ export default class JsMindLayout {
     let p = this.get_node_point_out(node)
     let ex_p = {}
     if (node.meta.layout.direction === DIRECTION.right) {
-      ex_p.x = p.x - this.opts.pspace
+      ex_p.x = p.x - this.options.pspace
     } else {
       ex_p.x = p.x
     }
@@ -144,7 +144,7 @@ export default class JsMindLayout {
    */
   toggle_node (node) {
     // 根节点不允许折叠
-    if (node.isroot) return
+    if (node.is_root()) return
     if (node.expanded) {
       this.collapse_node(node)
     } else {
@@ -219,7 +219,7 @@ export default class JsMindLayout {
   part_layout (node) {
     let root = this.jm.model.root
     let rootLayout = root.meta.layout
-    if (node.isroot) {
+    if (node.is_root()) {
       rootLayout.outer_height_right =
         this._layout_offset_subnodes_height(rootLayout.right_nodes)
       rootLayout.outer_height_left =
@@ -247,7 +247,7 @@ export default class JsMindLayout {
       } else {
         this.set_visible(node.children, false)
       }
-      if (!node.isroot) {
+      if (!node.is_root()) {
         node.meta.layout.visible = visible
         // 如果某节点被设置为不可见，手动夺取焦点
         if (!visible && node === this.model.selected_node) {
@@ -334,7 +334,7 @@ export default class JsMindLayout {
   }
 
   /**
-   * 调整一系列子节点的布局定位
+   * 递归调整一系列兄弟节点的布局定位
    * @param nodes {JsMindNode[]}
    * @private
    */
@@ -343,20 +343,20 @@ export default class JsMindLayout {
     let baseY = 0
     nodes.forEach(node => {
       const layout = node.meta.layout
-      layout.outer_height = this._layout_offset_subnodes(node.children)
+      layout.outer_height = this._layout_offset_subnodes(node.children || [])
       if (!node.expanded) {
         layout.outer_height = 0
         this.set_visible(node.children, false)
       }
       layout.outer_height = Math.max(node.meta.view.height, layout.outer_height)
       layout.offset_y = baseY + layout.outer_height / 2
-      layout.offset_x = this.opts.hspace * node.direction +
+      layout.offset_x = this.options.hspace * node.direction +
         node.parent.meta.view.width * (node.parent.direction + node.direction) / 2
-      if (!node.parent.isroot) layout.offset_x += this.opts.pspace * node.direction
-      baseY = baseY + layout.outer_height + this.opts.vspace
+      if (!node.parent.is_root()) layout.offset_x += this.options.pspace * node.direction
+      baseY = baseY + layout.outer_height + this.options.vspace
       totalHeight += layout.outer_height
     })
-    totalHeight += this.opts.vspace * (nodes.length - 1)
+    totalHeight += this.options.vspace * (nodes.length - 1)
     nodes.forEach(node => {
       node.meta.layout.offset_y -= totalHeight / 2
     })
@@ -380,11 +380,11 @@ export default class JsMindLayout {
       outerHeight = Math.max(node.meta.view.height, outerHeight)
       node.meta.layout.outer_height = outerHeight
       node.meta.layout.offset_y = base_y + outerHeight / 2
-      base_y = base_y + outerHeight + this.opts.vspace
+      base_y = base_y + outerHeight + this.options.vspace
       totalHeight += outerHeight
     })
     if (nodes.length > 1) {
-      totalHeight += this.opts.vspace * (nodes.length - 1)
+      totalHeight += this.options.vspace * (nodes.length - 1)
     }
     nodes.forEach(node => {
       node.meta.layout.offset_y -= totalHeight / 2

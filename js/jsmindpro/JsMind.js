@@ -160,7 +160,7 @@ export default class JsMind {
    * 暴露接口让外部可以访问 nodes，但不直接访问 JsMindModel
    * @returns {{JsMindNode}}
    */
-  get_nodes() {
+  get_nodes () {
     return this.model.nodes
   }
 
@@ -217,7 +217,7 @@ export default class JsMind {
    */
   toggle_node (node) {
     node = this._sanitize_node(node)
-    if (node.isroot) return
+    if (node.is_root()) return
     this.view.save_location(node)
     this.layout.toggle_node(node)
     this.view.relayout()
@@ -231,7 +231,7 @@ export default class JsMind {
    */
   expand_node (node, deep = false) {
     node = this._sanitize_node(node)
-    if (node.isroot) return
+    if (node.is_root()) return
     this.view.save_location(node)
     this.layout.expand_node(node, deep)
     this.view.relayout()
@@ -244,7 +244,7 @@ export default class JsMind {
    */
   collapse_node (node) {
     node = this._sanitize_node(node)
-    if (node.isroot) return
+    if (node.is_root()) return
     this.view.save_location(node)
     this.layout.collapse_node(node)
     this.view.relayout()
@@ -260,7 +260,7 @@ export default class JsMind {
     this.collapse_all()
     nodes.forEach(node => {
       node = this._sanitize_node(node).parent
-      while (node && !node.isroot && !node.expanded) {
+      while (node && !node.is_root() && !node.expanded) {
         this.layout.expand_node(node)
         node = node.parent
       }
@@ -276,7 +276,7 @@ export default class JsMind {
     node = this._sanitize_node(node)
     this.view.save_location(node)
     // 从当前层级上溯，把所有其他兄弟节点折叠掉
-    while (!node.isroot) {
+    while (!node.is_root()) {
       node.parent.children.forEach(child => {
         if (child !== node) this.collapse_node(child)
       })
@@ -440,7 +440,7 @@ export default class JsMind {
   async remove_node (node) {
     node = this._sanitize_node(node)
     this._require_editable()
-    if (node.isroot) throw new Error('Can not remove root node')
+    if (node.is_root()) throw new Error('Can not remove root node')
     let nodeId = node.id
     let parentId = node.parent.id
     let parent = this.get_node(parentId)
@@ -536,7 +536,7 @@ export default class JsMind {
    */
   find_node_before (node) {
     node = this._sanitize_node(node)
-    if (node.isroot) return null
+    if (node.is_root()) return null
     // 非一级子节点好搞，直接上一个
     if (!node.parent.is_root) return this.model.get_node_before(node)
     // 如果是一级子节点，则要考虑方向的问题
@@ -555,7 +555,7 @@ export default class JsMind {
    */
   find_node_after (node) {
     node = this._sanitize_node(node)
-    if (node.isroot) return null
+    if (node.is_root()) return null
     // 非一级子节点好搞，直接上一个
     if (!node.parent.is_root) return this.model.get_node_after(node)
     // 如果是一级子节点，则要考虑方向的问题
