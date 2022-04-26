@@ -64,9 +64,7 @@ export default class JsMindModel {
    * @returns {JsMindNode}
    */
   get_node (nodeId) {
-    const node = this.nodes[nodeId]
-    if (!node) throw new Error(`Node with id=${nodeId} does not exists.`)
-    return node
+    return this.nodes[nodeId] || null
   }
 
   /**

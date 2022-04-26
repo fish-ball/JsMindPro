@@ -329,7 +329,7 @@ class JsMindExtensionDraggable {
     let sibling_nodes = targetNode.children
     let node = null
     let deltaY = Number.MAX_VALUE
-    let nodeBefore = null
+    let prevNode = null
     let beforeId = '_last_'
     for (let sc = sibling_nodes.length; sc--;) {
       node = sibling_nodes[sc]
@@ -337,13 +337,12 @@ class JsMindExtensionDraggable {
         let dy = node.get_location().y - shadowH
         if (dy > 0 && dy < deltaY) {
           deltaY = dy
-          nodeBefore = node
+          prevNode = node
           beforeId = '_first_'
         }
       }
     }
-    if (nodeBefore) beforeId = nodeBefore.id
-    this.jm.move_node(srcNode.id, beforeId, targetNode.id, targetDirection)
+    this.jm.move_node(srcNode, prevNode, targetNode, targetDirection)
     this.active_node = null
     this.target_node = null
     this.target_direct = null

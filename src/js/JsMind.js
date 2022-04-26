@@ -149,186 +149,6 @@ export default class JsMind {
   }
 
   /**
-   * 返回当前的思维导图实例是否可编辑
-   * @returns {boolean}
-   */
-  can_edit () {
-    return this.options.editable
-  }
-
-  /**
-   * 配置启用编辑
-   */
-  enable_edit () {
-    this.options.editable = true
-  }
-
-  /**
-   * 配置禁用编辑
-   */
-  disable_edit () {
-    this.options.editable = false
-  }
-
-  /**
-   * 暴露接口让外部可以访问 nodes，但不直接访问 JsMindModel
-   * @returns {{JsMindNode}}
-   */
-  get_nodes () {
-    return this.model.nodes
-  }
-
-  /**
-   * 配置启用某个事件
-   * 例如 call enable_event_handle('dblclick')
-   * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
-   */
-  enable_event_handle (eventName) {
-    this.options.default_event_handle['enable_' + eventName + '_handle'] = true
-  }
-
-  /**
-   * 配置禁用某个事件
-   * 例如 call disable_event_handle('dblclick')
-   * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
-   */
-  disable_event_handle (eventName) {
-    this.options.default_event_handle['enable_' + eventName + '_handle'] = false
-  }
-
-  /**
-   * 设置当前思维导图实例的主题
-   * @param theme {String}
-   */
-  set_theme (theme) {
-    let theme_old = this.options.theme
-    this.options.theme = (!!theme) ? theme : null
-    if (theme_old !== this.options.theme) {
-      this.view.reset_theme()
-    }
-  }
-
-  /**
-   * 开始编辑一个节点
-   * @param node {JsMindNode}
-   * @returns {Promise<void>}
-   */
-  @require_editable
-  async begin_edit (node) {
-    node = node || this.get_selected_node()
-    if (!node) return
-    this.select_node(node)
-    return this.view.edit_node_begin(node)
-  }
-
-  /**
-   * 结束一个节点的编辑状态
-   * @returns {Promise<void>}
-   */
-  async end_edit () {
-    return this.view.edit_node_end()
-  }
-
-  /**
-   * 切换一个节点的折叠/展开状态
-   * @param node {JsMindNode|null}
-   */
-  toggle_node (node) {
-    if (!node || node.is_root()) return
-    this.view.save_location(node)
-    this.layout.toggle_node(node)
-    this.view.relayout()
-    this.view.restore_location(node)
-  }
-
-  /**
-   * 展开一个节点
-   * @param node {JsMindNode|Number|String}
-   * @param deep {boolean} 是否级联展开到最底层
-   */
-  expand_node (node, deep = false) {
-    node = this._sanitize_node(node)
-    if (node.is_root()) return
-    this.view.save_location(node)
-    this.layout.expand_node(node, deep)
-    this.view.relayout()
-    this.view.restore_location(node)
-  }
-
-  /**
-   * 折叠一个节点
-   * @param node {JsMindNode|Number|String}
-   */
-  collapse_node (node) {
-    node = this._sanitize_node(node)
-    if (node.is_root()) return
-    this.view.save_location(node)
-    this.layout.collapse_node(node)
-    this.view.relayout()
-    this.view.restore_location(node)
-  }
-
-  /**
-   * 展开到指定的节点列表
-   * 将指定的列表到根节点的路径全部打开，其余全部关闭
-   * @param nodes {JsMindNode[]|Number[]|String[]}
-   */
-  expand_to_nodes (nodes) {
-    this.collapse_all()
-    nodes.forEach(node => {
-      node = this._sanitize_node(node).parent
-      while (node && !node.is_root() && !node.expanded) {
-        this.layout.expand_node(node)
-        node = node.parent
-      }
-    })
-    this.view.relayout()
-  }
-
-  /**
-   * 折叠除本节点外的其他节点
-   * @param node {JsMindNode|Number|String}
-   */
-  collapse_other (node) {
-    node = this._sanitize_node(node)
-    this.view.save_location(node)
-    // 从当前层级上溯，把所有其他兄弟节点折叠掉
-    while (!node.is_root()) {
-      node.parent.children.forEach(child => {
-        if (child !== node) this.collapse_node(child)
-      })
-      node = node.parent
-    }
-    this.view.relayout()
-    this.view.restore_location(node)
-  }
-
-  /**
-   * 展开所有的节点
-   */
-  expand_all () {
-    this.layout.expand_all()
-    this.view.relayout()
-  }
-
-  /**
-   * 折叠所有的节点
-   */
-  collapse_all () {
-    this.layout.collapse_all()
-    this.view.relayout()
-  }
-
-  /**
-   * 展开到指定的层级
-   * @param depth {Number} 层级
-   */
-  expand_to_depth (depth) {
-    this.layout.expand_to_depth(depth)
-    this.view.relayout()
-  }
-
-  /**
    * 渲染一个数据，相当于重置之后再渲染
    * @param format {String} 数据格式：node_array|node_tree|freemind
    * @param data {Object} 加载的思维导图数据
@@ -379,17 +199,310 @@ export default class JsMind {
   }
 
   /**
+   * 暴露接口让外部可以访问 nodes，但不直接访问 JsMindModel
+   * @returns {{JsMindNode}}
+   */
+  get_nodes () {
+    return this.model.nodes
+  }
+
+  /**
+   * 获取当前选中的节点
+   * @returns {JsMindNode}
+   */
+  get_selected_node () {
+    return this.model.selected_node
+  }
+
+  /**
+   * 触发选中某个节点
+   * @param node {JsMindNode} 待选中的节点
+   */
+  select_node (node) {
+    const lastNode = this.get_selected_node()
+    if (node && !node.is_visible()) return
+    if (lastNode) lastNode.deselect()
+    this.model.selected_node = node
+    if (node) node.select()
+  }
+
+  /**
+   * 触发清除选中
+   */
+  select_clear () {
+    this.select_node(null)
+  }
+
+  /**
+   * 返回当前的思维导图实例是否可编辑
+   * @returns {boolean}
+   */
+  can_edit () {
+    return this.options.editable
+  }
+
+  /**
+   * 配置启用编辑
+   */
+  enable_edit () {
+    this.options.editable = true
+  }
+
+  /**
+   * 配置禁用编辑
+   */
+  disable_edit () {
+    this.options.editable = false
+  }
+
+  /**
+   * 重设大小
+   */
+  resize () {
+    return this.view.resize()
+  }
+
+  /**
+   * 配置启用某个事件
+   * 例如 call enable_event_handle('dblclick')
+   * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
+   */
+  enable_event_handle (eventName) {
+    this.options.default_event_handle['enable_' + eventName + '_handle'] = true
+  }
+
+  /**
+   * 配置禁用某个事件
+   * 例如 call disable_event_handle('dblclick')
+   * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
+   */
+  disable_event_handle (eventName) {
+    this.options.default_event_handle['enable_' + eventName + '_handle'] = false
+  }
+
+  /**
+   * 添加一个事件处理器
+   * callback(type ,data)
+   * @param callback {Function}
+   */
+  add_event_listener (callback) {
+    this._event_handlers.push(callback)
+  }
+
+  /**
+   * 触发一个事件处理
+   * TODO: event_handle 相关的都属于外部注入钩子，需要改成 async
+   * @param type
+   * @param data
+   */
+  invoke_event_handle (type, data) {
+    this._event_handlers.forEach(handler => handler(type, data))
+  }
+
+  /**
+   * 设置当前思维导图实例的主题
+   * @param theme {String}
+   */
+  set_theme (theme) {
+    let theme_old = this.options.theme
+    this.options.theme = (!!theme) ? theme : null
+    if (theme_old !== this.options.theme) {
+      this.view.reset_theme()
+    }
+  }
+
+  /**
+   * 返回指定节点的上一个节点（注意会穿越层级，也就是按↑键对应的节点）
+   * @param node {JsMindNode}
+   * @returns {JsMindNode}
+   */
+  find_node_before (node) {
+    if (node.is_root()) return null
+    // 非一级子节点好搞，直接上一个
+    if (!node.parent.is_root) return this.model.get_node_before(node)
+    // 如果是一级子节点，则要考虑方向的问题
+    let idx = node.parent.children.indexOf(node) - 1
+    while (idx > -1) {
+      if (node.parent.children[idx].direction === node.direction) break
+      idx -= 1
+    }
+    return idx > -1 ? node.parent.children[idx] : null
+  }
+
+  /**
+   * 返回指定节点的下一个节点（注意会穿越层级，也就是按↓键对应的节点）
+   * @param node {JsMindNode}
+   * @returns {JsMindNode}
+   */
+  find_node_after (node) {
+    if (node.is_root()) return null
+    // 非一级子节点好搞，直接上一个
+    if (!node.parent.is_root) return this.model.get_node_after(node)
+    // 如果是一级子节点，则要考虑方向的问题
+    let idx = node.parent.children.indexOf(node) + 1
+    while (idx < node.parent.children.length) {
+      if (node.parent.children[idx].direction === node.direction) break
+      idx += 1
+    }
+    return idx > -1 ? node.parent.children[idx] : null
+  }
+
+  /**
+   * 切换一个节点的折叠/展开状态
+   * @param node {JsMindNode|null}
+   */
+  toggle_node (node) {
+    if (!node || node.is_root()) return
+    this.view.save_location(node)
+    this.layout.toggle_node(node)
+    this.view.relayout()
+    this.view.restore_location(node)
+  }
+
+  /**
+   * 展开一个节点
+   * @param node {JsMindNode}
+   * @param deep {boolean} 是否级联展开到最底层
+   */
+  expand_node (node, deep = false) {
+    if (node.is_root()) return
+    this.view.save_location(node)
+    this.layout.expand_node(node, deep)
+    this.view.relayout()
+    this.view.restore_location(node)
+  }
+
+  /**
+   * 折叠一个节点
+   * @param node {JsMindNode}
+   */
+  collapse_node (node) {
+    if (node.is_root()) return
+    this.view.save_location(node)
+    this.layout.collapse_node(node)
+    this.view.relayout()
+    this.view.restore_location(node)
+  }
+
+  /**
+   * 展开到指定的节点列表
+   * 将指定的列表到根节点的路径全部打开，其余全部关闭
+   * @param nodes {JsMindNode[]}
+   */
+  expand_to_nodes (nodes) {
+    this.collapse_all()
+    nodes.forEach(node => {
+      node = this.get_node(node).parent
+      while (node && !node.is_root() && !node.expanded) {
+        this.layout.expand_node(node)
+        node = node.parent
+      }
+    })
+    this.view.relayout()
+  }
+
+  /**
+   * 折叠除本节点外的其他节点
+   * @param node {JsMindNode}
+   */
+  collapse_other (node) {
+    this.view.save_location(node)
+    // 从当前层级上溯，把所有其他兄弟节点折叠掉
+    while (!node.is_root()) {
+      node.parent.children.forEach(child => {
+        if (child !== node) this.collapse_node(child)
+      })
+      node = node.parent
+    }
+    this.view.relayout()
+    this.view.restore_location(node)
+  }
+
+  /**
+   * 展开所有的节点
+   */
+  expand_all () {
+    this.layout.expand_all()
+    this.view.relayout()
+  }
+
+  /**
+   * 折叠所有的节点
+   */
+  collapse_all () {
+    this.layout.collapse_all()
+    this.view.relayout()
+  }
+
+  /**
+   * 展开到指定的层级
+   * @param depth {Number} 层级
+   */
+  expand_to_depth (depth) {
+    this.layout.expand_to_depth(depth)
+    this.view.relayout()
+  }
+
+  /**
+   * 开始编辑一个节点
+   * @param node {JsMindNode}
+   * @returns {Promise<void>}
+   */
+  @require_editable
+  async begin_edit (node) {
+    node = node || this.get_selected_node()
+    if (!node) return
+    this.select_node(node)
+    return this.view.edit_node_begin(node)
+  }
+
+  /**
+   * 结束一个节点的编辑状态
+   * @param cancel {Boolean} 取消操作（默认为 false 即提交修改）
+   * @returns {Promise<void>}
+   */
+  @require_editable
+  async end_edit (cancel = false) {
+    return this.view.edit_node_end(cancel)
+  }
+
+  /**
    * 修改一个节点的 id
    * @param oldId
    * @param newId
    */
+  @require_editable
   rename_node (oldId, newId) {
     this.model.rename_node(oldId, newId)
   }
 
   /**
+   * 修改一个节点的内容
+   * @param node {JsMindNode} 节点ID
+   * @param topic {String} 新的节点内容
+   * @returns {Promise<void>}
+   */
+  @require_editable
+  async update_node (node, topic) {
+    // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
+    if (!topic || !topic.trim()) topic = '<未命名>'
+    if (node.topic === topic) {
+      // 没有修改
+      await this.view.update_node(node)
+    } else {
+      // 有修改
+      node.topic = topic
+      await this.view.update_node(node)
+      this.view.show(false)
+      this.invoke_event_handle(EVENT_TYPE.edit, {
+        evt: 'update_node', data: [node, topic], node: node
+      })
+    }
+  }
+
+  /**
    * 根据输入值生成并添加一个节点
-   * @param parentNode {JsMindNode|Number|String} 父节点的 ID
+   * @param parentNode {JsMindNode} 父节点的 ID
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
@@ -411,15 +524,15 @@ export default class JsMind {
 
   /**
    * 在指定的节点之前插入一个兄弟节点
-   * @param nodeBefore {JsMindNode|Number|String} 参照节点或其ID
+   * @param nodeBefore {JsMindNode} 参照节点或其ID
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {Promise<JsMindNode>}
    */
+  @require_editable
   async insert_node_before (nodeBefore, nodeId, topic, data) {
-    this._require_editable()
-    let node = this.model.insert_node_before(nodeBefore, nodeId, topic, data)
+    const node = this.model.insert_node_before(nodeBefore, nodeId, topic, data)
     await this.view.add_node(node)
     await this.view.show(false)
     this.invoke_event_handle(EVENT_TYPE.edit, {
@@ -433,14 +546,14 @@ export default class JsMind {
   /**
    * 在指定的节点之后插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeAfter {JsMindNode|Number|String} 参照节点或其ID
+   * @param nodeAfter {JsMindNode} 参照节点或其ID
    * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {Promise<JsMindNode>}
    */
+  @require_editable
   async insert_node_after (nodeAfter, nodeId, topic, data) {
-    this._require_editable()
     let node = this.model.insert_node_after(nodeAfter, nodeId, topic, data)
     await this.view.add_node(node)
     this.invoke_event_handle(EVENT_TYPE.edit, {
@@ -490,167 +603,29 @@ export default class JsMind {
   }
 
   /**
-   * 修改一个节点的内容
-   * @param node {JsMindNode} 节点ID
-   * @param topic {String} 新的节点内容
-   * @returns {Promise<void>}
-   */
-  @require_editable
-  async update_node (node, topic) {
-    // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
-    if (!topic || !topic.trim()) topic = '<未命名>'
-    if (node.topic === topic) {
-      // 没有修改
-      await this.view.update_node(node)
-    } else {
-      // 有修改
-      node.topic = topic
-      await this.view.update_node(node)
-      this.view.show(false)
-      this.invoke_event_handle(EVENT_TYPE.edit, {
-        evt: 'update_node', data: [node, topic], node: node
-      })
-    }
-  }
-
-  /**
    * 移动一个节点
-   * @param node {JsMindNode|Number|String} 待移动节点
-   * @param nodeBefore {JsMindNode|Number|String}
-   *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
-   * @param parent {JsMindNode|Number|String}
+   * @param node {JsMindNode} 待移动节点
+   * @param prevNode {JsMindNode|String}
+   *        TODO: 这个 _first_ 或 _last_ 的接口相当不优雅，后面改掉
+   *        移动到这个节点的前面，填入 _first_ 或 _last_ 可调整到开头或末尾
+   * @param parent {JsMindNode}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {Promise<void>}
    */
-  async move_node (node, nodeBefore, parent, direction) {
-    this._require_editable()
-    parent = this._sanitize_node(parent)
-    node = this.model.move_node(node, nodeBefore, parent, direction)
+  @require_editable
+  async move_node (node, prevNode, parent, direction) {
+    node = this.model.move_node(node, prevNode, parent, direction)
     this.layout.expand_node(parent)
     await this.view.update_node(node)
     this.view.show(false)
     this.invoke_event_handle(EVENT_TYPE.edit, {
       evt: 'move_node',
-      data: [node, nodeBefore, parent, direction],
+      data: [node, prevNode, parent, direction],
       node: node
     })
   }
 
-  /**
-   * 触发选中某个节点
-   * @param node {JsMindNode} 待选中的节点
-   */
-  select_node (node) {
-    const lastNode = this.get_selected_node()
-    if (node && !node.is_visible()) return
-    if (lastNode) lastNode.deselect()
-    this.model.selected_node = node
-    if (node) node.select()
-  }
-
-  /**
-   * 触发清除选中
-   */
-  select_clear () {
-    this.select_node(null)
-  }
-
-  /**
-   * 获取当前选中的节点
-   * @returns {JsMindNode}
-   */
-  get_selected_node () {
-    return this.model.selected_node
-  }
-
-  /**
-   * 返回指定节点的上一个节点（注意会穿越层级，也就是按↑键对应的节点）
-   * @param node {JsMindNode|Number|String}
-   * @returns {JsMindNode}
-   */
-  find_node_before (node) {
-    node = this._sanitize_node(node)
-    if (node.is_root()) return null
-    // 非一级子节点好搞，直接上一个
-    if (!node.parent.is_root) return this.model.get_node_before(node)
-    // 如果是一级子节点，则要考虑方向的问题
-    let idx = node.parent.children.indexOf(node) - 1
-    while (idx > -1) {
-      if (node.parent.children[idx].direction === node.direction) break
-      idx -= 1
-    }
-    return idx > -1 ? node.parent.children[idx] : null
-  }
-
-  /**
-   * 返回指定节点的下一个节点（注意会穿越层级，也就是按↓键对应的节点）
-   * @param node {JsMindNode|Number|String}
-   * @returns {JsMindNode}
-   */
-  find_node_after (node) {
-    node = this._sanitize_node(node)
-    if (node.is_root()) return null
-    // 非一级子节点好搞，直接上一个
-    if (!node.parent.is_root) return this.model.get_node_after(node)
-    // 如果是一级子节点，则要考虑方向的问题
-    let idx = node.parent.children.indexOf(node) + 1
-    while (idx < node.parent.children.length) {
-      if (node.parent.children[idx].direction === node.direction) break
-      idx += 1
-    }
-    return idx > -1 ? node.parent.children[idx] : null
-  }
-
-  /**
-   * 重设大小
-   */
-  resize () {
-    return this.view.resize()
-  }
-
-  /**
-   * 添加一个事件处理器
-   * callback(type ,data)
-   * @param callback {Function}
-   */
-  add_event_listener (callback) {
-    this._event_handlers.push(callback)
-  }
-
-  /**
-   * 触发一个事件处理
-   * TODO: event_handle 相关的都属于外部注入钩子，需要改成 async
-   * @param type
-   * @param data
-   */
-  invoke_event_handle (type, data) {
-    this._event_handlers.forEach(handler => handler(type, data))
-  }
-
   // >>>>>>>> private methods >>>>>>>>
-
-
-  /**
-   * 要求有 editable 状态，否则抛错
-   * @private
-   */
-  _require_editable () {
-    if (!this.can_edit()) throw new Error('This model map is not editable')
-  }
-
-  /**
-   * 返回一个 node 实例：
-   * + 如果传入 nodeId，则返回对应的节点集内的 node，找不到返回 null
-   * + 如果传入的是 node 实例，则查找是否在节点集内并一致，一致返回节点本身，否则返回 null
-   * @param node {JsMindNode|Number}
-   * @returns {JsMindNode}
-   * @private
-   */
-  _sanitize_node (node) {
-    if (!JsMindUtil.is_node(node)) return this.get_node(node)
-    if (this.model.nodes[node.id] === node) return node
-    throw new Error('The node is not defined inside the current tree.')
-  }
 
   // >>>>>>>> static methods >>>>>>>>
 
