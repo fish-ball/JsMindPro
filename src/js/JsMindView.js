@@ -117,11 +117,9 @@ export default class JsMindView {
       }
     })
 
-    // TODO: 是否有循环触发的嫌疑 ???
+    // 编辑框失去焦点处理：保存并结束编辑
     JsMindUtil.dom.add_event(this.e_editor, 'blur', async e => {
       await this.edit_node_end()
-      // 失去焦点的情况下，需要先反选原来选中的节点
-      if (this._editing_node) this._editing_node.deselect()
     })
 
     // 绑定 view 上面的事件
@@ -292,6 +290,8 @@ export default class JsMindView {
     } else {
       await this.jm.update_node(node, topic)
     }
+    // 选中这个节点
+    this.jm.select_node(node)
   }
 
   /**
