@@ -1,8 +1,8 @@
 {
-  "name": "JsMindPro",
+  "name": "jsmindpro",
   "version": "1.0.0",
   "description": "Base on hizzgdev/jsmind project, porting to ES6 class based syntax.",
-  "main": "js/jsmindpro/JsMind.js",
+  "main": "src/js/JsMind.js",
   "directories": {
     "doc": "docs",
     "example": "example"

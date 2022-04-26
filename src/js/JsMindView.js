@@ -10,6 +10,7 @@ export default class JsMindView {
     /** @type JsMind */
     this.jm = jm
     this.model = jm.model
+    this.layout = jm.layout
 
     this.container = null
     this.e_panel = null
@@ -167,7 +168,7 @@ export default class JsMindView {
    * 展开到画布大小显示范围（缩放至显示全部）
    */
   expand_size () {
-    let minSize = this.jm.layout.get_min_size()
+    let minSize = this.layout.get_min_size()
     let minWidth = minSize.w + this.opts.hmargin * 2
     let minHeight = minSize.h + this.opts.vmargin * 2
     this.size.w = Math.max(this.e_panel.clientWidth, minWidth)
@@ -180,7 +181,7 @@ export default class JsMindView {
    * @returns {Promise<void>}
    */
   async add_node (node) {
-    await node.create_element(this.e_nodes, this.jm)
+    await node.create_element(this.e_nodes, this)
     node.init_size()
   }
 
@@ -297,8 +298,9 @@ export default class JsMindView {
   /**
    * 触发节点编辑完成的
    * @param cancel {Boolean} 取消操作
+   * @returns {Promise<void>}
    */
-  edit_node_end (cancel = false) {
+  async edit_node_end (cancel = false) {
     // 如果不是正在编辑，退出
     if (!this._editing_node) return
     // 正式保存
@@ -310,9 +312,9 @@ export default class JsMindView {
     element.style.zIndex = 'auto'
     element.removeChild(this.e_editor)
     if (cancel || !topic) {
-      this.jm.update_node(node.id, node.topic)
+      return this.jm.update_node(node.id, node.topic)
     } else {
-      this.jm.update_node(node.id, topic)
+      return this.jm.update_node(node.id, topic)
     }
   }
 
@@ -427,7 +429,7 @@ export default class JsMindView {
    */
   async init_nodes () {
     const nodes = this.jm.model.nodes
-    await Promise.all(_.map(nodes, node => node.create_element(this.e_nodes, this.jm)))
+    await Promise.all(_.map(nodes, node => node.create_element(this.e_nodes, this)))
     // _.forEach(nodes, node => node.init_size())
   }
 

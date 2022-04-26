@@ -76,6 +76,8 @@ function require_init (target, name, descriptor) {
 
 
 export default class JsMind {
+  static EVENT_TYPE = EVENT_TYPE
+  static DIRECTION = DIRECTION
 
   // Subclass registration
   static plugin = JsMindPlugin
@@ -464,7 +466,8 @@ export default class JsMind {
    */
   async update_node (nodeId, topic) {
     this._require_editable()
-    if (!topic.trim()) throw new Error('topic can not be empty')
+    // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
+    if (!topic || !topic.trim()) topic = '<未命名>'
     let node = this.get_node(nodeId)
     if (node.topic === topic) {
       // 没有修改

@@ -71,10 +71,10 @@ export default class JsMindNode {
   /**
    * 为当前的 node 对象创建一个 DOM 节点，挂载到 elParent 中
    * @param elParent {Node}
-   * @param jm {JsMind}
+   * @param view {JsMindView}
    * @returns {Promise<void>}
    */
-  async create_element (elParent, jm) {
+  async create_element (elParent, view) {
     // 添加 Node 的 DOM 元素
     const elNode = document.createElement('div')
     elNode.className = 'jmnode'
@@ -97,7 +97,7 @@ export default class JsMindNode {
       this.meta.view.expander = elExpander
     }
     // 刷新渲染状态
-    await jm.view.update_node(this)
+    await view.update_node(this)
   }
 
   /**
