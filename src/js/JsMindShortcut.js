@@ -76,9 +76,8 @@ export default class JsMindShortcut {
     // 在 await 之前先阻断默认事件
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
-    const node = await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    // TODO: 需要做插入之后的选中，暂时放在外部去做
-    // jm.begin_edit(node)
+    await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    // TODO: 需要做插入之后的选中，由于异步的原因，暂时放在外部去做
   }
 
   /**
@@ -93,18 +92,17 @@ export default class JsMindShortcut {
     // 在 await 之前先阻断默认事件
     // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
     // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
-    const node = await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    // TODO: 需要做插入之后的选中，暂时放在外部去做
-    // jm.begin_edit(node)
+    await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    // TODO: 需要做插入之后的选中，由于异步的原因，暂时放在外部去做
   }
 
   /**
    * 触发编辑一个节点
    */
-  handle_editnode () {
+  async handle_editnode () {
     const jm = this.jm
-    let selected_node = jm.get_selected_node()
-    if (selected_node) jm.begin_edit(selected_node)
+    let selectedNode = jm.get_selected_node()
+    if (selectedNode) await jm.begin_edit(selectedNode)
   }
 
   /**
@@ -113,10 +111,10 @@ export default class JsMindShortcut {
    */
   async handle_delnode () {
     const jm = this.jm
-    let selected_node = jm.get_selected_node()
-    if (!selected_node) return
-    if (selected_node.is_root()) throw new Error('Cannot delete root node.')
-    await jm.remove_node(selected_node)
+    let selectedNode = jm.get_selected_node()
+    if (!selectedNode) return
+    if (selectedNode.is_root()) throw new Error('Cannot delete root node.')
+    await jm.remove_node(selectedNode)
   }
 
   /**
@@ -125,9 +123,7 @@ export default class JsMindShortcut {
   handle_toggle () {
     const jm = this.jm
     let selected_node = jm.get_selected_node()
-    if (!!selected_node) {
-      jm.toggle_node(selected_node.id)
-    }
+    jm.toggle_node(selected_node)
   }
 
   /**

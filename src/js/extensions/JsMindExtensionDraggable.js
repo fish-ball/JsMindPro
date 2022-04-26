@@ -261,17 +261,15 @@ class JsMindExtensionDraggable {
    * @param e {MouseEvent|TouchEvent}
    */
   drag_start (e) {
-    if (!this.jm.get_editable()) return
+    if (!this.jm.can_edit()) return
     if (this.capture) return
     this.active_node = null
 
     let view = this.jm.view
     let el = e.target || event.srcElement
     if (!el.classList.contains('jmnode')) return
-    let nodeId = view.get_binded_nodeid(el)
-    if (!nodeId) return
-    let node = this.jm.get_node(nodeId)
-    if (node.is_root()) return
+    let node = view.get_node_by_element(el)
+    if (!node || node.is_root()) return
     this._clean_capturing()
     this._timer_capturing = setTimeout(() => {
       this._timer_capturing = 0
@@ -290,7 +288,7 @@ class JsMindExtensionDraggable {
    * @param e {MouseEvent|TouchEvent}
    */
   drag (e) {
-    if (!this.jm.get_editable()) return
+    if (!this.jm.can_edit()) return
     if (!this.capture) return
     e.preventDefault()
     this.show_shadow()
@@ -310,7 +308,7 @@ class JsMindExtensionDraggable {
    */
   drag_end (e) {
     this._clean_capturing()
-    if (!this.jm.get_editable() || !this.capture || !this.moved) return
+    if (!this.jm.can_edit() || !this.capture || !this.moved) return
     this._clear_lines()
     this.hide_shadow()
     this.move_node(this.active_node, this.target_node, this.target_direct)

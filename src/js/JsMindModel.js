@@ -193,11 +193,10 @@ export default class JsMindModel {
 
   /**
    * 移除一个节点
-   * @param node {JsMindNode|Number|String} 待移除的节点
+   * @param node {JsMindNode} 待移除的节点
    */
   remove_node (node) {
-    node = this._sanitize_node(node)
-    if (node.is_root()) throw new Error('Cannot remove root node')
+    if (node.is_root()) return
     // 后序遍历，先递归清理所有子树节点
     let children = node.children
     node.children = []

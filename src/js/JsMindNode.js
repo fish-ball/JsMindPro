@@ -89,10 +89,8 @@ export default class JsMindNode {
       // 为父元素创建一个 expander
       const elExpander = document.createElement('div')
       elExpander.className = 'jmexpander'
-      // $t(elExpander, '-')
       elExpander.innerText = '-'
       elExpander.setAttribute('nodeid', this.id)
-      // elExpander.style.visibility = 'hidden'
       elParent.appendChild(elExpander)
       this.meta.view.expander = elExpander
     }

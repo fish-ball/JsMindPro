@@ -17,17 +17,17 @@ export const DIRECTION = {left: -1, center: 0, right: 1}
 export const EVENT_TYPE = {show: 1, resize: 2, edit: 3, select: 4}
 
 export const DEFAULT_OPTIONS = {
-  container: '',   // id of the container
+  container: '',   // (querySelector/id/Element) of the container
   editable: false, // you can change it in your options
   theme: null,
   mode: 'full',     // full or side
-  support_html: true,
 
   view: {
     hmargin: 100,
     vmargin: 50,
     line_width: 2,
-    line_color: '#555'
+    line_color: '#555',
+    render_node: null // functions (elNode, node) to render the node
   },
   layout: {
     hspace: 30,
@@ -70,6 +70,21 @@ function require_init (target, name, descriptor) {
   descriptor.value = async function () {
     if (!this._initialized) throw new Error('JsMind 对象尚未初始化。')
     return func.call(this, ...arguments)
+  }
+  return descriptor
+}
+
+/**
+ * [decorator] 要求 JsMind 处于可编辑状态
+ * 参考：http://caibaojian.com/es6/decorator.html
+ * @param target
+ * @param name
+ * @param descriptor
+ */
+function require_editable (target, name, descriptor) {
+  const func = descriptor.value
+  descriptor.value = async function () {
+    if (this.can_edit()) return func.call(this, ...arguments)
   }
   return descriptor
 }
@@ -119,7 +134,6 @@ export default class JsMind {
     // Init view
     this.view = new JsMindView(this, {
       container: this.options.container,
-      support_html: this.options.support_html,
       render_node: this.options.render_node,
       ...this.options.view
     })
@@ -127,8 +141,6 @@ export default class JsMind {
 
     // Init shortcut
     this.shortcut = new JsMindShortcut(this, this.options.shortcut)
-
-    this._event_bind()
 
     JsMind.init_plugins(this)
 
@@ -140,7 +152,7 @@ export default class JsMind {
    * 返回当前的思维导图实例是否可编辑
    * @returns {boolean}
    */
-  get_editable () {
+  can_edit () {
     return this.options.editable
   }
 
@@ -198,28 +210,31 @@ export default class JsMind {
 
   /**
    * 开始编辑一个节点
-   * @param node {JsMindNode|Number|String}
+   * @param node {JsMindNode}
+   * @returns {Promise<void>}
    */
-  begin_edit (node) {
-    node = this._sanitize_node(node)
-    this._require_editable()
-    this.view.edit_node_begin(node)
+  @require_editable
+  async begin_edit (node) {
+    node = node || this.get_selected_node()
+    if (!node) return
+    this.select_node(node)
+    return this.view.edit_node_begin(node)
   }
 
   /**
    * 结束一个节点的编辑状态
+   * @returns {Promise<void>}
    */
-  end_edit () {
-    this.view.edit_node_end()
+  async end_edit () {
+    return this.view.edit_node_end()
   }
 
   /**
    * 切换一个节点的折叠/展开状态
-   * @param node {JsMindNode|Number|String}
+   * @param node {JsMindNode|null}
    */
   toggle_node (node) {
-    node = this._sanitize_node(node)
-    if (node.is_root()) return
+    if (!node || node.is_root()) return
     this.view.save_location(node)
     this.layout.toggle_node(node)
     this.view.relayout()
@@ -354,10 +369,12 @@ export default class JsMind {
 
   /**
    * 在当前图内获取指定 id 的 node
-   * @param nodeId {Number}
+   * @param nodeId {Number|String|JsMindNode}
    * @returns {JsMindNode}
    */
   get_node (nodeId) {
+    // 兼容写法
+    if (nodeId instanceof JsMindNode) return nodeId
     return this.model.get_node(nodeId)
   }
 
@@ -378,8 +395,8 @@ export default class JsMind {
    * @param data {*}
    * @returns {Promise<JsMindNode>} 范围添加成功后的节点，操作失败返回 null
    */
+  @require_editable
   async add_node (parentNode, nodeId, topic, data = null) {
-    this._require_editable()
     let node = this.model.add_node(parentNode, nodeId, topic, data)
     await this.view.add_node(node)
     this.view.show(false)
@@ -436,39 +453,52 @@ export default class JsMind {
 
   /**
    * 移除一个指定的节点
-   * @param node {JsMindNode|Number|String} 待移除节点或者 ID
+   * @param node {JsMindNode} 待移除节点或者 ID
    * @returns {Promise<Boolean>}
    */
+  @require_editable
   async remove_node (node) {
-    node = this._sanitize_node(node)
-    this._require_editable()
-    if (node.is_root()) throw new Error('Can not remove root node')
-    let nodeId = node.id
-    let parentId = node.parent.id
-    let parent = this.get_node(parentId)
+    if (node.is_root()) return false
+    // 选中的节点被级联删除了，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
+    // 这个要先处理完再从逻辑层删除，否则会炸
+    const selectedNode = this.get_selected_node()
+    if (node.is_ancestor_of(selectedNode)) {
+      const parent = node.parent
+      const index = parent.children.indexOf(node)
+      if (index < parent.children.length - 1) {
+        this.select_node(parent.children[index + 1])
+      } else if (index > 0) {
+        this.select_node(parent.children[index - 1])
+      } else {
+        this.select_node(parent)
+      }
+    }
     // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
-    this.view.save_location(parent)
+    this.view.save_location(node.parent)
+    // 视图层删除
     await this.view.remove_node(node)
+    // 逻辑层删除
     this.model.remove_node(node)
-    await this.view.show(false)
-    this.view.restore_location(parent)
+    // 抛出被删除事件
     this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'remove_node', data: [nodeId], node: parentId
+      evt: 'remove_node', data: [node.id], node: node.parent.id
     })
+    // 重新渲染回复定位
+    await this.view.show(false)
+    this.view.restore_location(node.parent)
     return true
   }
 
   /**
    * 修改一个节点的内容
-   * @param nodeId {Number|String} 节点ID
+   * @param node {JsMindNode} 节点ID
    * @param topic {String} 新的节点内容
    * @returns {Promise<void>}
    */
-  async update_node (nodeId, topic) {
-    this._require_editable()
+  @require_editable
+  async update_node (node, topic) {
     // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
     if (!topic || !topic.trim()) topic = '<未命名>'
-    let node = this.get_node(nodeId)
     if (node.topic === topic) {
       // 没有修改
       await this.view.update_node(node)
@@ -478,10 +508,9 @@ export default class JsMind {
       await this.view.update_node(node)
       this.view.show(false)
       this.invoke_event_handle(EVENT_TYPE.edit, {
-        evt: 'update_node', data: [nodeId, topic], node: nodeId
+        evt: 'update_node', data: [node, topic], node: node
       })
     }
-    this.view.e_panel.focus()
   }
 
   /**
@@ -509,19 +538,21 @@ export default class JsMind {
 
   /**
    * 触发选中某个节点
-   * @param node {JsMindNode|Number|String} 待选中的节点
+   * @param node {JsMindNode} 待选中的节点
    */
   select_node (node) {
-    node = this._sanitize_node(node)
-    if (!node.is_visible()) return
-    this.view.select_node(node)
+    const lastNode = this.get_selected_node()
+    if (node && !node.is_visible()) return
+    if (lastNode) lastNode.deselect()
+    this.model.selected_node = node
+    if (node) node.select()
   }
 
   /**
    * 触发清除选中
    */
   select_clear () {
-    this.view.select_clear()
+    this.select_node(null)
   }
 
   /**
@@ -598,65 +629,13 @@ export default class JsMind {
 
   // >>>>>>>> private methods >>>>>>>>
 
-  /**
-   * 绑定思维导图的主要事件（鼠标按下、点击、双击）
-   * @private
-   */
-  _event_bind () {
-    this.view.add_event(this, 'mousedown', this._mousedown_handle)
-    this.view.add_event(this, 'click', this._click_handle)
-    this.view.add_event(this, 'dblclick', this._dblclick_handle)
-  }
-
-  /**
-   * 处理鼠标按下事件
-   * @param e {Event}
-   */
-  _mousedown_handle (e) {
-    if (!this.options.default_event_handle['enable_mousedown_handle']) return
-    let element = e.target || event.srcElement
-    let nodeId = this.view.get_binded_nodeid(element)
-    if (!!nodeId) {
-      this.select_node(nodeId)
-    } else {
-      this.view.select_clear()
-    }
-  }
-
-  /**
-   * 点击事件处理器
-   * @param e {Event}
-   */
-  _click_handle (e) {
-    if (!this.options.default_event_handle['enable_click_handle']) return
-    let element = e.target || event.srcElement
-    let isExpander = element.classList.contains('jmexpander')
-    // 仅处理展开器
-    if (!isExpander) return
-    let nodeId = this.view.get_binded_nodeid(element)
-    if (nodeId) this.toggle_node(nodeId)
-  }
-
-  /**
-   * 双击事件处理器
-   * @param e {Event}
-   */
-  _dblclick_handle (e) {
-    if (!this.options.default_event_handle['enable_dblclick_handle']) return
-    if (this.get_editable()) {
-      let element = e.target || event.srcElement
-      let nodeId = this.view.get_binded_nodeid(element)
-      if (nodeId) this.begin_edit(nodeId)
-    }
-  }
-
 
   /**
    * 要求有 editable 状态，否则抛错
    * @private
    */
   _require_editable () {
-    if (!this.get_editable()) throw new Error('This model map is not editable')
+    if (!this.can_edit()) throw new Error('This model map is not editable')
   }
 
   /**

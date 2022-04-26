@@ -58,6 +58,9 @@
 }
 
 .jmnodes.theme-xmind .jmexpander {
+  position: absolute;
+  right: 0;
+  top: 50%;
 }
 
 .jmnodes.theme-xmind .jmexpander:hover {
