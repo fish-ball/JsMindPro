@@ -27,7 +27,11 @@ export const DEFAULT_OPTIONS = {
     vmargin: 50,
     line_width: 2,
     line_color: '#555',
-    render_node: null // functions (elNode, node) to render the node
+    render_node: null, // functions (elNode, node) to render the node
+    zoom: 1,
+    zoom_step: 0.1,
+    min_zoom: 0.5,
+    max_zoom: 2
   },
   layout: {
     hspace: 30,
@@ -253,6 +257,31 @@ export default class JsMind {
    */
   disable_edit () {
     this.options.editable = false
+  }
+
+  /**
+   * 缩放到指定倍数
+   * @param zoom
+   * @returns {Boolean} 返回是否设置成功（超限返回 false）
+   */
+  set_zoom (zoom) {
+    return this.view.set_zoom(zoom)
+  }
+
+  /**
+   * 放大一档
+   * @returns {Boolean} 返回是否设置成功（超限返回 false）
+   */
+  zoom_in () {
+    return this.set_zoom(this.view.options.zoom + this.view.options.zoom_step)
+  }
+
+  /**
+   * 缩小一档
+   * @returns {Boolean} 返回是否设置成功（超限返回 false）
+   */
+  zoom_out () {
+    return this.set_zoom(this.view.options.zoom - this.view.options.zoom_step)
   }
 
   /**

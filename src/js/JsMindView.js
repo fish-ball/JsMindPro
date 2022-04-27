@@ -11,7 +11,11 @@ export default class JsMindView {
       hmargin: 100,
       vmargin: 50,
       line_width: 2,
-      line_color: '#555555'
+      line_color: '#555555',
+      zoom: 1,
+      zoom_step: 0.1,
+      min_zoom: 0.5,
+      max_zoom: 2
     }, options)
 
     /** @type JsMind */
@@ -45,11 +49,6 @@ export default class JsMindView {
     this.container = this.options.container instanceof Element ? this.options.container :
       document.querySelector(this.options.container) || document.getElementById(this.options.container)
     if (!this.container) throw new Error('the options.view.container was not be found in dom')
-
-    this.actualZoom = 1
-    this.zoomStep = 0.1
-    this.minZoom = 0.5
-    this.maxZoom = 2
 
     // 初始化画布
     this.e_canvas = document.createElement('canvas')
@@ -151,6 +150,14 @@ export default class JsMindView {
   }
 
   /**
+   * 返回视图是否处于正在编辑的状态
+   * @returns {boolean}
+   */
+  is_editing () {
+    return !!this._editing_node
+  }
+
+  /**
    * 重置一个 View
    */
   reset () {
@@ -226,29 +233,6 @@ export default class JsMindView {
   }
 
   /**
-   * 选择一个节点
-   * TODO: 对模型的职责应该从 view 中剥离，不要让 view 写入 model
-   * @param node {JsMindNode|node}
-   */
-  select_node (node) {
-    if (lastNode) lastNode.deselect()
-    if (node) node.select()
-    this.model.selected_node = node
-    // 发出事件
-    this.jm.invoke_event_handle(EVENT_TYPE.select, {
-      node: node && node.id
-    })
-  }
-
-  /**
-   * 返回视图是否处于正在编辑的状态
-   * @returns {boolean}
-   */
-  is_editing () {
-    return !!this._editing_node
-  }
-
-  /**
    * 触发开始编辑
    * @param node {JsMindNode}
    * @returns {Promise<void>}
@@ -318,29 +302,13 @@ export default class JsMindView {
   }
 
   /**
-   * 放大一档
-   * @returns {boolean} 返回是否设置成功（超限会返回 false）
-   */
-  zoomIn () {
-    return this.setZoom(this.actualZoom + this.zoomStep)
-  }
-
-  /**
-   * 缩小一档
-   * @returns {boolean} 返回是否设置成功（超限会返回 false）
-   */
-  zoomOut () {
-    return this.setZoom(this.actualZoom - this.zoomStep)
-  }
-
-  /**
    * 缩放到指定倍数
    * @param zoom {Number} 缩放倍数值
    * @returns {boolean} 返回是否设置成功（超限会返回 false）
    */
-  setZoom (zoom = 1) {
-    if ((zoom < this.minZoom) || (zoom > this.maxZoom)) return false
-    this.actualZoom = zoom
+  set_zoom (zoom = 1) {
+    if ((zoom < this.options.min_zoom) || (zoom > this.options.max_zoom)) return false
+    this.options.zoom = zoom
     for (let i = 0; i < this.e_panel.children.length; i++) {
       this.e_panel.children[i].style.transform = 'scale(' + zoom + ')'
     }
