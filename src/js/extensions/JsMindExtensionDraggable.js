@@ -275,8 +275,8 @@ class JsMindExtensionDraggable {
       this._timer_capturing = 0
       this.reset_shadow(el)
       this.active_node = node
-      this.offset_x = (e.clientX || e.touches[0].clientX) / view.zoom - el.offsetLeft
-      this.offset_y = (e.clientY || e.touches[0].clientY) / view.zoom - el.offsetTop
+      this.offset_x = (e.clientX || e.touches[0].clientX) / view.options.zoom - el.offsetLeft
+      this.offset_y = (e.clientY || e.touches[0].clientY) / view.options.zoom - el.offsetTop
       this.capture = true
       // 时间到，先触发一次 drag 避免不动的时候错乱
       this.drag(e)
@@ -294,8 +294,8 @@ class JsMindExtensionDraggable {
     this.show_shadow()
     this.moved = true
     let view = this.jm.view
-    let px = (e.clientX || e.touches[0].clientX) / view.zoom - this.offset_x
-    let py = (e.clientY || e.touches[0].clientY) / view.zoom - this.offset_y
+    let px = (e.clientX || e.touches[0].clientX) / view.options.zoom - this.offset_x
+    let py = (e.clientY || e.touches[0].clientY) / view.options.zoom - this.offset_y
     this.shadow.style.left = px + 'px'
     this.shadow.style.top = py + 'px'
     // 触发磁力线计算
