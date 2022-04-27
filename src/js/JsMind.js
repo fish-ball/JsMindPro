@@ -228,6 +228,7 @@ export default class JsMind {
     if (lastNode) lastNode.deselect()
     this.model.selected_node = node
     if (node) node.select()
+    this.invoke_event_handle(EVENT_TYPE.select, node)
   }
 
   /**
