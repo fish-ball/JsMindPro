@@ -169,4 +169,61 @@ export default class JsMindNode {
     return !!node && (node === this || this.is_ancestor_of(node.parent))
   }
 
+  /**
+   * 获取当前节点在布局中的偏移量（等于上级连接线到当前节点的进入点）
+   * 实际就是从父节点的偏移量按路径累加
+   * @returns {{x: number, y: number}}
+   */
+  get_layout_offset () {
+    const layout = this.meta.layout
+    // TODO: 缓存事实上未实装
+    if (layout.offset_cache) return layout.offset_cache
+    const x = layout.offset_x
+    const y = layout.offset_y
+    if (this.is_root()) return {x, y}
+    const {x: dx, y: dy} = this.parent.get_layout_offset()
+    return {x: x + dx, y: y + dy}
+  }
+
+  /**
+   * 获取当前节点连接到下级节点的连接线起点（等于当前节点折叠器的外侧位置）
+   * 实际就是从父节点的偏移量按路径累加
+   * @returns {{x: number, y: number}}
+   */
+  get_layout_offset_out () {
+    const layout = this.meta.layout
+    const view = this.meta.view
+    if (this.is_root()) return {x: 0, y: 0}
+    const {x, y} = this.get_layout_offset()
+    // TODO: 如何注入配置？
+    const pspace = 10
+    return {x: x + (view.width + pspace) * layout.direction, y}
+  }
+
+  /**
+   * 获取节点的坐标（左上角）
+   * @returns {{x: Number, y: Number}}
+   */
+  get_layout_offset_top_left () {
+    const offset = this.get_layout_offset()
+    return {
+      x: offset.x + this.meta.view.width * (this.meta.layout.direction - 1) / 2,
+      y: offset.y - this.meta.view.height / 2
+    }
+  }
+
+  /**
+   * 获取节点的折叠器位置坐标
+   * @returns {{x: Number, y: Number}}
+   */
+  get_layout_offset_expander () {
+    // TODO: 如何注入配置
+    const pspace = 10
+    const {x, y} = this.get_layout_offset_out()
+    return {
+      x: x - pspace * (this.direction + 1) / 2, // 仅当 right 的时候向左移动一个折叠器宽度
+      y: y - pspace / 2
+    }
+  }
+
 }

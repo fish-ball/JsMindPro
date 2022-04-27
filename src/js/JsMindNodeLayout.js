@@ -20,9 +20,8 @@ export default class JsMindNodeLayout {
     this.left_nodes = []
     /** @type {JsMindNode[]} */
     this.right_nodes = []
-    /** 偏移值缓存
-     * @type {{x: Number, y: Number}}
-     */
-    this.offset = {x: -1, y: -1}
+    /** 偏移值缓存 @type {{x: Number, y: Number} | null} */
+    this.offset_cache = null
   }
+
 }

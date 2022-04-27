@@ -266,7 +266,7 @@ class JsMindExtensionDraggable {
     this.active_node = null
 
     let view = this.jm.view
-    let el = e.target || event.srcElement
+    let el = e.target
     if (!el.classList.contains('jmnode')) return
     let node = view.get_node_by_element(el)
     if (!node || node.is_root()) return

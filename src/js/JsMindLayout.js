@@ -9,8 +9,6 @@ export default class JsMindLayout {
     this.options = options
 
     this.jm = jm
-    this.view = this.jm.view
-    this.model = this.jm.model
 
     this.isside = this.options.mode === 'side'
     this.reset()
@@ -39,96 +37,12 @@ export default class JsMindLayout {
   }
 
   /**
-   * 获取某个节点的偏移量
-   * @param node {JsMindNode}
-   * @returns {{x: number, y: number}}
-   */
-  get_node_offset (node) {
-    const layout = node.meta.layout
-    if (('offset' in layout) && this.cache_valid) return layout.offset
-    let x = layout.offset_x
-    let y = layout.offset_y
-    if (!node.is_root()) {
-      const {x: dx, y: dy} = this.get_node_offset(node.parent)
-      x += dx
-      y += dy
-    }
-    return {x, y}
-  }
-
-  /**
-   * 获取节点的坐标
-   * @param node
-   * @returns {{x: Number, y: Number}}
-   */
-  get_node_point (node) {
-    let offset = this.get_node_offset(node)
-    return {
-      x: offset.x + node.meta.view.width * (node.meta.layout.direction - 1) / 2,
-      y: offset.y - node.meta.view.height / 2
-    }
-  }
-
-  /**
-   * 获取某个节点的进入点（父节点连过来的线的连接点）
-   * @param node {JsMindNode}
-   * @returns {{x: number, y: number}|*}
-   */
-  get_node_point_in (node) {
-    return this.get_node_offset(node)
-  }
-
-  /**
-   * 获取某个节点的退出点（父节点连过来的线的连接点）
-   * @param node {JsMindNode}
-   * @returns {{x: number, y: number}|null}
-   */
-  get_node_point_out (node) {
-    const layoutData = node.meta.layout
-    const viewData = node.meta.view
-    let poutCache = null
-    if (('_pout_' in layoutData) && this.cache_valid) {
-      poutCache = layoutData._pout_
-    } else {
-      poutCache = {x: -1, y: -1}
-      layoutData._pout_ = poutCache
-    }
-    if (poutCache.x === -1 || poutCache.y === -1) {
-      if (node.is_root()) {
-        poutCache.x = 0
-        poutCache.y = 0
-      } else {
-        const offset = this.get_node_offset(node)
-        poutCache.x = offset.x + (viewData.width + this.options.pspace) * layoutData.direction
-        poutCache.y = offset.y
-      }
-    }
-    return poutCache
-  }
-
-  /**
-   * 计算折叠点空间的坐标
-   * @param node {JsMindNode}
-   */
-  get_expander_point (node) {
-    let p = this.get_node_point_out(node)
-    let ex_p = {}
-    if (node.meta.layout.direction === DIRECTION.right) {
-      ex_p.x = p.x - this.options.pspace
-    } else {
-      ex_p.x = p.x
-    }
-    ex_p.y = p.y - node.meta.view.expander.offsetHeight / 2
-    return ex_p
-  }
-
-  /**
    * 获取当前画布的包裹大小
    * @returns {{w: number, h: number}}
    */
   get_min_size () {
     _.forEach(this.jm.model.nodes, node => {
-      const pout = this.get_node_point_out(node)
+      const pout = node.get_layout_offset_out()
       this.bounds.e = Math.max(pout.x, this.bounds.e)
       this.bounds.w = Math.min(pout.x, this.bounds.w)
     })
@@ -242,19 +156,19 @@ export default class JsMindLayout {
    */
   set_visible (nodes, visible) {
     nodes.forEach(node => {
+      // 后序遍历，先把需要的子节点做了
       if (node.expanded) {
         this.set_visible(node.children, visible)
       } else {
         this.set_visible(node.children, false)
       }
-      if (!node.is_root()) {
-        node.meta.layout.visible = visible
-        // 如果某节点被设置为不可见，手动夺取焦点
-        if (!visible && node === this.model.selected_node) {
-          // TODO: 这里还没有能够刷新到具体的节点 class
-          this.model.selected_node = null
-          node.deselect()
-        }
+      // 根节点免处理
+      if (node.is_root()) return
+      // 设置节点布局可见性标记
+      node.meta.layout.visible = visible
+      // 如果某节点被设置为不可见，手动夺取焦点
+      if (!visible && node === this.jm.get_selected_node()) {
+        this.jm.select_clear()
       }
     })
   }

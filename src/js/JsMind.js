@@ -169,9 +169,7 @@ export default class JsMind {
     this.layout.reset()
     await this.view.init_nodes()
     this.view.show(true)
-    this.invoke_event_handle(EVENT_TYPE.show, {
-      data: [data]
-    })
+    this.invoke_event_handle(EVENT_TYPE.show, {data: [data]})
   }
 
   /**
@@ -228,7 +226,7 @@ export default class JsMind {
     if (lastNode) lastNode.deselect()
     this.model.selected_node = node
     if (node) node.select()
-    this.invoke_event_handle(EVENT_TYPE.select, node)
+    this.invoke_event_handle(EVENT_TYPE.select, {node})
   }
 
   /**
@@ -283,13 +281,6 @@ export default class JsMind {
    */
   zoom_out () {
     return this.set_zoom(this.view.options.zoom - this.view.options.zoom_step)
-  }
-
-  /**
-   * 重设大小
-   */
-  resize () {
-    return this.view.resize()
   }
 
   /**
@@ -397,7 +388,7 @@ export default class JsMind {
     if (!node || node.is_root()) return
     this.view.save_location(node)
     this.layout.toggle_node(node)
-    this.view.relayout()
+    this.view.refresh()
     this.view.restore_location(node)
   }
 
@@ -410,7 +401,7 @@ export default class JsMind {
     if (node.is_root()) return
     this.view.save_location(node)
     this.layout.expand_node(node, deep)
-    this.view.relayout()
+    this.view.refresh()
     this.view.restore_location(node)
   }
 
@@ -422,7 +413,7 @@ export default class JsMind {
     if (node.is_root()) return
     this.view.save_location(node)
     this.layout.collapse_node(node)
-    this.view.relayout()
+    this.view.refresh()
     this.view.restore_location(node)
   }
 
@@ -440,7 +431,7 @@ export default class JsMind {
         node = node.parent
       }
     })
-    this.view.relayout()
+    this.view.refresh()
   }
 
   /**
@@ -456,7 +447,7 @@ export default class JsMind {
       })
       node = node.parent
     }
-    this.view.relayout()
+    this.view.refresh()
     this.view.restore_location(node)
   }
 
@@ -465,7 +456,7 @@ export default class JsMind {
    */
   expand_all () {
     this.layout.expand_all()
-    this.view.relayout()
+    this.view.refresh()
   }
 
   /**
@@ -473,7 +464,7 @@ export default class JsMind {
    */
   collapse_all () {
     this.layout.collapse_all()
-    this.view.relayout()
+    this.view.refresh()
   }
 
   /**
@@ -482,7 +473,15 @@ export default class JsMind {
    */
   expand_to_depth (depth) {
     this.layout.expand_to_depth(depth)
-    this.view.relayout()
+    this.view.refresh()
+  }
+
+  /**
+   * 返回 JsMind 是否处于编辑中的状态
+   * @returns {boolean}
+   */
+  is_editing () {
+    return this.view.is_editing()
   }
 
   /**

@@ -158,40 +158,8 @@ export default class JsMindView {
   }
 
   /**
-   * 重置一个 View
-   */
-  reset () {
-    this._clear_lines()
-    this._clear_nodes()
-    this.reset_theme()
-  }
-
-  /**
-   * 重设主题标记
-   */
-  reset_theme () {
-    let themeName = this.jm.options.theme
-    const themeClass = _.find(this.e_nodes.classList, x => /^theme-/.test(x))
-    if (themeClass !== 'theme-' + themeName) {
-      this.e_nodes.classList.remove(themeClass)
-      this.e_nodes.classList.add('theme-' + themeName)
-    }
-  }
-
-  /**
-   * 展开到画布大小显示范围（缩放至显示全部）
-   */
-  expand_size () {
-    let minSize = this.jm.layout.get_min_size()
-    let minWidth = minSize.w + this.options.hmargin * 2
-    let minHeight = minSize.h + this.options.vmargin * 2
-    this.size.w = Math.max(this.e_panel.clientWidth, minWidth)
-    this.size.h = Math.max(this.e_panel.clientHeight, minHeight)
-  }
-
-  /**
-   * 添加一个 node
-   * @param node {JsMindNode}
+   * 在视图中加入一个节点
+   * @param node {JsMindNode} 前置条件：必须保证 node 已经注册在 model 中
    * @returns {Promise<void>}
    */
   async add_node (node) {
@@ -201,7 +169,7 @@ export default class JsMindView {
 
   /**
    * 视图上删除一个节点
-   * @param node {JsMindNode}
+   * @param node {JsMindNode} 前置条件：必须保证 node 已经注册在 model 中
    * @returns {Promise<void>}
    */
   async remove_node (node) {
@@ -279,6 +247,27 @@ export default class JsMindView {
   }
 
   /**
+   * 重置一个 View
+   */
+  reset () {
+    this._clear_lines()
+    this._clear_nodes()
+    this.reset_theme()
+  }
+
+  /**
+   * 重设主题标记
+   */
+  reset_theme () {
+    let themeName = this.jm.options.theme
+    const themeClass = _.find(this.e_nodes.classList, x => /^theme-/.test(x))
+    if (themeClass !== 'theme-' + themeName) {
+      this.e_nodes.classList.remove(themeClass)
+      this.e_nodes.classList.add('theme-' + themeName)
+    }
+  }
+
+  /**
    * 获取当前视图的偏移量
    * @returns {{x: number, y: number}}
    */
@@ -287,18 +276,6 @@ export default class JsMindView {
     const x = (this.size.w - bounds.e - bounds.w) / 2
     const y = this.size.h / 2
     return {x, y}
-  }
-
-  /**
-   * 执行一次重新调整大小
-   */
-  resize () {
-    this.e_canvas.width = 1
-    this.e_canvas.height = 1
-    this.e_nodes.style.width = '1px'
-    this.e_nodes.style.height = '1px'
-    this.expand_size()
-    this._show()
   }
 
   /**
@@ -322,17 +299,19 @@ export default class JsMindView {
    */
   show (keepCenter) {
     this.jm.layout.layout()
-    this.expand_size()
-    this._show()
+    this.refresh()
     if (keepCenter) this._center_root()
   }
 
-  /**
-   * 重设布局
-   */
-  relayout () {
-    this.expand_size()
-    this._show()
+  /** 重新布局刷新一次 **/
+  refresh () {
+    const minSize = this.jm.layout.get_min_size()
+    // TODO: view.size 到底和 layout 的 size 之间是什么关系
+    this.size.w = Math.max(this.e_panel.clientWidth, minSize.w + this.options.hmargin * 2)
+    this.size.h = Math.max(this.e_panel.clientHeight, minSize.h + this.options.vmargin * 2)
+    this._show_lines()
+    this._show_nodes()
+    this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []})
   }
 
   /**
@@ -340,8 +319,8 @@ export default class JsMindView {
    * @param node
    */
   save_location (node) {
-    const view = node.meta.view
-    view.save_location(parseInt(view.element.style.left) - this.e_panel.scrollLeft, parseInt(view.element.style.top) - this.e_panel.scrollTop)
+    const nodeView = node.meta.view
+    nodeView.save_location(parseInt(nodeView.element.style.left) - this.e_panel.scrollLeft, parseInt(nodeView.element.style.top) - this.e_panel.scrollTop)
   }
 
   /**
@@ -349,10 +328,10 @@ export default class JsMindView {
    * @param node
    */
   restore_location (node) {
-    const view = node.meta.view
-    const {x, y} = view.restore_location()
-    this.e_panel.scrollLeft = parseInt(view.element.style.left) - x
-    this.e_panel.scrollTop = parseInt(view.element.style.top) - y
+    const nodeView = node.meta.view
+    const {x, y} = nodeView.restore_location()
+    this.e_panel.scrollLeft = parseInt(nodeView.element.style.left) - x
+    this.e_panel.scrollTop = parseInt(nodeView.element.style.top) - y
   }
 
   /**
@@ -452,16 +431,20 @@ export default class JsMindView {
    * @param pin {{x,y}} 入点坐标
    * @param pout {{x,y}} 出点坐标
    * @param offset {{x,y}} 偏移量
-   * @param canvasCtx Canvas 对象
    * @private
    */
-  _draw_line (pin, pout, offset, canvasCtx) {
-    let ctx = canvasCtx || this.canvas_ctx
+  _draw_line (pin, pout, offset) {
+    const ctx = this.canvas_ctx
     ctx.strokeStyle = this.options.line_color
     ctx.lineWidth = this.options.line_width
     ctx.lineCap = 'round'
-
-    JsMindUtil.canvas.bezierto(ctx, pin.x + offset.x, pin.y + offset.y, pout.x + offset.x, pout.y + offset.y)
+    JsMindUtil.canvas.bezierto(
+      ctx,
+      pin.x + offset.x,
+      pin.y + offset.y,
+      pout.x + offset.x,
+      pout.y + offset.y
+    )
   }
 
   /**
@@ -470,7 +453,11 @@ export default class JsMindView {
    * @private
    */
   _show_lines (canvasContext) {
+    // 清理旧的线
     this._clear_lines(canvasContext)
+    // 重设 canvas 大小
+    this.e_canvas.width = this.size.w
+    this.e_canvas.height = this.size.h
     let _offset = this.get_view_offset()
     Object.keys(this.jm.model.nodes).forEach(key => {
       const node = this.jm.model.nodes[key]
@@ -479,9 +466,9 @@ export default class JsMindView {
       // 隐藏的节点没有线
       if (('visible' in node.meta.layout) && !node.meta.layout.visible) return
       // 获取布局的入点坐标
-      const pin = this.jm.layout.get_node_point_in(node)
+      const pin = node.get_layout_offset()
       // 获取父节点布局的出点坐标
-      const pout = this.jm.layout.get_node_point_out(node.parent)
+      const pout = node.parent.get_layout_offset_out()
       // 画线
       this._draw_line(pout, pin, _offset, canvasContext)
     })
@@ -503,10 +490,11 @@ export default class JsMindView {
    * @private
    */
   _show_nodes () {
-    let p = null
-    let expanderPoint = null
-    let expanderText = '-'
-    let offset = this.get_view_offset()
+    // 重设节点容器大小
+    this.e_nodes.style.width = this.size.w + 'px'
+    this.e_nodes.style.height = this.size.h + 'px'
+    // 获取偏移量
+    const offset = this.get_view_offset()
     _.forEach(this.jm.model.nodes, node => {
       const view = node.meta.view
       const elNode = view.element
@@ -518,7 +506,7 @@ export default class JsMindView {
         return
       }
       // 计算坐标点并渲染到 DOM
-      p = this.jm.layout.get_node_point(node)
+      const p = node.get_layout_offset_top_left()
       view.abs_x = offset.x + p.x
       view.abs_y = offset.y + p.y
       elNode.style.left = (offset.x + p.x) + 'px'
@@ -526,13 +514,12 @@ export default class JsMindView {
       elNode.style.display = ''
       elNode.style.visibility = 'visible'
       if (!node.is_root() && node.children.length > 0) {
-        expanderText = node.expanded ? '-' : '+'
-        expanderPoint = this.jm.layout.get_expander_point(node)
+        const expanderPoint = node.get_layout_offset_expander()
         elExpander.style.left = (offset.x + expanderPoint.x) + 'px'
         elExpander.style.top = (offset.y + expanderPoint.y) + 'px'
         elExpander.style.display = ''
         elExpander.style.visibility = 'visible'
-        elExpander.innerText = expanderText
+        elExpander.innerText = node.expanded ? '-' : '+'
       }
       // hide expander while all children have been removed
       if (!node.is_root() && node.children.length === 0) {
@@ -544,20 +531,6 @@ export default class JsMindView {
         node.select()
       }
     })
-  }
-
-  /**
-   * 执行一次渲染
-   * @private
-   */
-  _show () {
-    this.e_canvas.width = this.size.w
-    this.e_canvas.height = this.size.h
-    this.e_nodes.style.width = this.size.w + 'px'
-    this.e_nodes.style.height = this.size.h + 'px'
-    this._show_nodes()
-    this._show_lines()
-    this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []})
   }
 
 }
