@@ -162,7 +162,7 @@ export default class JsMindView {
    */
   reset () {
     this._clear_lines()
-    this.clear_nodes()
+    this._clear_nodes()
     this.reset_theme()
   }
 
@@ -356,16 +356,6 @@ export default class JsMindView {
   }
 
   /**
-   * 清理所有的 dom 节点
-   */
-  clear_nodes () {
-    if (!this.jm.model) return
-    _.forEach(this.jm.model.nodes, node => {
-      node.destroy()
-    })
-  }
-
-  /**
    * 初始化节点
    * @returns {Promise<void>}
    */
@@ -376,8 +366,9 @@ export default class JsMindView {
   }
 
   /**
-   * 重新创建一个 node 的元素
-   * 产生了对象之后还需要调用 view.show() 来进行渲染
+   * 重新创建一个 node 的元素 * 会清除 view 对应的 DOM 并重新生成，渲染视图
+   * 一般用于 node 数据被修改的情况下
+   * @param node {JsMindNode}
    * @returns {Promise<void>}
    */
   async refresh_node (node) {
@@ -493,6 +484,16 @@ export default class JsMindView {
       const pout = this.jm.layout.get_node_point_out(node.parent)
       // 画线
       this._draw_line(pout, pin, _offset, canvasContext)
+    })
+  }
+
+  /**
+   * 清理所有的 dom 节点
+   */
+  _clear_nodes () {
+    if (!this.jm.model) return
+    _.forEach(this.jm.model.nodes, node => {
+      node.destroy()
     })
   }
 

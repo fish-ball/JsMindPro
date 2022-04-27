@@ -292,6 +292,18 @@ export default class JsMind {
   }
 
   /**
+   * 重新创建一个 node 的元素 * 会清除 view 对应的 DOM 并重新生成，渲染视图
+   * 一般用于 node 数据被修改的情况下
+   * @param node {JsMindNode}
+   * @returns {Promise<void>}
+   */
+  async refresh_node (node) {
+    await this.view.refresh_node(node)
+    // TODO: 为什么这个不充分要补这句？
+    this.view.show(false)
+  }
+
+  /**
    * 配置启用某个事件
    * 例如 call enable_event_handle('dblclick')
    * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
