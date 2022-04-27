@@ -121,6 +121,14 @@ export default class JsMindView {
       await this.edit_node_end()
     })
 
+    // 窗口大小变化的事件响应
+    if ('ResizeObserver' in window) {
+      const resizeObserver = new ResizeObserver(_.debounce((entry, observer) => this.refresh(), 100))
+      resizeObserver.observe(this.container)
+    } else {
+      console.warn('当前版本的浏览器不支持 ResizeObserver，大小调整事件处理将不起作用。')
+    }
+
     // 绑定 view 上面的事件
     this._event_bind()
   }
