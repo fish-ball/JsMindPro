@@ -86,8 +86,13 @@ export default class JsMindLayout {
   /**
    * 折叠节点
    * @param node {JsMindNode}
+   * @param deep {Boolean} 是否折叠后代
    */
-  collapse_node (node) {
+  collapse_node (node, deep = false) {
+    // 如果级联折叠，采取后序遍历先折叠儿子
+    if (deep) node.children.forEach(child => this.collapse_node(child, true))
+    // 设置自身的折叠状态
+    if (node.is_root()) return
     node.expanded = false
     this.part_layout(node)
     this.set_visible(node.children, false)
@@ -123,7 +128,7 @@ export default class JsMindLayout {
    * 全部折叠所有节点
    */
   collapse_all () {
-    this.expand_to_depth(1)
+    this.collapse_node(this.jm.get_root(), true)
   }
 
   /**
