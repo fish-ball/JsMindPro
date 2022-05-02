@@ -20,7 +20,7 @@ export const DEFAULT_OPTIONS = {
   container: '',   // (querySelector/id/Element) of the container
   editable: false, // you can change it in your options
   theme: null,
-  mode: 'full',     // full or side
+  mode: 'both',     // both or side
 
   view: {
     hmargin: 100,
@@ -535,9 +535,7 @@ export default class JsMind {
       node.topic = topic
       await this.view.update_node(node)
       this.view.show(false)
-      this.invoke_event_handle(EVENT_TYPE.edit, {
-        evt: 'update_node', data: [node, topic], node: node
-      })
+      this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'update_node', data: [node]})
     }
   }
 
@@ -555,31 +553,26 @@ export default class JsMind {
     await this.view.add_node(node)
     this.view.show(false)
     this.expand_node(parentNode)
-    this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'add_node',
-      data: [parentNode.id, nodeId, topic, data],
-      node: nodeId
-    })
+    this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'add_node', data: [node]})
     return node
   }
 
   /**
    * 在指定的节点之前插入一个兄弟节点
-   * @param nodeBefore {JsMindNode} 参照节点或其ID
+   * @param nextNode {JsMindNode} 参照节点或其ID
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {Promise<JsMindNode>}
    */
   @require_editable
-  async insert_node_before (nodeBefore, nodeId, topic, data) {
-    const node = this.model.insert_node_before(nodeBefore, nodeId, topic, data)
+  async insert_node_before (nextNode, nodeId, topic, data) {
+    const node = this.model.insert_node_before(nextNode, nodeId, topic, data)
     await this.view.add_node(node)
     await this.view.show(false)
     this.invoke_event_handle(EVENT_TYPE.edit, {
       evt: 'insert_node_before',
-      data: [JsMindUtil.to_node_id(nodeBefore), nodeId, topic, data],
-      node: nodeId
+      data: [node, nextNode]
     })
     return node
   }
@@ -587,20 +580,19 @@ export default class JsMind {
   /**
    * 在指定的节点之后插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeAfter {JsMindNode} 参照节点或其ID
+   * @param prevNode {JsMindNode} 参照节点或其ID
    * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {Promise<JsMindNode>}
    */
   @require_editable
-  async insert_node_after (nodeAfter, nodeId, topic, data) {
-    let node = this.model.insert_node_after(nodeAfter, nodeId, topic, data)
+  async insert_node_after (prevNode, nodeId, topic, data) {
+    const node = this.model.insert_node_after(prevNode, nodeId, topic, data)
     await this.view.add_node(node)
     this.invoke_event_handle(EVENT_TYPE.edit, {
       evt: 'insert_node_after',
-      data: [JsMindUtil.to_node_id(nodeAfter), nodeId, topic, data],
-      node: nodeId
+      data: [node, prevNode]
     })
     return node
   }
@@ -634,9 +626,7 @@ export default class JsMind {
     // 逻辑层删除
     this.model.remove_node(node)
     // 抛出被删除事件
-    this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'remove_node', data: [node.id], node: node.parent.id
-    })
+    this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_node', data: [node]})
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(node.parent)
@@ -646,9 +636,7 @@ export default class JsMind {
   /**
    * 移动一个节点
    * @param node {JsMindNode} 待移动节点
-   * @param prevNode {JsMindNode|String}
-   *        TODO: 这个 _first_ 或 _last_ 的接口相当不优雅，后面改掉
-   *        移动到这个节点的前面，填入 _first_ 或 _last_ 可调整到开头或末尾
+   * @param prevNode {JsMindNode} 移动到这个节点的前面
    * @param parent {JsMindNode}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {Promise<void>}
@@ -661,8 +649,7 @@ export default class JsMind {
     this.view.show(false)
     this.invoke_event_handle(EVENT_TYPE.edit, {
       evt: 'move_node',
-      data: [node, prevNode, parent, direction],
-      node: node
+      data: [node, parent, prevNode]
     })
   }
 

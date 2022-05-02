@@ -326,19 +326,17 @@ class JsMindExtensionDraggable {
     let shadowH = this.shadow.offsetTop
     if (!targetNode || !srcNode || srcNode.is_ancestor_of(targetNode)) return
     // lookup before_node
-    let sibling_nodes = targetNode.children
+    let siblings = targetNode.children
     let node = null
     let deltaY = Number.MAX_VALUE
     let prevNode = null
-    let beforeId = '_last_'
-    for (let sc = sibling_nodes.length; sc--;) {
-      node = sibling_nodes[sc]
+    for (let sc = siblings.length; sc--;) {
+      node = siblings[sc]
       if (node.direction === targetDirection && node.id !== srcNode.id) {
         let dy = node.get_location().y - shadowH
         if (dy > 0 && dy < deltaY) {
           deltaY = dy
           prevNode = node
-          beforeId = '_first_'
         }
       }
     }

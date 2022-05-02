@@ -89,8 +89,7 @@ export default class JsMindModel {
     // 先重排下标
     node.children.forEach((child, i) => {
       child.direction = node.is_root() ? {
-        both: [DIRECTION.right, DIRECTION.left][i % 2],
-        side: DIRECTION.right
+        both: [DIRECTION.right, DIRECTION.left][i % 2], side: DIRECTION.right
       }[this.options.mode || 'both'] : node.direction
       child.index = i
       this.arrange(child)
@@ -99,17 +98,14 @@ export default class JsMindModel {
 
   /**
    * 根据输入值生成并添加一个节点
-   * @param parentNode {JsMindNode|Number|String} 父节点的 ID
+   * @param parentNode {JsMindNode} 父节点
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
    * @param idx {Number} 节点序号，默认放最后
    * @returns {JsMindNode} 范围添加成功后的节点，操作失败返回 null
    */
-  add_node (parentNode, nodeId,
-            topic, data, idx = -1) {
-    // 如果传入对象并非 JsMindNode，查找并返回这个 node
-    parentNode = this._sanitize_node(parentNode)
+  add_node (parentNode, nodeId, topic, data, idx = -1) {
     // 不传入位置的话，放在末尾
     if (idx < 0) idx = parentNode.children.length
     // 创建并置入节点
@@ -126,26 +122,23 @@ export default class JsMindModel {
   /**
    * 在指定的节点之前插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeBefore {JsMindNode|Number|String} 参照节点或其ID
+   * @param nextNode {JsMindNode} 节点
    * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {JsMindNode}
    */
-  insert_node_before (nodeBefore, nodeId, topic, data) {
-    nodeBefore = this._sanitize_node(nodeBefore)
-    if (!nodeBefore) return null
-    return this.add_node(nodeBefore.parent, nodeId, topic, data, nodeBefore.index - 0.5)
+  insert_node_before (nextNode, nodeId, topic, data) {
+    return this.add_node(nextNode.parent, nodeId, topic, data, nextNode.index - 0.5)
   }
 
   /**
    * 获取指定节点的前一个兄弟节点
-   * @param node {JsMindNode|Number|String}
+   * @param node {JsMindNode}
    * @returns {JsMindNode}
    */
   get_node_before (node) {
-    node = this._sanitize_node(node)
-    if (!node || node.is_root()) return null
+    if (node.is_root()) return null
     let idx = node.index - 1
     return idx > -1 ? node.parent.children[idx] : null
   }
@@ -153,40 +146,36 @@ export default class JsMindModel {
   /**
    * 在指定的节点之后插入一个兄弟节点
    * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nodeAfter {JsMindNode|Number|String} 参照节点或其ID
+   * @param prevNode {JsMindNode} 参照节点或其ID
    * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
    * @returns {JsMindNode}
    */
-  insert_node_after (nodeAfter, nodeId, topic, data) {
-    nodeAfter = this._sanitize_node(nodeAfter)
-    return this.add_node(nodeAfter.parent, nodeId, topic, data, nodeAfter.index + 0.5)
+  insert_node_after (prevNode, nodeId, topic, data) {
+    return this.add_node(prevNode.parent, nodeId, topic, data, prevNode.index + 0.5)
   }
 
   /**
    * 获取指定节点的后一个节点
-   * @param node {JsMindNode|Number|String}
+   * @param node {JsMindNode}
    * @returns {JsMindNode}
    */
   get_node_after (node) {
-    node = this._sanitize_node(node)
     let idx = node.index + 1
     return idx < node.parent.children.length ? node.parent.children[idx] : null
   }
 
   /**
    * 移动一个节点
-   * @param node {JsMindNode|Number|String} 待移动节点
-   * @param nodeBefore {JsMindNode|Number|String}
-   *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
-   * @param parent {JsMindNode|Number|String}
+   * @param node {JsMindNode} 待移动节点
+   * @param nextNode {JsMindNode} 目标位置的后一个节点
+   * @param parent {JsMindNode}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {JsMindNode}
    */
-  move_node (node, nodeBefore, parent, direction) {
-    node = this._sanitize_node(node)
-    return this._move_node(node, nodeBefore, parent || node.parent.id, direction)
+  move_node (node, nextNode, parent, direction) {
+    return this._move_node(node, nextNode, parent || node.parent.id, direction)
   }
 
   /**
@@ -206,32 +195,15 @@ export default class JsMindModel {
   }
 
   /**
-   * 返回一个 node 实例：
-   * + 如果传入 nodeId，则返回对应的节点集内的 node，找不到返回 null
-   * + 如果传入的是 node 实例，则查找是否在节点集内并一致，一致返回节点本身，否则返回 null
-   * @param node {JsMindNode|Number}
-   * @returns {JsMindNode}
-   * @private
-   */
-  _sanitize_node (node) {
-    if (!(node instanceof JsMindNode)) return this.get_node(node)
-    if (this.nodes[node.id] === node) return node
-    throw new Error('The node is not defined inside the current tree.')
-  }
-
-  /**
    * 执行实质移动一个节点
-   * @param node {JsMindNode|Number|String} 待移动节点
-   * @param nodeBefore {JsMindNode|Number|String}
-   *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
-   * @param parent {JsMindNode|Number|String}
+   * @param node {JsMindNode} 待移动节点
+   * @param nextNode {JsMindNode} 目标位置的后一个节点
+   * @param parent {JsMindNode}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {JsMindNode}
    * @private
    */
-  _move_node (node, nodeBefore, parent, direction = DIRECTION.right) {
-    node = this._sanitize_node(node)
-    parent = this._sanitize_node(parent)
+  _move_node (node, nextNode, parent, direction = DIRECTION.right) {
     if (!node || !parent) return null
     // 跨父节点移动
     if (node.parent !== parent) {
@@ -244,7 +216,7 @@ export default class JsMindModel {
     // 根节点
     node.direction = node.parent.is_root() ? direction : node.parent.direction
     // 同一个父节点内部移动
-    this._move_node_internal(node, nodeBefore)
+    this._move_node_internal(node, nextNode)
     this._flow_node_direction(node)
     return node
   }
@@ -263,22 +235,28 @@ export default class JsMindModel {
   /**
    * 在同一个父节点内部移动一个节点
    * @param node
-   * @param nodeBefore {JsMindNode|Number|String}
-   *        移动到目的节点的前面，接受对象或者节点 id 传入，填入 _first_ 或 _last_ 可调整到开头或末尾
+   * @param nextNode {JsMindNode} 目标位置的后一个节点
    * @returns {JsMindNode|null}
    * @private
    */
-  _move_node_internal (node, nodeBefore) {
-    node = this._sanitize_node(node)
-    if (nodeBefore === '_last_') {
-      node.index = node.parent.children.length
-    } else if (nodeBefore === '_first_') {
-      node.index = -1
+  _move_node_internal (node, nextNode) {
+    if (node.parent.is_root() && this.options.mode === 'both') {
+      // TODO: 这里如果使用 both 布局的话，index 是有特殊指定意义的，为了避免布局反复横跳是需要做特殊处理的
+      // >>> 需要重写
+      if (!nextNode) {
+        node.index = node.parent.children.length
+      } else {
+        if (node.parent !== nextNode.parent) return null
+        node.index = nextNode.index - 0.5
+      }
+      // <<<
     } else {
-      nodeBefore = this._sanitize_node(nodeBefore)
-      if (!nodeBefore) return null
-      if (node.parent !== nodeBefore.parent) return null
-      node.index = nodeBefore.index - 0.5
+      if (!nextNode) {
+        node.index = node.parent.children.length
+      } else {
+        if (node.parent !== nextNode.parent) return null
+        node.index = nextNode.index - 0.5
+      }
     }
     this._reindex(node.parent)
     return node
@@ -299,11 +277,10 @@ export default class JsMindModel {
 
   /**
    * 重整某个节点下的子节点的序号
-   * @param node {JsMindNode|Number|String}
+   * @param node {JsMindNode}
    * @private
    */
   _reindex (node) {
-    node = this._sanitize_node(node)
     node.children.sort((a, b) => a.index - b.index)
     for (let i = 0; i < node.children.length; i++) {
       node.children[i].index = i
