@@ -425,7 +425,7 @@ export default class JsMind {
   expand_to_nodes (nodes) {
     this.collapse_all()
     nodes.forEach(node => {
-      node = this.get_node(node).parent
+      node = node.parent
       while (node && !node.is_root() && !node.expanded) {
         this.layout.expand_node(node)
         node = node.parent
