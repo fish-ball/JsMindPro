@@ -52,6 +52,7 @@ export default class JsMindView {
 
     // 初始化画布
     this.e_canvas = document.createElement('canvas')
+    this.e_canvas.className = 'canvas-lines'
     this.canvas_ctx = this.e_canvas.getContext('2d')
 
     // 初始化节点容器

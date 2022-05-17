@@ -4,13 +4,7 @@ import JsMindNode from '../JsMindNode'
 import JsMindUtil from '../JsMindUtil'
 import JsMindPlugin from '../JsMindPlugin'
 
-let options = {
-  line_width: 1,
-  stroke_style: 'rgba(0,0,0,0.3)',
-  stroke_dash: [8, 4]
-}
-
-class JsMindExtensionDraggable {
+class JsMindExtensionDragScroll {
 
   constructor (jm) {
     /** @type JsMind */
@@ -217,10 +211,7 @@ class JsMindExtensionDraggable {
     })
     if (!closestNode) return null
     return {
-      node: closestNode,
-      direction: direction,
-      sp: shadowPoint,
-      np: nodePoint
+      node: closestNode, direction: direction, sp: shadowPoint, np: nodePoint
     }
   }
 
@@ -370,10 +361,10 @@ class JsMindExtensionDraggable {
 }
 
 (function () {
-  if (JsMind.draggable !== void 0) return
+  if (JsMind.drag_scroll !== void 0) return
 
-  let draggable_plugin = new JsMindPlugin('draggable', function (jm) {
-    let jd = new JsMindExtensionDraggable(jm)
+  let draggable_plugin = new JsMindPlugin('drag_scroll', function (jm) {
+    let jd = new JsMindExtensionDragScroll(jm)
     jd.init()
     jm.add_event_listener(function (type, data) {
       jd.jm_event_handle(type, data)
