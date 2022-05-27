@@ -421,9 +421,10 @@ export default class JsMind {
    * 展开到指定的节点列表
    * 将指定的列表到根节点的路径全部打开，其余全部关闭
    * @param nodes {JsMindNode[]}
+   * @param collapseOther {Boolean}
    */
-  expand_to_nodes (nodes) {
-    this.collapse_all()
+  expand_to_nodes (nodes, collapseOther = true) {
+    if (collapseOther) this.collapse_all()
     nodes.forEach(node => {
       node = node.parent
       while (node && !node.is_root() && !node.expanded) {
