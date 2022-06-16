@@ -122,10 +122,18 @@ export default class JsMindNode {
 
   /**
    * 选中一个节点（更新其 css class）
+   * @param focus {Boolean} 选定后是否定位到焦点
    */
-  select () {
+  select (focus = true) {
     if (this.meta.view.element) {
       this.meta.view.element.classList.add('selected')
+      if (focus) {
+        this.meta.view.element.scrollIntoView({
+          behavior: 'smooth', // auto(default)/smooth
+          block: 'nearest', // Vertical: start(default)/center/end/nearest
+          inline: 'nearest' // Horizontal: start/center/end/nearest(default)
+        })
+      }
     }
   }
 
