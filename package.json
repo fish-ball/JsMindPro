@@ -1,14 +1,17 @@
 {
-  "name": "JsMindPro",
+  "name": "jsmindpro",
   "version": "1.0.0",
   "description": "Base on hizzgdev/jsmind project, porting to ES6 class based syntax.",
-  "main": "js/jsmindpro/JsMind.js",
+  "main": "src/js/JsMind.js",
   "directories": {
     "doc": "docs",
     "example": "example"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "jsdom"
   },
   "repository": {
     "type": "git",
@@ -30,5 +33,12 @@
       "name": "fish-ball",
       "email": "57082212@qq.com"
     }
-  ]
+  ],
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "jest": "^27.5.1"
+  }
 }
