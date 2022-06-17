@@ -537,7 +537,7 @@ export default class JsMindView {
       }
       // set select class display
       if (node === this.jm.get_selected_node()) {
-        node.select()
+        node.select(false)
       }
     })
   }

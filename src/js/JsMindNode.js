@@ -128,7 +128,7 @@ export default class JsMindNode {
     if (this.meta.view.element) {
       this.meta.view.element.classList.add('selected')
       if (focus) {
-        this.meta.view.element.scrollIntoView({
+        this.scroll_into_view({
           behavior: 'smooth', // auto(default)/smooth
           block: 'nearest', // Vertical: start(default)/center/end/nearest
           inline: 'nearest' // Horizontal: start/center/end/nearest(default)
