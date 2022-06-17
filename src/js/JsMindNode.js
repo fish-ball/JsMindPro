@@ -158,6 +158,13 @@ export default class JsMindNode {
   }
 
   /**
+   * 将节点移动到屏幕显示区域中
+   */
+  scroll_into_view (options = {behavior: 'smooth', block: 'center', inline: 'center'}) {
+    this.meta.view.element.scrollIntoView(options)
+  }
+
+  /**
    * 获取当前节点的 view 尺寸（宽高）
    * @returns {{w: Number, h: Number}}
    */
