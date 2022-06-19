@@ -49,6 +49,15 @@ export default class JsMindModel {
   }
 
   /**
+   * 追加数据
+   * @param data {Object}
+   * @returns {JsMindModel}
+   */
+  append_data (data) {
+    return this.formatter.append_data(this, data)
+  }
+
+  /**
    * 返回
    * @param data_format
    * @returns {*}

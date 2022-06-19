@@ -173,6 +173,17 @@ export default class JsMind {
   }
 
   /**
+   * 增量渲染数据，相当于在原本 Model 上面加上一些新的源数据内容，多用于批量插入
+   * @param data
+   * @returns {Promise<void>}
+   */
+  async append_data (data) {
+    this.model.append_data(data)
+    await this.view.maintain_nodes()
+    this.view.show(false)
+  }
+
+  /**
    * 获取数据集
    * @param data_format
    * @returns {*}

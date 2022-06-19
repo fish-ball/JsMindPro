@@ -354,6 +354,19 @@ export default class JsMindView {
   }
 
   /**
+   * 维护节点
+   * 遍历所有节点，如果节点没有初始化，给他初始化一个元素，用于 append_node 之后的处理。
+   * @returns {Promise<void>}
+   */
+  async maintain_nodes () {
+    const nodes = this.jm.model.nodes
+    await Promise.all(_.map(nodes, node => {
+      // console.log(node.id, node.topic)
+      if (!node.meta.view.element) return node.create_element(this.e_nodes, this)
+    }))
+  }
+
+  /**
    * 重新创建一个 node 的元素 * 会清除 view 对应的 DOM 并重新生成，渲染视图
    * 一般用于 node 数据被修改的情况下
    * @param node {JsMindNode}
