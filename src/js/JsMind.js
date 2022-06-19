@@ -230,13 +230,14 @@ export default class JsMind {
   /**
    * 触发选中某个节点
    * @param node {JsMindNode} 待选中的节点
+   * @param focus {Boolean} 定位节点，移动到屏幕显示区域中
    */
-  select_node (node) {
+  select_node (node, focus = true) {
     const lastNode = this.get_selected_node()
     if (node && !node.is_visible()) return
     if (lastNode) lastNode.deselect()
     this.model.selected_node = node
-    if (node) node.select()
+    if (node) node.select(focus)
     this.invoke_event_handle(EVENT_TYPE.select, {node})
   }
 

@@ -128,7 +128,7 @@ export default class JsMindNode {
     if (this.meta.view.element) {
       this.meta.view.element.classList.add('selected')
       if (focus) {
-        this.meta.view.element.scrollIntoView({
+        this.scroll_into_view({
           behavior: 'smooth', // auto(default)/smooth
           block: 'nearest', // Vertical: start(default)/center/end/nearest
           inline: 'nearest' // Horizontal: start/center/end/nearest(default)
@@ -155,6 +155,13 @@ export default class JsMindNode {
       x: this.meta.view.abs_x,
       y: this.meta.view.abs_y
     }
+  }
+
+  /**
+   * 将节点移动到屏幕显示区域中
+   */
+  scroll_into_view (options = {behavior: 'smooth', block: 'center', inline: 'center'}) {
+    this.meta.view.element.scrollIntoView(options)
   }
 
   /**
