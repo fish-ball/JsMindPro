@@ -1,3 +1,4 @@
+import _ from 'lodash-es'
 import JsMind from '../JsMind'
 import {DIRECTION, EVENT_TYPE} from '../JsMind'
 import JsMindNode from '../JsMindNode'
