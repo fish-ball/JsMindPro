@@ -1,7 +1,4 @@
-import _ from 'lodash-es'
 import JsMind from '../JsMind'
-import {DIRECTION, EVENT_TYPE} from '../JsMind'
-import JsMindNode from '../JsMindNode'
 import JsMindUtil from '../JsMindUtil'
 import JsMindPlugin from '../JsMindPlugin'
 
@@ -34,29 +31,16 @@ class JsMindExtensionDragScroll {
     let ext = this
     let container = this.jm.view.container
     JsMindUtil.dom.add_event(container, 'mousedown', function (e) {
-      ext.drag_start.call(ext, e)
+      ext.drag_start(e)
     })
-    // JsMindUtil.dom.add_event(container, 'mousemove', function (e) {
-    //   _.debounce(ext.drag).call(ext, e)
-    // })
     JsMindUtil.dom.add_event(container, 'mouseup', function (e) {
-      ext.drag_end.call(ext, e)
-    })
-    JsMindUtil.dom.add_event(container, 'touchstart', function (e) {
-      ext.drag_start.call(ext, e)
-    })
-    // JsMindUtil.dom.add_event(container, 'touchmove', function (e) {
-    //   _.debounce(ext.drag).call(ext, e || event)
-    // })
-    JsMindUtil.dom.add_event(container, 'touchend', function (e) {
-      if (!ext.jm.options.editable) return // 必须支持编辑才响应
-      ext.drag_end.call(ext, e || event)
+      ext.drag_end(e)
     })
   }
 
   /**
    * 开始拖动
-   * @param e {MouseEvent|TouchEvent}
+   * @param e {MouseEvent}
    */
   drag_start (e) {
     const el = this.jm.view.container.getElementsByClassName('jsmind-inner')[0]
@@ -64,12 +48,11 @@ class JsMindExtensionDragScroll {
     if (e.button === 2 && e.buttons === 2 && e.target.parentElement === el) {
       // 禁用掉右键菜单，免得拖拽结束的时候触发
       this.target = e.target
-      this.startX = e.screenX
-      this.startY = e.screenY
+      this.startX = e.clientX
+      this.startY = e.clientY
       this.scrollX = el.scrollLeft
       this.scrollY = el.scrollTop
       this.jm.view.container.addEventListener('mousemove', this.dragHandler)
-      this.jm.view.container.addEventListener('touchmove', this.dragHandler)
     } else {
       this.drag_end(e)
     }
@@ -77,12 +60,13 @@ class JsMindExtensionDragScroll {
 
   /**
    * 触发拖动
-   * @param e {MouseEvent|TouchEvent}
+   * @param e {MouseEvent}
    */
   drag (e) {
+    if (!(e.button === 0 && e.buttons === 2)) return this.drag_end(e)
     const el = this.jm.view.container.getElementsByClassName('jsmind-inner')[0]
-    el.scrollLeft = this.scrollX - e.screenX + this.startX
-    el.scrollTop = this.scrollY - e.screenY + this.startY
+    el.scrollLeft = this.scrollX - e.clientX + this.startX
+    el.scrollTop = this.scrollY - e.clientY + this.startY
     if (e.target && !this.active) {
       this.target.addEventListener('contextmenu', this.disable_event)
       this.active = true
@@ -91,18 +75,17 @@ class JsMindExtensionDragScroll {
 
   /**
    * 结束拖动
-   * @param e {MouseEvent|TouchEvent}
+   * @param e {MouseEvent}
    */
   drag_end (e) {
-    if (this.target) {
-      this.jm.view.container.removeEventListener('mousemove', this.dragHandler)
-      this.jm.view.container.removeEventListener('touchmove', this.dragHandler)
-      setTimeout(() => {
+    this.jm.view.container.removeEventListener('mousemove', this.dragHandler)
+    setTimeout(() => {
+      if (this.target) {
         this.target.removeEventListener('contextmenu', this.disable_event)
         this.target = null
-      }, 0)
-    }
-    this.active = false
+      }
+      this.active = false
+    }, 0)
   }
 
   /**

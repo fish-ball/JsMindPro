@@ -21,14 +21,16 @@ class JsMindExtensionDraggable {
     this.shadow = null
     this.shadow_w = 0
     this.shadow_h = 0
+    this.target = null
     this.active_node = null
     this.target_node = null
     this.target_direct = null
     this.offset_x = 0
     this.offset_y = 0
     this.capture = false
-    this.moved = false
-    this._timer_capturing = 0
+
+    this.drag_handler = null
+    this.active = false
   }
 
   /**
@@ -38,6 +40,7 @@ class JsMindExtensionDraggable {
     this._create_canvas()
     this._create_shadow()
     this._event_bind()
+    this.drag_handler = _.debounce(this.drag).bind(this)
   }
 
   /**
@@ -71,7 +74,7 @@ class JsMindExtensionDraggable {
    * 显示影子元素
    */
   show_shadow () {
-    if (!this.moved) this.shadow.style.visibility = 'visible'
+    this.shadow.style.visibility = 'visible'
   }
 
   /**
@@ -230,92 +233,86 @@ class JsMindExtensionDraggable {
    * @private
    */
   _event_bind () {
-    let jd = this
+    let ext = this
     let container = this.jm.view.container
     JsMindUtil.dom.add_event(container, 'mousedown', function (e) {
-      if (!jd.jm.options.editable) return // 必须支持编辑才响应
-      jd.drag_start.call(jd, e || event)
-    })
-    JsMindUtil.dom.add_event(container, 'mousemove', function (e) {
-      if (!jd.jm.options.editable) return // 必须支持编辑才响应
-      _.debounce(jd.drag).call(jd, e || event)
+      ext.drag_start(e)
     })
     JsMindUtil.dom.add_event(container, 'mouseup', function (e) {
-      if (!jd.jm.options.editable) return // 必须支持编辑才响应
-      jd.drag_end.call(jd, e || event)
-    })
-    JsMindUtil.dom.add_event(container, 'touchstart', function (e) {
-      if (!jd.jm.options.editable) return // 必须支持编辑才响应
-      jd.drag_start.call(jd, e || event)
-    })
-    JsMindUtil.dom.add_event(container, 'touchmove', function (e) {
-      if (!jd.jm.options.editable) return // 必须支持编辑才响应
-      _.debounce(jd.drag).call(jd, e || event)
-    })
-    JsMindUtil.dom.add_event(container, 'touchend', function (e) {
-      if (!jd.jm.options.editable) return // 必须支持编辑才响应
-      jd.drag_end.call(jd, e || event)
+      ext.drag_end(e)
     })
   }
 
   /**
    * 开始拖动
-   * @param e {MouseEvent|TouchEvent}
+   * @param e {MouseEvent}
    */
   drag_start (e) {
-    if (!this.jm.can_edit()) return
-    if (this.capture) return
-    this.active_node = null
-
-    let view = this.jm.view
-    let el = e.target
-    if (!el.classList.contains('jmnode')) return
-    let node = view.get_node_by_element(el)
-    if (!node || node.is_root()) return
-    this._clean_capturing()
-    this._timer_capturing = setTimeout(() => {
-      this._timer_capturing = 0
-      this.reset_shadow(el)
+    // 单独按下左键才作数
+    if (e.button === 0 && e.buttons === 1 && this.jm.can_edit()) {
+      const view = this.jm.view
+      const el = e.target
+      if (!el.classList.contains('jmnode')) return
+      const node = view.get_node_by_element(el)
+      if (!node || node.is_root()) return
+      // 启动捕捉监听，产生位移才开始进入 capture
+      this.capture = false
+      this.target = el
       this.active_node = node
-      this.offset_x = (e.clientX || e.touches[0].clientX) / view.options.zoom - el.offsetLeft
-      this.offset_y = (e.clientY || e.touches[0].clientY) / view.options.zoom - el.offsetTop
-      this.capture = true
-      // 时间到，先触发一次 drag 避免不动的时候错乱
-      this.drag(e)
-    }, 200)
+      this.jm.view.container.addEventListener('mousemove', this.drag_handler)
+    } else {
+      // 否则取消操作
+      this.drag_end(e, true)
+    }
   }
 
   /**
    * 触发拖动
-   * @param e {MouseEvent|TouchEvent}
+   * @param e {MouseEvent}
    */
   drag (e) {
-    if (!this.jm.can_edit()) return
-    if (!this.capture) return
-    e.preventDefault()
-    this.show_shadow()
-    this.moved = true
-    let view = this.jm.view
-    let px = (e.clientX || e.touches[0].clientX) / view.options.zoom - this.offset_x
-    let py = (e.clientY || e.touches[0].clientY) / view.options.zoom - this.offset_y
-    this.shadow.style.left = px + 'px'
-    this.shadow.style.top = py + 'px'
-    // 触发磁力线计算
-    this.lookup_close_node.call(this)
+    // 左键按下才作数，如果拖动期间点了其他按键就取消
+    if (e.button === 0 && e.buttons === 1 && this.target && this.jm.can_edit()) {
+      const view = this.jm.view
+      if (!this.capture) {
+        this.reset_shadow(this.target)
+        this.offset_x = e.clientX / view.options.zoom - this.target.offsetLeft
+        this.offset_y = e.clientY / view.options.zoom - this.target.offsetTop
+        this.capture = true
+      }
+      e.preventDefault()
+      this.show_shadow()
+      let px = e.clientX / view.options.zoom - this.offset_x
+      let py = e.clientY / view.options.zoom - this.offset_y
+      this.shadow.style.left = px + 'px'
+      this.shadow.style.top = py + 'px'
+      // 触发磁力线计算
+      this.lookup_close_node()
+    } else {
+      // 否则取消操作
+      this.drag_end(e, true)
+    }
   }
 
   /**
    * 拖动结束的处理
-   * @param e
+   * @param e {MouseEvent}
+   * @param cancel {Boolean} 是否取消操作
    */
-  drag_end (e) {
-    this._clean_capturing()
-    if (!this.jm.can_edit() || !this.capture || !this.moved) return
+  drag_end (e, cancel = false) {
+    // 如果操作合法，执行操作
+    if (this.jm.can_edit() && !cancel && this.capture) {
+      this.move_node(this.active_node, this.target_node, this.target_direct)
+    }
+    // 清理所有
+    this.jm.view.container.removeEventListener('mousemove', this.drag_handler)
     this._clear_lines()
     this.hide_shadow()
-    this.move_node(this.active_node, this.target_node, this.target_direct)
-    this.moved = false
     this.capture = false
+    this.target = null
+    this.active_node = null
+    this.target_node = null
+    this.target_direct = null
   }
 
   /**
@@ -326,6 +323,7 @@ class JsMindExtensionDraggable {
    */
   move_node (srcNode, targetNode, targetDirection) {
     let shadowH = this.shadow.offsetTop
+    // 不允许移动到自己的子节点，否则会引起循环
     if (!targetNode || !srcNode || srcNode.is_ancestor_of(targetNode)) return
     // lookup before_node
     let siblings = targetNode.children
@@ -342,10 +340,10 @@ class JsMindExtensionDraggable {
         }
       }
     }
-    this.jm.move_node(srcNode, prevNode, targetNode, targetDirection)
-    this.active_node = null
-    this.target_node = null
-    this.target_direct = null
+    // 如果没有实际发生移动，则不进行任何操作
+    if (node.parent !== targetNode || (prevNode ? prevNode.index : siblings.length) !== srcNode.index + 1) {
+      this.jm.move_node(srcNode, prevNode, targetNode, targetDirection)
+    }
   }
 
   /**
@@ -355,17 +353,6 @@ class JsMindExtensionDraggable {
    */
   jm_event_handle (type, data) {
     if (type === EVENT_TYPE.resize) this.resize()
-  }
-
-  /**
-   * 清理捕捉状态
-   * @private
-   */
-  _clean_capturing () {
-    if (this._timer_capturing) {
-      clearTimeout(this._timer_capturing)
-      this._timer_capturing = 0
-    }
   }
 
 }
