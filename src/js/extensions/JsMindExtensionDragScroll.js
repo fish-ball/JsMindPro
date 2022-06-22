@@ -1,5 +1,4 @@
 import JsMind from '../JsMind'
-import JsMindUtil from '../JsMindUtil'
 import JsMindPlugin from '../JsMindPlugin'
 
 class JsMindExtensionDragScroll {
@@ -19,7 +18,6 @@ class JsMindExtensionDragScroll {
    */
   init () {
     this._event_bind()
-    // this.dragHandler = _.debounce(this.drag).bind(this)
     this.dragHandler = this.drag.bind(this)
   }
 
@@ -28,14 +26,9 @@ class JsMindExtensionDragScroll {
    * @private
    */
   _event_bind () {
-    let ext = this
-    let container = this.jm.view.container
-    JsMindUtil.dom.add_event(container, 'mousedown', function (e) {
-      ext.drag_start(e)
-    })
-    JsMindUtil.dom.add_event(container, 'mouseup', function (e) {
-      ext.drag_end(e)
-    })
+    const container = this.jm.view.container
+    container.addEventListener('mousedown', this.drag_start.bind(this))
+    container.addEventListener('mouseup', this.drag_end.bind(this))
   }
 
   /**

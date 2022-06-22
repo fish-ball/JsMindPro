@@ -218,6 +218,7 @@ export default class JsMindModel {
     if (node.parent !== parent) {
       // 从父节点中删除
       node.parent.children.splice(node.parent.children.indexOf(node), 1)
+      this._reindex(node.parent)
       // 加入新的父节点
       parent.children.push(node)
       node.parent = parent

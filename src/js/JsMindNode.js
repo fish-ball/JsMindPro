@@ -78,6 +78,7 @@ export default class JsMindNode {
     // 添加 Node 的 DOM 元素
     const elNode = document.createElement('div')
     elNode.className = 'jmnode'
+    elNode.setAttribute('draggable', '')
     elNode.setAttribute('nodeid', this.id)
     // elNode.style.visibility = 'hidden'
     elParent.appendChild(elNode)
