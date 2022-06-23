@@ -63,22 +63,6 @@ export const DEFAULT_OPTIONS = {
 }
 
 /**
- * [decorator] 要求 JsMind 对象被正确初始化
- * 参考：http://caibaojian.com/es6/decorator.html
- * @param target
- * @param name
- * @param descriptor
- */
-function require_init (target, name, descriptor) {
-  const func = descriptor.value
-  descriptor.value = async function () {
-    if (!this._initialized) throw new Error('JsMind 对象尚未初始化。')
-    return func.call(this, ...arguments)
-  }
-  return descriptor
-}
-
-/**
  * [decorator] 要求 JsMind 处于可编辑状态
  * 参考：http://caibaojian.com/es6/decorator.html
  * @param target
@@ -230,7 +214,7 @@ export default class JsMind {
   /**
    * 触发选中某个节点
    * @param node {JsMindNode} 待选中的节点
-   * @param focus {Boolean} 定位节点，移动到屏幕显示区域中
+   * @param focus {Boolean} 是否定位节点，移动到屏幕显示区域中
    */
   select_node (node, focus = true) {
     const lastNode = this.get_selected_node()

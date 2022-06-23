@@ -59,7 +59,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
         nd.topic = node.topic
         nd.data = node.data
       } else {
-        console.log('create_node model:', node.id, node.topic)
+        // console.log('create_node model:', node.id, node.topic)
         model.nodes[node.id] = new JsMindNode(
           node.id, -1, node.topic, node.data, null,
           null, node.expanded)

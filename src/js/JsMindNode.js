@@ -242,4 +242,15 @@ export default class JsMindNode {
     }
   }
 
+  /**
+   * 深度优先先序遍历这个节点（包括本身），并返回节点列表
+   * @returns {Generator<*, void, *>}
+   */
+  * iterate () {
+    yield this
+    for (const child of this.children) {
+      yield* child.iterate()
+    }
+  }
+
 }
