@@ -204,6 +204,14 @@ export default class JsMind {
   }
 
   /**
+   * 获取当前选中的节点集合
+   * @returns {JsMindNode[]}
+   */
+  get_selected_nodes () {
+    return this.model.selected_nodes
+  }
+
+  /**
    * 获取当前选中的节点
    * @returns {JsMindNode}
    */
@@ -212,24 +220,74 @@ export default class JsMind {
   }
 
   /**
-   * 触发选中某个节点
+   * 批量选中节点
+   * @param nodes {JsMindNode[]}
+   * @param focus {Boolean} 是否定位节点（最后一个），移动到屏幕显示区域中
+   */
+  select_nodes (nodes, focus = false) {
+    // 清理所有原有的 node 选中样式
+    for (const node of this.model.selected_nodes) node.deselect()
+    // 逻辑清除选中节点
+    this.model.selected_node = null
+    // 插入选择
+    this.model.selected_nodes.splice(0, this.model.selected_nodes.length, ...nodes)
+    // 标记选择样式
+    nodes.forEach(node => node.select())
+    // 抛出事件
+    this.invoke_event_handle(EVENT_TYPE.select, {node: nodes[nodes.length - 1] || null, nodes})
+  }
+
+  /**
+   * 触发选中某个节点（兼容旧的调用）
    * @param node {JsMindNode} 待选中的节点
    * @param focus {Boolean} 是否定位节点，移动到屏幕显示区域中
    */
   select_node (node, focus = true) {
-    const lastNode = this.get_selected_node()
-    if (node && !node.is_visible()) return
-    if (lastNode) lastNode.deselect()
-    this.model.selected_node = node
-    if (node) node.select(focus)
-    this.invoke_event_handle(EVENT_TYPE.select, {node})
+    if (!node) this.select_clear()
+    else this.select_nodes([node], focus)
+  }
+
+  /**
+   * 切换一个节点的选中状态（原来没有选中的话加入选中，原来有选中的话取消选中）
+   * @param node {JsMindNode} 待选中的节点
+   * @param value {Boolean?} 如果指定为 true/false，则指定选中或者剔除选中
+   */
+  toggle_select_node (node, value) {
+    let selected = value === void 0
+      ? !this.model.selected_nodes.includes(node) // 缺省为反转
+      : !!value // 否则为指定状态
+    if (selected && !this.model.selected_nodes.includes(node)) {
+      // 原来没选中，现在要选上
+      node.select()
+      this.model.selected_nodes.push(node)
+    } else if (!selected && this.model.selected_nodes.includes(node)) {
+      // 原来有选中，现在要反选
+      node.deselect()
+      const index = this.model.selected_nodes.indexOf(node)
+      this.model.selected_nodes.splice(index, 1)
+    } else {
+      // 没有变化的话什么也不做
+      return
+    }
+    // 有处理过的，处理完之后抛出事件
+    this.invoke_event_handle(EVENT_TYPE.select, {
+      node: selected ? node : null, // 如果是取消选择，则 node 参数为 null
+      nodes: this.model.selected_nodes
+    })
   }
 
   /**
    * 触发清除选中
    */
   select_clear () {
-    this.select_node(null)
+    // 原本没有的话，就直接不需要任何的处理了
+    if (this.model.selected_nodes.length === 0) return
+    // 清理所有原有的 node 选中样式
+    for (const node of this.model.selected_nodes) node.deselect()
+    // 逻辑清除选中节点
+    this.model.selected_node = null
+    // 触发事件
+    this.invoke_event_handle(EVENT_TYPE.select, {node: null, nodes: []})
   }
 
   /**

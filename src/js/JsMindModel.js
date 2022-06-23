@@ -25,9 +25,9 @@ export default class JsMindModel {
     this.nodes = {}
     /**
      * 当前逻辑上选中的节点
-     * @type {JsMindNode|null}
+     * @type {JsMindNode[]}
      */
-    this.selected_node = null
+    this.selected_nodes = []
     /**
      * 获取对应格式的 JsMindFormat 对象
      */
@@ -37,6 +37,22 @@ export default class JsMindModel {
      * 带入所有的配置项
      */
     this.options = options
+  }
+
+  /**
+   * Getter 获取某一个指定的节点，如果有多个选中，则返回最后一个
+   * 兼容原有的单节点实现
+   */
+  get selected_node () {
+    return this.selected_nodes[0] || null
+  }
+
+  /**
+   * 设置一个当前选定的节点
+   * @param node {JsMindNode|null}
+   */
+  set selected_node (node) {
+    this.selected_nodes.splice(0, this.selected_nodes.length, ...(node ? [node] : []))
   }
 
   /**
