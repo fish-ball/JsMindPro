@@ -362,16 +362,33 @@ export default class JsMind {
    * @returns {JsMindNode}
    */
   find_node_before (node) {
-    if (node.is_root()) return null
-    // 非一级子节点好搞，直接上一个
-    if (!node.parent.is_root) return this.model.get_node_before(node)
-    // 如果是一级子节点，则要考虑方向的问题
-    let idx = node.parent.children.indexOf(node) - 1
-    while (idx > -1) {
-      if (node.parent.children[idx].direction === node.direction) break
-      idx -= 1
+    let depth = 0
+    const direction = node.direction
+    let nxt = null
+    while (!node.is_root()) {
+      let siblings = node.parent.children
+      // 如果是一级节点，而且是两侧布局的话，过滤一下
+      if (node.parent.is_root() && this.options.layout.mode === 'both') {
+        siblings = siblings.filter(x => x.direction === direction)
+      }
+      // 找同级别下一个，找到就匹配上
+      const index = siblings.indexOf(node)
+      if (index > 0) {
+        nxt = siblings[index - 1]
+        break
+      }
+      // 找不到的话，上溯一级
+      depth += 1
+      node = node.parent
     }
-    return idx > -1 ? node.parent.children[idx] : null
+    // 没有匹配到的话，那就是已经最后一个了
+    if (!nxt) return null
+    // 曾经有上溯过的话，要拉回来
+    while (depth > 0 && nxt.children.length > 0) {
+      depth -= 1
+      nxt = nxt.children[nxt.children.length - 1]
+    }
+    return nxt
   }
 
   /**
@@ -380,16 +397,33 @@ export default class JsMind {
    * @returns {JsMindNode}
    */
   find_node_after (node) {
-    if (node.is_root()) return null
-    // 非一级子节点好搞，直接上一个
-    if (!node.parent.is_root) return this.model.get_node_after(node)
-    // 如果是一级子节点，则要考虑方向的问题
-    let idx = node.parent.children.indexOf(node) + 1
-    while (idx < node.parent.children.length) {
-      if (node.parent.children[idx].direction === node.direction) break
-      idx += 1
+    let depth = 0
+    const direction = node.direction
+    let nxt = null
+    while (!node.is_root()) {
+      let siblings = node.parent.children
+      // 如果是一级节点，而且是两侧布局的话，过滤一下
+      if (node.parent.is_root() && this.options.layout.mode === 'both') {
+        siblings = siblings.filter(x => x.direction === direction)
+      }
+      // 找同级别下一个，找到就匹配上
+      const index = siblings.indexOf(node)
+      if (index !== siblings.length - 1) {
+        nxt = siblings[index + 1]
+        break
+      }
+      // 找不到的话，上溯一级
+      depth += 1
+      node = node.parent
     }
-    return idx > -1 ? node.parent.children[idx] : null
+    // 没有匹配到的话，那就是已经最后一个了
+    if (!nxt) return null
+    // 曾经有上溯过的话，要拉回来
+    while (depth > 0 && nxt.children.length > 0) {
+      depth -= 1
+      nxt = nxt.children[0]
+    }
+    return nxt
   }
 
   /**
