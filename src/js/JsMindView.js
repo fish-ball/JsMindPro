@@ -392,16 +392,35 @@ export default class JsMindView {
 
   /**
    * 处理鼠标按下事件
-   * @param e {Event}
+   * @param e {MouseEvent}
    */
   _mousedown_handle (e) {
     if (!this.jm.options.default_event_handle['enable_mousedown_handle']) return
-    this.jm.select_node(this.get_node_by_element(e.target))
+    // 当前节点
+    const targetNode = this.get_node_by_element(e.target)
+    if (e.button === 0 && e.buttons === 1) {
+      // 单击左键
+      if (e.ctrlKey) {
+        if (targetNode) this.jm.toggle_select_node(targetNode)
+      } else {
+        this.jm.select_node(targetNode)
+      }
+    } else if (e.button === 2 && e.buttons === 2) {
+      // 单击右键
+      if (e.ctrlKey) {
+      } else if (this.jm.get_selected_nodes().length <= 1) {
+        // 单选的时候，右键直接选择到点的节点
+        this.jm.select_node(targetNode)
+      } else if (!this.jm.is_node_selected(targetNode)) {
+        // 多选的时候，如果当前节点不在已选范围内，直接重选
+        this.jm.select_node(targetNode)
+      }
+    }
   }
 
   /**
    * 点击事件处理器
-   * @param e {Event}
+   * @param e {MouseEvent}
    */
   _click_handle (e) {
     if (!this.jm.options.default_event_handle['enable_click_handle']) return
@@ -412,7 +431,7 @@ export default class JsMindView {
 
   /**
    * 双击事件处理器
-   * @param e {Event}
+   * @param e {MouseEvent}
    * @returns {Promise<void>}
    * @private
    */
@@ -444,8 +463,7 @@ export default class JsMindView {
    * @private
    */
   _clear_lines (canvasContext) {
-    let ctx = canvasContext || this.canvas_ctx
-    ctx.clearRect(0, 0, this.size.w, this.size.h)
+    this.canvas_ctx.clearRect(0, 0, this.size.w, this.size.h)
   }
 
   /**
@@ -471,12 +489,11 @@ export default class JsMindView {
 
   /**
    * 绘制画布上的所有线条
-   * @param canvasContext
    * @private
    */
-  _show_lines (canvasContext) {
+  _show_lines () {
     // 清理旧的线
-    this._clear_lines(canvasContext)
+    this._clear_lines()
     // 重设 canvas 大小
     this.e_canvas.width = this.size.w
     this.e_canvas.height = this.size.h
@@ -492,7 +509,7 @@ export default class JsMindView {
       // 获取父节点布局的出点坐标
       const pout = node.parent.get_layout_offset_out()
       // 画线
-      this._draw_line(pout, pin, _offset, canvasContext)
+      this._draw_line(pout, pin, _offset)
     })
   }
 
@@ -549,9 +566,7 @@ export default class JsMindView {
         elExpander.style.visibility = 'hidden'
       }
       // set select class display
-      if (node === this.jm.get_selected_node()) {
-        node.select(false)
-      }
+      if (this.jm.is_node_selected(node)) node.select(false)
     })
   }
 

@@ -110,11 +110,7 @@ export default class JsMindShortcut {
    * @returns {Promise<void>}
    */
   async handle_delnode () {
-    const jm = this.jm
-    let selectedNode = jm.get_selected_node()
-    if (!selectedNode) return
-    if (selectedNode.is_root()) throw new Error('Cannot delete root node.')
-    await jm.remove_node(selectedNode)
+    return this.jm.remove_nodes(this.jm.get_selected_nodes())
   }
 
   /**
@@ -122,8 +118,9 @@ export default class JsMindShortcut {
    */
   handle_toggle () {
     const jm = this.jm
-    let selected_node = jm.get_selected_node()
-    jm.toggle_node(selected_node)
+    for (const node of jm.get_selected_nodes()) {
+      jm.toggle_node(node)
+    }
   }
 
   /**

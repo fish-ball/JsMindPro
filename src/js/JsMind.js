@@ -220,6 +220,15 @@ export default class JsMind {
   }
 
   /**
+   * 判断一个节点是否被选中
+   * @param node {JsMindNode}
+   * @returns {boolean}
+   */
+  is_node_selected (node) {
+    return this.model.selected_nodes.includes(node)
+  }
+
+  /**
    * 批量选中节点
    * @param nodes {JsMindNode[]}
    * @param focus {Boolean} 是否定位节点（最后一个），移动到屏幕显示区域中
@@ -243,8 +252,11 @@ export default class JsMind {
    * @param focus {Boolean} 是否定位节点，移动到屏幕显示区域中
    */
   select_node (node, focus = true) {
-    if (!node) this.select_clear()
-    else this.select_nodes([node], focus)
+    if (!node) {
+      this.select_clear()
+    } else {
+      this.select_nodes([node], focus)
+    }
   }
 
   /**
@@ -253,14 +265,13 @@ export default class JsMind {
    * @param value {Boolean?} 如果指定为 true/false，则指定选中或者剔除选中
    */
   toggle_select_node (node, value) {
-    let selected = value === void 0
-      ? !this.model.selected_nodes.includes(node) // 缺省为反转
-      : !!value // 否则为指定状态
-    if (selected && !this.model.selected_nodes.includes(node)) {
+    const oldValue = this.model.selected_nodes.includes(node)
+    value = value === void 0 ? !oldValue : !!value
+    if (value && !oldValue) {
       // 原来没选中，现在要选上
       node.select()
       this.model.selected_nodes.push(node)
-    } else if (!selected && this.model.selected_nodes.includes(node)) {
+    } else if (!value && oldValue) {
       // 原来有选中，现在要反选
       node.deselect()
       const index = this.model.selected_nodes.indexOf(node)
@@ -271,7 +282,7 @@ export default class JsMind {
     }
     // 有处理过的，处理完之后抛出事件
     this.invoke_event_handle(EVENT_TYPE.select, {
-      node: selected ? node : null, // 如果是取消选择，则 node 参数为 null
+      node: value ? node : null, // 如果是取消选择，则 node 参数为 null
       nodes: this.model.selected_nodes
     })
   }
@@ -601,8 +612,7 @@ export default class JsMind {
    * @param oldId
    * @param newId
    */
-  @require_editable
-  rename_node (oldId, newId) {
+  @require_editable rename_node (oldId, newId) {
     this.model.rename_node(oldId, newId)
   }
 
@@ -660,8 +670,7 @@ export default class JsMind {
     await this.view.add_node(node)
     await this.view.show(false)
     this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'insert_node_before',
-      data: [node, nextNode]
+      evt: 'insert_node_before', data: [node, nextNode]
     })
     return node
   }
@@ -680,15 +689,14 @@ export default class JsMind {
     const node = this.model.insert_node_after(prevNode, nodeId, topic, data)
     await this.view.add_node(node)
     this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'insert_node_after',
-      data: [node, prevNode]
+      evt: 'insert_node_after', data: [node, prevNode]
     })
     return node
   }
 
   /**
    * 移除一个指定的节点
-   * @param node {JsMindNode} 待移除节点或者 ID
+   * @param node {JsMindNode} 待移除节点
    * @returns {Promise<Boolean>}
    */
   @require_editable
@@ -719,6 +727,49 @@ export default class JsMind {
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(node.parent)
+    return true
+  }
+
+  /**
+   * 批量移除指定的节点
+   * @param nodes {JsMindNode[]} 待移除节点列表
+   * @returns {Promise<Boolean>}
+   */
+  @require_editable
+  async remove_nodes (nodes) {
+    // 这里多选的情况下会产生一些冲突，例如一个节点和他的子节点都被选中，
+    // 同时删除，结果子节点删除的时候被级联干掉了，会导致失败
+    // 更好的处理应该事先逻辑剔除一些被覆盖的子节点再执行
+    const nodesToDelete = []
+    const nodeMap = {}
+    // 将待删除的节点列表全部标记在集合中
+    for (const node of nodes) nodeMap[node.id] = true
+    // 然后每个节点上溯路径上，如果有被标记过的，则不删除
+    for (const node of nodes) {
+      let nd = node
+      while (!nd.parent.is_root() && !(nd.parent.id in nodeMap)) nd = nd.parent
+      if (nd.parent.is_root()) nodesToDelete.push(node)
+    }
+    // 没有要删的就直接退出
+    if (nodesToDelete.length === 0) return false
+    // 如果单个删除，走回单个删除的路径
+    if (nodesToDelete.length === 1) return this.remove_node(nodesToDelete[0])
+    // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
+    const parent = nodesToDelete[0].parent
+    this.view.save_location(parent)
+    // 执行删除
+    await Promise.all(nodesToDelete.map(async node => {
+      if (node.is_root()) return
+      // 视图层删除
+      await this.view.remove_node(node)
+      // 逻辑层删除
+      this.model.remove_node(node)
+    }))
+    // 抛出被删除事件
+    this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_nodes', data: [nodesToDelete]})
+    // 重新渲染回复定位
+    await this.view.show(false)
+    this.view.restore_location(parent)
     return true
   }
 
