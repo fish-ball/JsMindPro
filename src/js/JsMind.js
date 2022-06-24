@@ -230,18 +230,21 @@ export default class JsMind {
 
   /**
    * 批量选中节点
+   * TODO: 交集部分的 UI 响应其实是多余的，可以考虑优化掉
    * @param nodes {JsMindNode[]}
    * @param focus {Boolean} 是否定位节点（最后一个），移动到屏幕显示区域中
    */
   select_nodes (nodes, focus = false) {
     // 清理所有原有的 node 选中样式
     for (const node of this.model.selected_nodes) node.deselect()
-    // 逻辑清除选中节点
-    this.model.selected_node = null
     // 插入选择
     this.model.selected_nodes.splice(0, this.model.selected_nodes.length, ...nodes)
     // 标记选择样式
     nodes.forEach(node => node.select())
+    // 如果要聚焦，那就焦点定位到最后一个
+    if (focus) nodes[nodes.length - 1].scroll_into_view({
+      block: 'nearest', inline: 'nearest'
+    })
     // 抛出事件
     this.invoke_event_handle(EVENT_TYPE.select, {node: nodes[nodes.length - 1] || null, nodes})
   }

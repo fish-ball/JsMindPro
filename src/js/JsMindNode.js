@@ -123,19 +123,9 @@ export default class JsMindNode {
 
   /**
    * 选中一个节点（更新其 css class）
-   * @param focus {Boolean} 选定后是否定位到焦点
    */
-  select (focus = true) {
-    if (this.meta.view.element) {
-      this.meta.view.element.classList.add('selected')
-      if (focus) {
-        this.scroll_into_view({
-          behavior: 'smooth', // auto(default)/smooth
-          block: 'nearest', // Vertical: start(default)/center/end/nearest
-          inline: 'nearest' // Horizontal: start/center/end/nearest(default)
-        })
-      }
-    }
+  select () {
+    if (this.meta.view.element) this.meta.view.element.classList.add('selected')
   }
 
   /**
@@ -159,10 +149,17 @@ export default class JsMindNode {
   }
 
   /**
+   * https://developer.mozilla.org/zh-CN/docs/Web/API/Element/scrollIntoView
    * 将节点移动到屏幕显示区域中
+   * @param behavior auto/smooth
+   * @param block start/end/center/nearest
+   * @param inline start/end/center/nearest
    */
-  scroll_into_view (options = {behavior: 'smooth', block: 'center', inline: 'center'}) {
-    this.meta.view.element.scrollIntoView(options)
+  scroll_into_view ({behavior = 'smooth', block = 'nearest', inline = 'nearest'} = {}) {
+    // nextTick 执行，避免可能卡在UI线程里面会不确定性失效
+    setTimeout(() => {
+      this.meta.view.element.scrollIntoView({behavior, block, inline})
+    }, 0)
   }
 
   /**

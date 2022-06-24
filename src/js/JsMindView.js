@@ -566,7 +566,7 @@ export default class JsMindView {
         elExpander.style.visibility = 'hidden'
       }
       // set select class display
-      if (this.jm.is_node_selected(node)) node.select(false)
+      if (this.jm.is_node_selected(node)) node.select()
     })
   }
 
