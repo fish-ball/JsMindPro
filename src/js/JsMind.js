@@ -235,12 +235,20 @@ export default class JsMind {
    * @param focus {Boolean} 是否定位节点（最后一个），移动到屏幕显示区域中
    */
   select_nodes (nodes, focus = false) {
-    // 清理所有原有的 node 选中样式
-    for (const node of this.model.selected_nodes) node.deselect()
+    const idOld = {}
+    const idNew = {}
+    this.model.selected_nodes.forEach(node => {
+      idOld[node.id] = true
+    })
+    nodes.forEach(node => {
+      idNew[node.id] = true
+      if (!(node.id in idOld)) node.select()
+    })
+    this.model.selected_nodes.forEach(node => {
+      if (!(node.id in idNew)) node.deselect()
+    })
     // 插入选择
     this.model.selected_nodes.splice(0, this.model.selected_nodes.length, ...nodes)
-    // 标记选择样式
-    nodes.forEach(node => node.select())
     // 如果要聚焦，那就焦点定位到最后一个
     if (focus) nodes[nodes.length - 1].scroll_into_view({
       block: 'nearest', inline: 'nearest'

@@ -44,7 +44,7 @@ export default class JsMindModel {
    * 兼容原有的单节点实现
    */
   get selected_node () {
-    return this.selected_nodes[0] || null
+    return this.selected_nodes.length ? this.selected_nodes[this.selected_nodes.length - 1] : null
   }
 
   /**

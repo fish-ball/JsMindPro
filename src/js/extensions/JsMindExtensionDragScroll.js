@@ -39,7 +39,6 @@ class JsMindExtensionDragScroll {
     const el = this.jm.view.container.getElementsByClassName('jsmind-inner')[0]
     // 必须是单按右键，并且点在空白地方才生效
     if (e.button === 2 && e.buttons === 2 && e.target.parentElement === el) {
-      // 禁用掉右键菜单，免得拖拽结束的时候触发
       this.target = e.target
       this.startX = e.clientX
       this.startY = e.clientY
@@ -61,6 +60,7 @@ class JsMindExtensionDragScroll {
     el.scrollLeft = this.scrollX - e.clientX + this.startX
     el.scrollTop = this.scrollY - e.clientY + this.startY
     if (e.target && !this.active) {
+      // 禁用掉右键菜单，免得拖拽结束的时候触发
       this.target.addEventListener('contextmenu', this.disable_event)
       this.active = true
     }
