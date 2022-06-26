@@ -1,5 +1,5 @@
 import _ from 'lodash-es'
-import JsMind from '../JsMind'
+import JsMind, {DIRECTION} from '../JsMind'
 import JsMindPlugin from '../JsMindPlugin'
 
 let options = {
@@ -30,9 +30,6 @@ class JsMindExtensionRectSelect {
   init () {
     this._event_bind()
     this.dragHandler = this.drag.bind(this)
-    // 计算节点匹配的动作非常重，加个防抖函数减少一些调用次数
-    this.applySelectNodes = _.debounce(this._select_nodes, 100).bind(this)
-    // this.applySelectNodes = this._select_nodes.bind(this)
   }
 
   /**
@@ -86,12 +83,54 @@ class JsMindExtensionRectSelect {
     const ry = this.rectH < 0 ? this.rectY + this.rectH : this.rectY
     const rw = Math.abs(this.rectW)
     const rh = Math.abs(this.rectH)
-    // TODO: 暴力算法，节点多了会死人的
-    this.jm.select_nodes(_.filter(this.jm.get_nodes(), node => {
+    const hspace = this.jm.options.layout.hspace
+    const selectedNodes = []
+    // 递归根据 layout 进行树区域的快速圈定
+    const selectFromNode = node => {
       const {x, y} = node.get_location()
       const {w, h} = node.get_size()
-      return !(x > rx + rw || x + w < rx || y > ry + rh || y + h < ry)
-    }))
+      // 节点自身被选中
+      if (!(x > rx + rw || x + w < rx || y > ry + rh || y + h < ry)) {
+        selectedNodes.push(node)
+      }
+      if (!node.expanded) return
+      // 右边
+      const rightHeight = node.is_root() ? node.meta.layout.outer_height_right
+        : node.direction === DIRECTION.right ? node.meta.layout.outer_height : 0
+      if (rightHeight > 0) {
+        const y0 = y + h / 2 - rightHeight / 2
+        const y1 = y + h / 2 + rightHeight / 2
+        if (!(y0 > ry + rh || y1 < ry || x + w + hspace > rx + rw)) {
+          // this.canvasContext.fillStyle = 'yellow'
+          // this.canvasContext.fillRect(x + w, y0, 20, y1 - y0)
+          // this.canvasContext.fillStyle = options.fill_style
+          for (const child of node.children) selectFromNode(child)
+        }
+      }
+      // 左边
+      const leftHeight = node.is_root() ? node.meta.layout.outer_height_left
+        : node.direction === DIRECTION.left ? node.meta.layout.outer_height : 0
+      if (leftHeight > 0) {
+        const y0 = y + h / 2 - leftHeight / 2
+        const y1 = y + h / 2 + leftHeight / 2
+        if (!(y0 > ry + rh || y1 < ry || x - hspace < rx)) {
+          // this.canvasContext.fillStyle = 'yellow'
+          // this.canvasContext.fillRect(x, y0, 20, y1 - y0)
+          // this.canvasContext.fillStyle = options.fill_style
+          for (const child of node.children) selectFromNode(child)
+        }
+      }
+    }
+    selectFromNode(this.jm.get_root())
+    // 执行选中
+    this.jm.select_nodes(selectedNodes)
+    // >>> DEPRECATED: 暴力算法，节点多了会死人的
+    // this.jm.select_nodes(_.filter(this.jm.get_nodes(), node => {
+    //   const {x, y} = node.get_location()
+    //   const {w, h} = node.get_size()
+    //   return !(x > rx + rw || x + w < rx || y > ry + rh || y + h < ry)
+    // }))
+    // <<<
   }
 
   /**
@@ -119,6 +158,16 @@ class JsMindExtensionRectSelect {
       this.clientX = e.clientX + el.scrollLeft
       this.clientY = e.clientY + el.scrollTop
       this.jm.view.container.addEventListener('mousemove', this.dragHandler)
+      // TODO: 权宜之计，核心还是在于优化 DOM
+      // 计算节点匹配的动作非常重，加个防抖函数减少一些调用次数
+      const nodeCount = Object.keys(this.jm.get_nodes()).length
+      if (nodeCount < 100) {
+        this.applySelectNodes = this._select_nodes.bind(this)
+      } else {
+        // 每一百个节点增加20ms的防抖
+        const interval = nodeCount * 0.2
+        this.applySelectNodes = _.debounce(this._select_nodes, interval).bind(this)
+      }
       e.stopPropagation()
     } else {
       this.drag_end(e)
