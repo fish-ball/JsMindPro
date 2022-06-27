@@ -63,9 +63,22 @@ export default class JsMindView {
     this.e_panel = document.createElement('div')
     this.e_panel.className = 'jsmind-inner'
     this.e_panel.tabIndex = 0
+    this.e_panel.style.position = 'absolute'
+    this.e_panel.style.width = 'auto'
+    this.e_panel.style.height = 'auto'
     this.e_panel.appendChild(this.e_canvas)
     this.e_panel.appendChild(this.e_nodes)
     this.container.appendChild(this.e_panel)
+    // Ctrl + 滚轮的缩放事件
+    this.e_panel.addEventListener('wheel', e => {
+      if (!e.ctrlKey) return
+      if (e.deltaY > 0) {
+        this.jm.zoom_out()
+      } else if (e.deltaY < 0) {
+        this.jm.zoom_in()
+      }
+      e.preventDefault()
+    })
 
     // 编辑框控件，默认不挂载到 DOM，进入编辑模式的时候才挂载
     this.e_editor = document.createElement('textarea')
@@ -277,7 +290,7 @@ export default class JsMindView {
   }
 
   /**
-   * 获取当前视图的偏移量
+   * 获取当前根节点的中心偏移量
    * @returns {{x: number, y: number}}
    */
   get_view_offset () {
@@ -295,10 +308,11 @@ export default class JsMindView {
   set_zoom (zoom = 1) {
     if ((zoom < this.options.min_zoom) || (zoom > this.options.max_zoom)) return false
     this.options.zoom = zoom
-    for (let i = 0; i < this.e_panel.children.length; i++) {
-      this.e_panel.children[i].style.transform = 'scale(' + zoom + ')'
-    }
-    this.show(true)
+    this.e_panel.style.transform = `scale(${zoom})`
+    this.e_panel.style.left = `${50 - 50 / zoom}%`
+    this.e_panel.style.right = `${50 - 50 / zoom}%`
+    this.e_panel.style.top = `${50 - 50 / zoom}%`
+    this.e_panel.style.bottom = `${50 - 50 / zoom}%`
     return true
   }
 
