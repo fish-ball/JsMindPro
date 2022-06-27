@@ -313,6 +313,7 @@ export default class JsMindView {
     this.e_panel.style.right = `${50 - 50 / zoom}%`
     this.e_panel.style.top = `${50 - 50 / zoom}%`
     this.e_panel.style.bottom = `${50 - 50 / zoom}%`
+    this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []})
     return true
   }
 
