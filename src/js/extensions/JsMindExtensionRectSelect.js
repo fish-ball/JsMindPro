@@ -93,7 +93,7 @@ class JsMindExtensionRectSelect {
       if (!(x > rx + rw || x + w < rx || y > ry + rh || y + h < ry)) {
         selectedNodes.push(node)
       }
-      if (!node.expanded) return
+      if (!node.expanded && !node.is_root()) return
       // 右边
       const rightHeight = node.is_root() ? node.meta.layout.outer_height_right
         : node.direction === DIRECTION.right ? node.meta.layout.outer_height : 0
