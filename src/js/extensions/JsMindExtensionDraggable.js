@@ -206,7 +206,11 @@ class JsMindExtensionDraggable {
    * @param e {DragEvent}
    */
   drag_start (e) {
-    if (!this.jm.can_edit()) return
+    // 有编辑权限才可以拖动，编辑过程不允许拖动
+    if (!this.jm.can_edit() || this.jm.is_editing()) {
+      e.preventDefault()
+      return
+    }
     // 定位节点
     const view = this.jm.view
     if (!e.target.classList.contains('jmnode')) return
