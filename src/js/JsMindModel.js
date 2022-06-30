@@ -197,7 +197,7 @@ export default class JsMindModel {
    * @param nextNode {JsMindNode} 目标位置的后一个节点
    * @param parent {JsMindNode}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
-   * @returns {JsMindNode}
+   * @returns {Boolean}
    */
   move_node (node, nextNode, parent, direction) {
     return this._move_node(node, nextNode, parent || node.parent.id, direction)
@@ -225,11 +225,11 @@ export default class JsMindModel {
    * @param nextNode {JsMindNode} 目标位置的后一个节点
    * @param parent {JsMindNode}
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
-   * @returns {JsMindNode}
+   * @returns {Boolean}
    * @private
    */
   _move_node (node, nextNode, parent, direction = DIRECTION.right) {
-    if (!node || !parent) return null
+    if (!node || !parent) return false
     // 跨父节点移动
     if (node.parent !== parent) {
       // 从父节点中删除
@@ -244,7 +244,7 @@ export default class JsMindModel {
     // 同一个父节点内部移动
     this._move_node_internal(node, nextNode)
     this._flow_node_direction(node)
-    return node
+    return true
   }
 
   /**

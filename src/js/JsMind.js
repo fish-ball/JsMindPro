@@ -62,22 +62,6 @@ export const DEFAULT_OPTIONS = {
   }
 }
 
-/**
- * [decorator] 要求 JsMind 处于可编辑状态
- * 参考：http://caibaojian.com/es6/decorator.html
- * @param target
- * @param name
- * @param descriptor
- */
-function require_editable (target, name, descriptor) {
-  const func = descriptor.value
-  descriptor.value = async function () {
-    if (this.can_edit()) return func.call(this, ...arguments)
-  }
-  return descriptor
-}
-
-
 export default class JsMind {
   static EVENT_TYPE = EVENT_TYPE
   static DIRECTION = DIRECTION
@@ -100,7 +84,10 @@ export default class JsMind {
 
     // 初始属性
     this._initialized = false
+    // TODO: 新的钩子机制建立之后，废弃原有的 event_handlers 机制
     this._event_handlers = []
+    // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
+    this._hooks = {}
   }
 
   /**
@@ -121,9 +108,7 @@ export default class JsMind {
 
     // Init view
     this.view = new JsMindView(this, {
-      container: this.options.container,
-      render_node: this.options.render_node,
-      ...this.options.view
+      container: this.options.container, render_node: this.options.render_node, ...this.options.view
     })
     this.view.init()
 
@@ -153,7 +138,7 @@ export default class JsMind {
     this.layout.reset()
     await this.view.init_nodes()
     this.view.show(true)
-    this.invoke_event_handle(EVENT_TYPE.show, {data: [data]})
+    await this.invoke_event_handle(EVENT_TYPE.show, {data: [data]})
   }
 
   /**
@@ -254,7 +239,7 @@ export default class JsMind {
       block: 'nearest', inline: 'nearest'
     })
     // 抛出事件
-    this.invoke_event_handle(EVENT_TYPE.select, {node: nodes[nodes.length - 1] || null, nodes})
+    this.invoke_event_handle(EVENT_TYPE.select, {node: nodes[nodes.length - 1] || null, nodes}).catch(() => 0)
   }
 
   /**
@@ -295,7 +280,7 @@ export default class JsMind {
     this.invoke_event_handle(EVENT_TYPE.select, {
       node: value ? node : null, // 如果是取消选择，则 node 参数为 null
       nodes: this.model.selected_nodes
-    })
+    }).catch(() => 0)
   }
 
   /**
@@ -309,7 +294,7 @@ export default class JsMind {
     // 逻辑清除选中节点
     this.model.selected_node = null
     // 触发事件
-    this.invoke_event_handle(EVENT_TYPE.select, {node: null, nodes: []})
+    this.invoke_event_handle(EVENT_TYPE.select, {node: null, nodes: []}).catch(() => 0)
   }
 
   /**
@@ -400,12 +385,12 @@ export default class JsMind {
 
   /**
    * 触发一个事件处理
-   * TODO: event_handle 相关的都属于外部注入钩子，需要改成 async
    * @param type
    * @param data
+   * @returns {Promise<void>}
    */
-  invoke_event_handle (type, data) {
-    this._event_handlers.forEach(handler => handler(type, data))
+  async invoke_event_handle (type, data) {
+    await Promise.all(this._event_handlers.map(handler => handler(type, data)))
   }
 
   /**
@@ -600,8 +585,8 @@ export default class JsMind {
    * @param node {JsMindNode}
    * @returns {Promise<void>}
    */
-  @require_editable
   async begin_edit (node) {
+    if (!this.can_edit()) return
     node = node || this.get_selected_node()
     if (!node) return
     this.select_node(node)
@@ -613,7 +598,6 @@ export default class JsMind {
    * @param cancel {Boolean} 取消操作（默认为 false 即提交修改）
    * @returns {Promise<void>}
    */
-  @require_editable
   async end_edit (cancel = false) {
     return this.view.edit_node_end(cancel)
   }
@@ -623,7 +607,8 @@ export default class JsMind {
    * @param oldId
    * @param newId
    */
-  @require_editable rename_node (oldId, newId) {
+  rename_node (oldId, newId) {
+    if (!this.can_edit()) return
     this.model.rename_node(oldId, newId)
   }
 
@@ -633,9 +618,9 @@ export default class JsMind {
    * @param topic {String} 新的节点内容
    * @returns {Promise<void>}
    */
-  @require_editable
   async update_node (node, topic) {
     // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
+    if (!this.can_edit()) return
     if (!topic || !topic.trim()) topic = '<未命名>'
     if (node.topic === topic) {
       // 没有修改
@@ -645,7 +630,7 @@ export default class JsMind {
       node.topic = topic
       await this.view.update_node(node)
       this.view.show(false)
-      this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'update_node', data: [node]})
+      await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'update_node', data: [node]})
     }
   }
 
@@ -655,15 +640,15 @@ export default class JsMind {
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
-   * @returns {Promise<JsMindNode>} 范围添加成功后的节点，操作失败返回 null
+   * @returns {Promise<JsMindNode|null>} 范围添加成功后的节点，操作失败返回 null
    */
-  @require_editable
   async add_node (parentNode, nodeId, topic, data = null) {
-    let node = this.model.add_node(parentNode, nodeId, topic, data)
+    if (!this.can_edit()) return null
+    const node = this.model.add_node(parentNode, nodeId, topic, data)
     await this.view.add_node(node)
     this.view.show(false)
     this.expand_node(parentNode)
-    this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'add_node', data: [node]})
+    await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'add_node', data: [node]})
     return node
   }
 
@@ -673,14 +658,14 @@ export default class JsMind {
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
-   * @returns {Promise<JsMindNode>}
+   * @returns {Promise<JsMindNode|null>}
    */
-  @require_editable
   async insert_node_before (nextNode, nodeId, topic, data) {
+    if (!this.can_edit()) return null
     const node = this.model.insert_node_before(nextNode, nodeId, topic, data)
     await this.view.add_node(node)
     await this.view.show(false)
-    this.invoke_event_handle(EVENT_TYPE.edit, {
+    await this.invoke_event_handle(EVENT_TYPE.edit, {
       evt: 'insert_node_before', data: [node, nextNode]
     })
     return node
@@ -693,13 +678,13 @@ export default class JsMind {
    * @param nodeId nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data
-   * @returns {Promise<JsMindNode>}
+   * @returns {Promise<JsMindNode|null>}
    */
-  @require_editable
   async insert_node_after (prevNode, nodeId, topic, data) {
+    if (!this.can_edit()) return null
     const node = this.model.insert_node_after(prevNode, nodeId, topic, data)
     await this.view.add_node(node)
-    this.invoke_event_handle(EVENT_TYPE.edit, {
+    await this.invoke_event_handle(EVENT_TYPE.edit, {
       evt: 'insert_node_after', data: [node, prevNode]
     })
     return node
@@ -710,8 +695,8 @@ export default class JsMind {
    * @param node {JsMindNode} 待移除节点
    * @returns {Promise<Boolean>}
    */
-  @require_editable
   async remove_node (node) {
+    if (!this.can_edit()) return false
     if (node.is_root()) return false
     // 选中的节点被级联删除了，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
     // 这个要先处理完再从逻辑层删除，否则会炸
@@ -734,7 +719,7 @@ export default class JsMind {
     // 逻辑层删除
     this.model.remove_node(node)
     // 抛出被删除事件
-    this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_node', data: [node]})
+    await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_node', data: [node]})
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(node.parent)
@@ -746,8 +731,8 @@ export default class JsMind {
    * @param nodes {JsMindNode[]} 待移除节点列表
    * @returns {Promise<Boolean>}
    */
-  @require_editable
   async remove_nodes (nodes) {
+    if (!this.can_edit()) return false
     // 这里多选的情况下会产生一些冲突，例如一个节点和他的子节点都被选中，
     // 同时删除，结果子节点删除的时候被级联干掉了，会导致失败
     // 更好的处理应该事先逻辑剔除一些被覆盖的子节点再执行
@@ -777,7 +762,7 @@ export default class JsMind {
       this.model.remove_node(node)
     }))
     // 抛出被删除事件
-    this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_nodes', data: [nodesToDelete]})
+    await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_nodes', data: [nodesToDelete]})
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(parent)
@@ -792,15 +777,14 @@ export default class JsMind {
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {Promise<void>}
    */
-  @require_editable
   async move_node (node, prevNode, parent, direction) {
-    node = this.model.move_node(node, prevNode, parent, direction)
+    if (!this.can_edit()) return
+    if (!this.model.move_node(node, prevNode, parent, direction)) return
     this.layout.expand_node(parent)
     await this.view.update_node(node)
     this.view.show(false)
-    this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'move_node',
-      data: [node, parent, prevNode]
+    await this.invoke_event_handle(EVENT_TYPE.edit, {
+      evt: 'move_node', data: [node, parent, prevNode]
     })
   }
 
