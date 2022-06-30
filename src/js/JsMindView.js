@@ -5,19 +5,7 @@ import {EVENT_TYPE} from './JsMind'
 ///////// Shortcut Functions /////////
 
 export default class JsMindView {
-  constructor (jm, options) {
-    this.options = Object.assign({
-      container: null,
-      hmargin: 100,
-      vmargin: 50,
-      line_width: 2,
-      line_color: '#555555',
-      zoom: 1,
-      zoom_step: 0.1,
-      min_zoom: 0.5,
-      max_zoom: 2
-    }, options)
-
+  constructor (jm) {
     /** @type JsMind */
     this.jm = jm
     /** * @type HTMLElement */
@@ -46,8 +34,11 @@ export default class JsMindView {
    */
   init () {
     // https://stackoverflow.com/a/36894871/2544762
-    this.container = this.options.container instanceof Element ? this.options.container :
-      document.querySelector(this.options.container) || document.getElementById(this.options.container)
+    const container = this.jm.options.container
+    this.container = typeof container === 'string'
+      ? document.querySelector(container) || document.getElementById(container)
+      : container
+
     if (!this.container) throw new Error('the options.view.container was not be found in dom')
 
     // 初始化画布
@@ -134,7 +125,6 @@ export default class JsMindView {
     JsMindUtil.dom.add_event(this.e_editor, 'blur', async e => {
       await this.edit_node_end()
     })
-
     // 窗口大小变化的事件响应
     if ('ResizeObserver' in window) {
       const resizeObserver = new ResizeObserver(_.debounce((entry, observer) => this.refresh(), 100))
@@ -212,9 +202,10 @@ export default class JsMindView {
   async update_node (node) {
     const view = node.meta.view
     let elNode = view.element
-    if ('render_node' in this.options && this.options.render_node instanceof Function) {
+    const renderNode = this.jm.options.view.render_node
+    if (renderNode instanceof Function) {
       // 注意在 render_node 实现里面，需要把原来的 el attributes 回填进去
-      elNode = await this.options.render_node(elNode, node)
+      elNode = await renderNode(elNode, node)
       node.meta.view.element = elNode
     } else {
       elNode.innerText = node.topic
@@ -306,8 +297,9 @@ export default class JsMindView {
    * @returns {boolean} 返回是否设置成功（超限会返回 false）
    */
   set_zoom (zoom = 1) {
-    if ((zoom < this.options.min_zoom) || (zoom > this.options.max_zoom)) return false
-    this.options.zoom = zoom
+    if ((zoom < this.jm.options.view.min_zoom)
+      || (zoom > this.jm.options.view.max_zoom)) return false
+    this.jm.options.view.zoom = zoom
     this.e_panel.style.transform = `scale(${zoom})`
     this.e_panel.style.left = `${50 - 50 / zoom}%`
     this.e_panel.style.right = `${50 - 50 / zoom}%`
@@ -331,8 +323,8 @@ export default class JsMindView {
   refresh () {
     const minSize = this.jm.layout.get_min_size()
     // TODO: view.size 到底和 layout 的 size 之间是什么关系
-    this.size.w = Math.max(this.e_panel.clientWidth, minSize.w + this.options.hmargin * 2)
-    this.size.h = Math.max(this.e_panel.clientHeight, minSize.h + this.options.vmargin * 2)
+    this.size.w = Math.max(this.e_panel.clientWidth, minSize.w + this.jm.options.view.hmargin * 2)
+    this.size.h = Math.max(this.e_panel.clientHeight, minSize.h + this.jm.options.view.vmargin * 2)
     this._show_lines()
     this._show_nodes()
     this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []}).catch(() => 0)
@@ -410,6 +402,7 @@ export default class JsMindView {
    * @param e {MouseEvent}
    */
   _mousedown_handle (e) {
+    // TODO: 考虑废弃这个控制配置
     if (!this.jm.options.default_event_handle['enable_mousedown_handle']) return
     // 当前节点
     const targetNode = this.get_node_by_element(e.target)
@@ -438,6 +431,7 @@ export default class JsMindView {
    * @param e {MouseEvent}
    */
   _click_handle (e) {
+    // TODO: 考虑废弃这个控制配置
     if (!this.jm.options.default_event_handle['enable_click_handle']) return
     // 仅处理展开器
     if (!e.target.classList.contains('jmexpander')) return
@@ -451,6 +445,7 @@ export default class JsMindView {
    * @private
    */
   async _dblclick_handle (e) {
+    // TODO: 考虑废弃这个控制配置
     if (!this.jm.options.default_event_handle['enable_dblclick_handle']) return
     return this.jm.begin_edit(this.get_node_by_element(e.target))
   }
@@ -490,8 +485,8 @@ export default class JsMindView {
    */
   _draw_line (pin, pout, offset) {
     const ctx = this.canvas_ctx
-    ctx.strokeStyle = this.options.line_color
-    ctx.lineWidth = this.options.line_width
+    ctx.strokeStyle = this.jm.options.view.line_color
+    ctx.lineWidth = this.jm.options.view.line_width
     ctx.lineCap = 'round'
     JsMindUtil.canvas.bezierto(
       ctx,

@@ -5,6 +5,8 @@
  * Project Home:
  *   https://github.com/hizzgdev/jsmind/
  */
+import _ from 'lodash-es'
+
 import JsMindPlugin from './JsMindPlugin'
 import JsMindUtil from './JsMindUtil'
 import JsMindNode from './JsMindNode'
@@ -17,27 +19,23 @@ export const DIRECTION = {left: -1, center: 0, right: 1}
 export const EVENT_TYPE = {show: 1, resize: 2, edit: 3, select: 4}
 
 export const DEFAULT_OPTIONS = {
-  container: '',   // (querySelector/id/Element) of the container
-  editable: false, // you can change it in your options
-  theme: null,
-  mode: 'both',     // both or side
-
+  container: void 0,        // (querySelector/id/Element) of the container
+  mode: 'both',             // both or side
+  editable: false,          // you can change it in your options
+  theme: 'xmind',
   view: {
-    hmargin: 100,
-    vmargin: 50,
-    line_width: 2,
-    line_color: '#555',
-    render_node: null, // functions (elNode, node) to render the node
+    hmargin: 100,           // 思维导图距容器外框的最小水平距离
+    vmargin: 50,            // 思维导图距容器外框的最小垂直距离
+    hspace: 20,             // 节点之间的水平间距
+    vspace: 15,             // 节点之间的垂直间距
+    pspace: 10,             // 节点与连接线之间的水平间距（用于容纳节点收缩/展开控制器）
+    line_width: 1,          // 思维导图线条的粗细
+    line_color: '#558ED5',  // 思维导图线条的颜色
     zoom: 1,
     zoom_step: 0.1,
     min_zoom: 0.5,
-    max_zoom: 2
-  },
-  layout: {
-    hspace: 30,
-    vspace: 20,
-    pspace: 13,
-    direction: 'right' // left/right/both
+    max_zoom: 2,
+    render_node: void 0     // functions (elNode, node) to render the node
   },
   default_event_handle: {
     enable_mousedown_handle: true,
@@ -46,7 +44,7 @@ export const DEFAULT_OPTIONS = {
   },
   shortcut: {
     enable: true,
-    handles: {},
+    handlers: {},
     mapping: {
       Tab: 'addchild',
       Enter: 'addbrother',
@@ -74,13 +72,7 @@ export default class JsMind {
   static plugins = []
 
   constructor (options) {
-    this.options = {}
-    Object.assign(this.options, DEFAULT_OPTIONS)
-    Object.assign(this.options, options)
-
-    if (!this.options.container) {
-      throw new Error('the options.container should not be null or empty.')
-    }
+    this.options = _.defaultsDeep({}, options, DEFAULT_OPTIONS)
 
     // 初始属性
     this._initialized = false
@@ -99,17 +91,10 @@ export default class JsMind {
     }
 
     // TODO: 职责引用解耦 Init layout
-    this.layout = new JsMindLayout(this, {
-      mode: this.options.mode,
-      hspace: this.options.layout.hspace,
-      vspace: this.options.layout.vspace,
-      pspace: this.options.layout.pspace
-    })
+    this.layout = new JsMindLayout(this)
 
     // Init view
-    this.view = new JsMindView(this, {
-      container: this.options.container, render_node: this.options.render_node, ...this.options.view
-    })
+    this.view = new JsMindView(this)
     this.view.init()
 
     // Init shortcut

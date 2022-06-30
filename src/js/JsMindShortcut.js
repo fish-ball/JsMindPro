@@ -5,27 +5,26 @@ import JsMindUtil from './JsMindUtil'
 // shortcut provider
 // TODO: 热键防抖如何解决？
 export default class JsMindShortcut {
-  constructor (jm, options) {
+  constructor (jm) {
     this.jm = jm
-    this.opts = options
-    // 绑定所有外置 handles 处理函数
-    this.handles = {}
-    _.forEach(options.handles, (func, key) => {
-      this.handles[key] = func
+    // 绑定所有外置 handlers 处理函数
+    this.handlers = {}
+    _.forEach(this.jm.options.shortcut.handlers, (func, key) => {
+      this.handlers[key] = func
     })
-    // 绑定所有内置 handle 处理函数 handle_xxx 到 this.handles.xxx
+    // 绑定所有内置 handle 处理函数 handle_xxx 到 this.handlers.xxx
     Object.getOwnPropertyNames(Object.getPrototypeOf(this)).forEach(key => {
       if (!key.startsWith('handle_')) return
       const handle = key.replace(/^handle_/, '')
-      this.handles[handle] = this[key]
+      this.handlers[handle] = this[key]
     })
     // 加入映射
     this._mapping = {}
-    _.forEach(options.mapping, (handle, key) => {
-      if (handle instanceof Function) {
-        this._mapping[key] = handle
-      } else if (handle in this.handles) {
-        this._mapping[key] = this.handles[handle]
+    _.forEach(this.jm.options.shortcut.mapping, (handler, key) => {
+      if (handler instanceof Function) {
+        this._mapping[key] = handler
+      } else if (handler in this.handlers) {
+        this._mapping[key] = this.handlers[handler]
       }
     })
     // 绑定事件
@@ -33,11 +32,11 @@ export default class JsMindShortcut {
   }
 
   enable_shortcut () {
-    this.opts.enable = true
+    this.jm.options.shortcut.enable = true
   }
 
   disable_shortcut () {
-    this.opts.enable = false
+    this.jm.options.shortcut.enable = false
   }
 
   /**
@@ -47,7 +46,7 @@ export default class JsMindShortcut {
   handler (e) {
     // 编辑中状态不处理热键
     if (this.jm.view.is_editing()) return
-    if (!this.opts.enable) return
+    if (!this.jm.options.shortcut.enable) return
     // 纯控制键不响应
     if (/^Control|Shift|Alt|Meta$/.test(e.key)) return
     const keys = []
@@ -60,8 +59,8 @@ export default class JsMindShortcut {
     if (keyName in this._mapping) {
       this._mapping[keyName].apply(this, [e])
       if (e) e.preventDefault()
-    } else if ('default' in this.handles) {
-      this.handles.default.apply(this, [e, keyName])
+    } else if ('default' in this.handlers) {
+      this.handlers.default.apply(this, [e, keyName])
     }
   }
 

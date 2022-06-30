@@ -83,7 +83,7 @@ class JsMindExtensionRectSelect {
     const ry = this.rectH < 0 ? this.rectY + this.rectH : this.rectY
     const rw = Math.abs(this.rectW)
     const rh = Math.abs(this.rectH)
-    const hspace = this.jm.options.layout.hspace
+    const hspace = this.jm.options.view.hspace
     const selectedNodes = []
     // 递归根据 layout 进行树区域的快速圈定
     const selectFromNode = node => {

@@ -103,7 +103,7 @@ class JsMindExtensionDraggable {
         if (this.direction === DIRECTION.right && sx < cx + cw
           || this.direction === DIRECTION.left && sx + sw > cx) return false
         // 纵向区间匹配
-        const oh = childNode.meta.layout.outer_height + this.jm.options.layout.vspace
+        const oh = childNode.meta.layout.outer_height + this.jm.options.view.vspace
         // 子节点的上下界
         const clb = (i === 0 || mode === 'both' && node === root && i === 1)
           ? lb : cy + ch / 2 - oh / 2
