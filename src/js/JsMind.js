@@ -22,7 +22,8 @@ export const DEFAULT_OPTIONS = {
   container: void 0,        // (querySelector/id/Element) of the container
   mode: 'both',             // both or side
   editable: false,          // you can change it in your options
-  theme: 'xmind', view: {
+  theme: 'xmind',
+  view: {
     hmargin: 100,           // 思维导图距容器外框的最小水平距离
     vmargin: 50,            // 思维导图距容器外框的最小垂直距离
     hspace: 20,             // 节点之间的水平间距
@@ -30,11 +31,21 @@ export const DEFAULT_OPTIONS = {
     pspace: 10,             // 节点与连接线之间的水平间距（用于容纳节点收缩/展开控制器）
     line_width: 1,          // 思维导图线条的粗细
     line_color: '#558ED5',  // 思维导图线条的颜色
-    zoom: 1, zoom_step: 0.1, min_zoom: 0.5, max_zoom: 2, render_node: void 0     // functions (elNode, node) to render the node
-  }, default_event_handle: {
-    enable_mousedown_handle: true, enable_click_handle: true, enable_dblclick_handle: true
-  }, shortcut: {
-    enable: true, handlers: {}, mapping: {
+    zoom: 1,
+    zoom_step: 0.1,
+    min_zoom: 0.5,
+    max_zoom: 2,
+    render_node: void 0     // functions (elNode, node) to render the node
+  },
+  default_event_handle: {
+    enable_mousedown_handle: true,
+    enable_click_handle: true,
+    enable_dblclick_handle: true
+  },
+  shortcut: {
+    enable: true,
+    handlers: {},
+    mapping: {
       Tab: 'addchild',
       Enter: 'addbrother',
       NumpadEnter: 'addbrother',
