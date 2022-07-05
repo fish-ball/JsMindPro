@@ -155,8 +155,8 @@ class JsMindExtensionRectSelect {
       this.target = e.target
       this.rectX = e.offsetX
       this.rectY = e.offsetY
-      this.offsetX = e.offsetX + el.scrollLeft
-      this.offsetY = e.offsetY + el.scrollTop
+      this.offsetX = e.offsetX
+      this.offsetY = e.offsetY
       this.jm.view.container.addEventListener('mousemove', this.dragHandler)
       // TODO: 权宜之计，核心还是在于优化 DOM
       // 计算节点匹配的动作非常重，加个防抖函数减少一些调用次数
@@ -187,8 +187,8 @@ class JsMindExtensionRectSelect {
       this.active = true
       this._create_canvas()
     }
-    this.rectW = e.offsetX - this.offsetX + el.scrollLeft
-    this.rectH = e.offsetY - this.offsetY + el.scrollTop
+    this.rectW = e.offsetX - this.offsetX
+    this.rectH = e.offsetY - this.offsetY
     // 绘制框选框
     this._draw_rect()
     // 选中节点
