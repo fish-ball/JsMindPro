@@ -22,8 +22,7 @@ export const DEFAULT_OPTIONS = {
   container: void 0,        // (querySelector/id/Element) of the container
   mode: 'both',             // both or side
   editable: false,          // you can change it in your options
-  theme: 'xmind',
-  view: {
+  theme: 'xmind', view: {
     hmargin: 100,           // 思维导图距容器外框的最小水平距离
     vmargin: 50,            // 思维导图距容器外框的最小垂直距离
     hspace: 20,             // 节点之间的水平间距
@@ -31,21 +30,11 @@ export const DEFAULT_OPTIONS = {
     pspace: 10,             // 节点与连接线之间的水平间距（用于容纳节点收缩/展开控制器）
     line_width: 1,          // 思维导图线条的粗细
     line_color: '#558ED5',  // 思维导图线条的颜色
-    zoom: 1,
-    zoom_step: 0.1,
-    min_zoom: 0.5,
-    max_zoom: 2,
-    render_node: void 0     // functions (elNode, node) to render the node
-  },
-  default_event_handle: {
-    enable_mousedown_handle: true,
-    enable_click_handle: true,
-    enable_dblclick_handle: true
-  },
-  shortcut: {
-    enable: true,
-    handlers: {},
-    mapping: {
+    zoom: 1, zoom_step: 0.1, min_zoom: 0.5, max_zoom: 2, render_node: void 0     // functions (elNode, node) to render the node
+  }, default_event_handle: {
+    enable_mousedown_handle: true, enable_click_handle: true, enable_dblclick_handle: true
+  }, shortcut: {
+    enable: true, handlers: {}, mapping: {
       Tab: 'addchild',
       Enter: 'addbrother',
       NumpadEnter: 'addbrother',
@@ -57,7 +46,8 @@ export const DEFAULT_OPTIONS = {
       ArrowUp: 'up',
       ArrowDown: 'down'
     }
-  }
+  }, // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
+  hooks: {}
 }
 
 export default class JsMind {
@@ -66,7 +56,7 @@ export default class JsMind {
 
   // Subclass registration
   static plugin = JsMindPlugin
-  static util = JsMindUtil
+  static util = JsMindUtil // TODO: 考虑清除引用废掉这层
   static node = JsMindNode
 
   static plugins = []
@@ -80,6 +70,9 @@ export default class JsMind {
     this._event_handlers = []
     // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
     this._hooks = {}
+    _.forEach(this.options.hooks, (value, key) => {
+      this._hooks[key] = value instanceof Function ? [value] : value
+    })
   }
 
   /**
@@ -104,6 +97,30 @@ export default class JsMind {
 
     // 标记已初始化
     this._initialized = true
+  }
+
+  /**
+   * 添加一个钩子处理函数
+   * @param name {String} 钩子名称
+   * @param func {Function} 钩子处理函数
+   */
+  add_hook (name, func) {
+    if (!this._hooks[name]) this._hooks[name] = []
+    const hooks = this._hooks[name]
+    // 避免重复加入参数
+    if (hooks.indexOf(func) === -1) return
+    hooks.push(func)
+  }
+
+  /**
+   * 应用一个钩子函数
+   * @param name {String} 钩子名称
+   * @param params {Object} 钩子参数
+   * @param context {Object} 上下文对象，用于传递参数
+   * @returns {Promise<void>}
+   */
+  async apply_hook (name, params, context) {
+    await Promise.all((this._hooks[name] || []).map(func => func(params, context)))
   }
 
   /**
@@ -318,7 +335,7 @@ export default class JsMind {
    * @returns {Boolean} 返回是否设置成功（超限返回 false）
    */
   zoom_in () {
-    return this.set_zoom(this.view.options.zoom + this.view.options.zoom_step)
+    return this.set_zoom(this.options.view.zoom + this.options.view.zoom_step)
   }
 
   /**
@@ -326,7 +343,7 @@ export default class JsMind {
    * @returns {Boolean} 返回是否设置成功（超限返回 false）
    */
   zoom_out () {
-    return this.set_zoom(this.view.options.zoom - this.view.options.zoom_step)
+    return this.set_zoom(this.options.view.zoom - this.options.view.zoom_step)
   }
 
   /**
@@ -337,7 +354,6 @@ export default class JsMind {
    */
   async refresh_node (node) {
     await this.view.refresh_node(node)
-    // TODO: 为什么这个不充分要补这句？
     this.view.show(false)
   }
 
@@ -402,7 +418,7 @@ export default class JsMind {
     while (!node.is_root()) {
       let siblings = node.parent.children
       // 如果是一级节点，而且是两侧布局的话，过滤一下
-      if (node.parent.is_root() && this.options.layout.mode === 'both') {
+      if (node.parent.is_root() && this.options.mode === 'both') {
         siblings = siblings.filter(x => x.direction === direction)
       }
       // 找同级别下一个，找到就匹配上
@@ -437,7 +453,7 @@ export default class JsMind {
     while (!node.is_root()) {
       let siblings = node.parent.children
       // 如果是一级节点，而且是两侧布局的话，过滤一下
-      if (node.parent.is_root() && this.options.layout.mode === 'both') {
+      if (node.parent.is_root() && this.options.mode === 'both') {
         siblings = siblings.filter(x => x.direction === direction)
       }
       // 找同级别下一个，找到就匹配上
@@ -611,11 +627,15 @@ export default class JsMind {
       // 没有修改
       await this.view.update_node(node)
     } else {
+      // HOOK: 更新节点前置钩子
+      const context = {}
+      await this.apply_hook('before_update_node', {node, topic}, context)
       // 有修改
       node.topic = topic
       await this.view.update_node(node)
       this.view.show(false)
-      await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'update_node', data: [node]})
+      // HOOK: 更新节点后置钩子
+      await this.apply_hook('after_update_node', {node}, context)
     }
   }
 
@@ -625,15 +645,28 @@ export default class JsMind {
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
    * @param data {*}
+   * @param index {Number} 插入的节点序号（插入后的目标序号），默认 -1 加到最后
    * @returns {Promise<JsMindNode|null>} 范围添加成功后的节点，操作失败返回 null
    */
-  async add_node (parentNode, nodeId, topic, data = null) {
+  async add_node (parentNode, nodeId, topic, data = null, index = -1) {
     if (!this.can_edit()) return null
-    const node = this.model.add_node(parentNode, nodeId, topic, data)
+    // HOOK: 新增节点前置钩子
+    const context = {}
+    await this.apply_hook('before_add_node', {
+      parent: parentNode, nodeId, topic, index
+    }, context)
+    const node = this.model.add_node(
+      parentNode, nodeId, topic, data,
+      index >= 0 ? index - 0.5 : -1
+    )
     await this.view.add_node(node)
-    this.view.show(false)
+    // HOOK: 新增节点后置钩子，允许在钩子中修改 node 的值
+    await this.apply_hook('process_add_node', {node}, context)
+    // 需要刷新视图才能正常显示
     this.expand_node(parentNode)
-    await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'add_node', data: [node]})
+    await this.refresh_node(node)
+    // HOOK: 新增并渲染完成之后执行
+    await this.apply_hook('after_add_node', {node}, context)
     return node
   }
 
@@ -646,14 +679,7 @@ export default class JsMind {
    * @returns {Promise<JsMindNode|null>}
    */
   async insert_node_before (nextNode, nodeId, topic, data) {
-    if (!this.can_edit()) return null
-    const node = this.model.insert_node_before(nextNode, nodeId, topic, data)
-    await this.view.add_node(node)
-    await this.view.show(false)
-    await this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'insert_node_before', data: [node, nextNode]
-    })
-    return node
+    return this.add_node(nextNode.parent, nodeId, topic, data, nextNode.index)
   }
 
   /**
@@ -666,13 +692,7 @@ export default class JsMind {
    * @returns {Promise<JsMindNode|null>}
    */
   async insert_node_after (prevNode, nodeId, topic, data) {
-    if (!this.can_edit()) return null
-    const node = this.model.insert_node_after(prevNode, nodeId, topic, data)
-    await this.view.add_node(node)
-    await this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'insert_node_after', data: [node, prevNode]
-    })
-    return node
+    return this.add_node(prevNode.parent, nodeId, topic, data, prevNode.index + 1)
   }
 
   /**
@@ -683,6 +703,9 @@ export default class JsMind {
   async remove_node (node) {
     if (!this.can_edit()) return false
     if (node.is_root()) return false
+    // HOOK: 删除节点前置钩子
+    const context = {}
+    await this.apply_hook('before_remove_node', {node}, context)
     // 选中的节点被级联删除了，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
     // 这个要先处理完再从逻辑层删除，否则会炸
     const selectedNode = this.get_selected_node()
@@ -703,11 +726,11 @@ export default class JsMind {
     await this.view.remove_node(node)
     // 逻辑层删除
     this.model.remove_node(node)
-    // 抛出被删除事件
-    await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_node', data: [node]})
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(node.parent)
+    // HOOK: 删除节点后置钩子
+    await this.apply_hook('after_remove_node', {node}, context)
     return true
   }
 

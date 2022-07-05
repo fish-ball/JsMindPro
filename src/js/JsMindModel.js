@@ -132,7 +132,7 @@ export default class JsMindModel {
    */
   add_node (parentNode, nodeId, topic, data, idx = -1) {
     // 不传入位置的话，放在末尾
-    if (idx < 0) idx = parentNode.children.length
+    if (idx === -1) idx = parentNode.children.length
     // 创建并置入节点
     const node = new JsMindNode(nodeId, idx, topic, data, parentNode, parentNode.direction)
     this._put_node(node)
@@ -145,19 +145,6 @@ export default class JsMindModel {
   }
 
   /**
-   * 在指定的节点之前插入一个兄弟节点
-   * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param nextNode {JsMindNode} 节点
-   * @param nodeId nodeId {Number|String} 加入节点的 ID
-   * @param topic {String} 节点标题
-   * @param data
-   * @returns {JsMindNode}
-   */
-  insert_node_before (nextNode, nodeId, topic, data) {
-    return this.add_node(nextNode.parent, nodeId, topic, data, nextNode.index - 0.5)
-  }
-
-  /**
    * 获取指定节点的前一个兄弟节点
    * @param node {JsMindNode}
    * @returns {JsMindNode}
@@ -166,19 +153,6 @@ export default class JsMindModel {
     if (node.is_root()) return null
     let idx = node.index - 1
     return idx > -1 ? node.parent.children[idx] : null
-  }
-
-  /**
-   * 在指定的节点之后插入一个兄弟节点
-   * 手段是插入一个 0.5 下标的元素，然后通过 add_node 的 _reindex 整理顺序
-   * @param prevNode {JsMindNode} 参照节点或其ID
-   * @param nodeId nodeId {Number|String} 加入节点的 ID
-   * @param topic {String} 节点标题
-   * @param data
-   * @returns {JsMindNode}
-   */
-  insert_node_after (prevNode, nodeId, topic, data) {
-    return this.add_node(prevNode.parent, nodeId, topic, data, prevNode.index + 0.5)
   }
 
   /**
