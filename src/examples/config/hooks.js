@@ -51,7 +51,7 @@ export default {
    * @param context {Object} 上下文对象，用于传递参数
    * @returns {Promise<void>}
    */
-  async before_move_node({node, parent, index}, context) {
+  async before_move_node ({node, parent, index}, context) {
   },
 
   /**
@@ -86,6 +86,14 @@ export default {
    * @param context {Object} 上下文对象，用于传递参数
    */
   async after_remove_node ({node}, context) {
+  },
+
+  /**
+   * 在缩放之后抛出的钩子
+   * @param zoom {Number} 调整成功之后的缩放比例
+   * @param context {Object} 上下文对象，用于传递参数
+   */
+  async after_zoom ({zoom}, context) {
   }
 
 }

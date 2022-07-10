@@ -294,9 +294,9 @@ export default class JsMindView {
   /**
    * 缩放到指定倍数
    * @param zoom {Number} 缩放倍数值
-   * @returns {boolean} 返回是否设置成功（超限会返回 false）
+   * @returns {Promise<boolean>} 返回是否设置成功（超限会返回 false）
    */
-  set_zoom (zoom = 1) {
+  async set_zoom (zoom = 1) {
     if ((zoom < this.jm.options.view.min_zoom)
       || (zoom > this.jm.options.view.max_zoom)) return false
     this.jm.options.view.zoom = zoom
@@ -305,7 +305,9 @@ export default class JsMindView {
     this.e_panel.style.right = `${50 - 50 / zoom}%`
     this.e_panel.style.top = `${50 - 50 / zoom}%`
     this.e_panel.style.bottom = `${50 - 50 / zoom}%`
-    this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []}).catch(() => 0)
+    // 执行钩子
+    const context = {}
+    await this.jm.apply_hook('after_zoom', {zoom}, context)
     return true
   }
 

@@ -73,7 +73,7 @@ export default class JsMind {
   static plugins = []
 
   constructor (options) {
-    this.options = _.defaultsDeep({}, options, DEFAULT_OPTIONS)
+    this.options = _.defaultsDeep(options, DEFAULT_OPTIONS)
 
     // 初始属性
     this._initialized = false
@@ -335,9 +335,9 @@ export default class JsMind {
   /**
    * 缩放到指定倍数
    * @param zoom
-   * @returns {Boolean} 返回是否设置成功（超限返回 false）
+   * @returns {Promise<boolean>} 返回是否设置成功（超限返回 false）
    */
-  set_zoom (zoom) {
+  async set_zoom (zoom) {
     return this.view.set_zoom(zoom)
   }
 
