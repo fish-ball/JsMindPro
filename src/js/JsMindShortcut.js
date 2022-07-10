@@ -184,7 +184,7 @@ export default class JsMindShortcut {
     if (selectedNode.is_root()) {
       // 跳到指定方向中间的那个节点
       const children = selectedNode.children.filter(c => c.direction === d)
-      node = children[children[Math.floor((children.length - 1) / 2)]]
+      node = children[Math.floor((children.length - 1) / 2)]
     } else if (selectedNode.direction === d) {
       // 同方向的左右，找到中间的儿子节点
       const children = selectedNode.children
