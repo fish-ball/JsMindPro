@@ -269,7 +269,7 @@ class JsMindExtensionDraggable {
   /**
    * 执行逻辑节点移动
    */
-  move_node () {
+  async move_node () {
     const shadowY = this.shadowElement.offsetTop + this.shadowElement.offsetHeight / 2
     // 在同级节点中找到第一个比影子节点靠后的节点 prevNode
     const siblings = this.targetNode.children || []
@@ -285,7 +285,7 @@ class JsMindExtensionDraggable {
     const sourceIndex = siblings.indexOf(this.sourceNode)
     if (this.targetNode !== this.sourceNode.parent ||
       prevNode !== siblings[sourceIndex] && prevNode !== siblings[sourceIndex + 1]) {
-      this.jm.move_node(this.sourceNode, prevNode, this.targetNode, this.direction)
+      await this.jm.move_node(this.sourceNode, prevNode, this.targetNode, this.direction)
     }
   }
 

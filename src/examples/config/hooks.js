@@ -17,10 +17,11 @@ export default {
    * @param parent {JsMindNode} 父节点的 ID
    * @param nodeId {Number|String} 加入节点的 ID
    * @param topic {String} 节点标题
+   * @param index {Number} 待插入节点的目标顺序号，缺省为移动到最后
    * @param context {Object} 上下文对象，用于传递参数
    * @returns {Promise<JsMindNode>} 范围添加成功后的节点，操作失败返回 null
    */
-  async before_add_node ({parent, nodeId, topic}, context) {
+  async before_add_node ({parent, nodeId, topic, index}, context) {
   },
 
   /**
@@ -41,6 +42,16 @@ export default {
    * @returns {Promise<void>}
    */
   async after_add_node ({node}, context) {
+  },
+
+  /**
+   * @param node {JsMindNode} 需要移动的节点
+   * @param parent {JsMindNode} 移动到的目标位置的父节点
+   * @param index {Number} 目标位置的顺序号，缺省为移动到最后
+   * @param context {Object} 上下文对象，用于传递参数
+   * @returns {Promise<void>}
+   */
+  async before_move_node({node, parent, index}, context) {
   },
 
   /**

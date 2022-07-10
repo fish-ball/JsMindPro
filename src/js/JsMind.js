@@ -761,6 +761,7 @@ export default class JsMind {
     for (const node of nodes) nodeMap[node.id] = true
     // 然后每个节点上溯路径上，如果有被标记过的，则不删除
     for (const node of nodes) {
+      if (node.is_root()) continue
       let nd = node
       while (!nd.parent.is_root() && !(nd.parent.id in nodeMap)) nd = nd.parent
       if (nd.parent.is_root()) nodesToDelete.push(node)
@@ -791,20 +792,23 @@ export default class JsMind {
   /**
    * 移动一个节点
    * @param node {JsMindNode} 待移动节点
-   * @param prevNode {JsMindNode} 移动到这个节点的前面
-   * @param parent {JsMindNode}
+   * @param nextNode {JsMindNode} 移动到这个节点的前面，缺省为移动到最后
+   * @param parent {JsMindNode} 目标位置的父节点
    * @param direction {Number} 如果目标位置是一级子节点，指定方向
    * @returns {Promise<void>}
    */
-  async move_node (node, prevNode, parent, direction) {
+  async move_node (node, nextNode, parent, direction) {
     if (!this.can_edit()) return
-    if (!this.model.move_node(node, prevNode, parent, direction)) return
+    // 移动节点前置钩子
+    const context = {}
+    const targetIndex = parent.children.indexOf(nextNode)
+    await this.apply_hook('before_move_node', {
+      node, parent, index: targetIndex === -1 ? parent.children.length : targetIndex
+    }, context)
+    if (!this.model.move_node(node, nextNode, parent, direction)) return
     this.layout.expand_node(parent)
     await this.view.update_node(node)
     this.view.show(false)
-    await this.invoke_event_handle(EVENT_TYPE.edit, {
-      evt: 'move_node', data: [node, parent, prevNode]
-    })
   }
 
   // >>>>>>>> private methods >>>>>>>>
