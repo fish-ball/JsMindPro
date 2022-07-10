@@ -702,7 +702,7 @@ export default class JsMind {
    * @param data
    * @returns {Promise<JsMindNode|null>}
    */
-  async insert_node_after (prevNode, nodeId, topic, data) {
+  async insert_node_after (prevNode, nodeId, topic, data = null) {
     return this.add_node(prevNode.parent, nodeId, topic, data, prevNode.index + 1)
   }
 

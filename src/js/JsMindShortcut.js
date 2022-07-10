@@ -73,10 +73,7 @@ export default class JsMindShortcut {
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     // 在 await 之前先阻断默认事件
-    // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
-    // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
     await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    // TODO: 需要做插入之后的选中，由于异步的原因，暂时放在外部去做
   }
 
   /**
@@ -89,10 +86,7 @@ export default class JsMindShortcut {
     if (!selectedNode) return
     if (selectedNode.is_root()) return this.handle_addchild()
     // 在 await 之前先阻断默认事件
-    // !! 注意这里在 insert_node_after 里面的 invoke_event_handle 可能会触发 node 本身的剧变
-    // 如果因此导致 node 相关的引用丢失，会导致不可预期的效果，因此后续不做任何处理
     await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
-    // TODO: 需要做插入之后的选中，由于异步的原因，暂时放在外部去做
   }
 
   /**

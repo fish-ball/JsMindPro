@@ -307,7 +307,7 @@ export default class JsMindView {
     this.e_panel.style.bottom = `${50 - 50 / zoom}%`
     // 执行钩子
     const context = {}
-    await this.jm.apply_hook('after_zoom', {zoom}, context)
+    await this.jm.apply_hook('after_rerender', {jm: this.jm}, context)
     return true
   }
 
@@ -329,7 +329,9 @@ export default class JsMindView {
     this.size.h = Math.max(this.e_panel.clientHeight, minSize.h + this.jm.options.view.vmargin * 2)
     this._show_lines()
     this._show_nodes()
-    this.jm.invoke_event_handle(EVENT_TYPE.resize, {data: []}).catch(() => 0)
+    // 重新缩放之后的
+    const context = {}
+    this.jm.apply_hook('after_rerender', {jm: this.jm}, context).catch(() => 0)
   }
 
   /**

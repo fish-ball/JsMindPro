@@ -89,11 +89,11 @@ export default {
   },
 
   /**
-   * 在缩放之后抛出的钩子
-   * @param zoom {Number} 调整成功之后的缩放比例
+   * 在画布被重新渲染之后触发的钩子
+   * @param jm {JsMind}
    * @param context {Object} 上下文对象，用于传递参数
    */
-  async after_zoom ({zoom}, context) {
+  async after_rerender ({jm}, context) {
   }
 
 }
