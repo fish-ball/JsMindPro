@@ -716,7 +716,7 @@ export default class JsMind {
     if (node.is_root()) return false
     // HOOK: 删除节点前置钩子
     const context = {}
-    await this.apply_hook('before_remove_node', {node}, context)
+    await this.apply_hook('before_remove_node', {nodes: [node]}, context)
     // 选中的节点被级联删除了，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
     // 这个要先处理完再从逻辑层删除，否则会炸
     const selectedNode = this.get_selected_node()
@@ -772,6 +772,8 @@ export default class JsMind {
     if (nodesToDelete.length === 1) return this.remove_node(nodesToDelete[0])
     // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
     const parent = nodesToDelete[0].parent
+    const context = {}
+    await this.apply_hook('before_remove_node', {nodes}, context)
     this.view.save_location(parent)
     // 执行删除
     await Promise.all(nodesToDelete.map(async node => {
@@ -781,8 +783,6 @@ export default class JsMind {
       // 逻辑层删除
       this.model.remove_node(node)
     }))
-    // 抛出被删除事件
-    await this.invoke_event_handle(EVENT_TYPE.edit, {evt: 'remove_nodes', data: [nodesToDelete]})
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(parent)

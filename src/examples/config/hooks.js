@@ -74,10 +74,10 @@ export default {
 
   /**
    * 删除节点前置钩子
-   * @param node {JsMindNode} 待删除的节点
+   * @param nodes {JsMindNode[]} 待删除的节点列表
    * @param context {Object} 上下文对象，用于传递参数
    */
-  async before_remove_node ({node}, context) {
+  async before_remove_node ({nodes}, context) {
   },
 
   /**
