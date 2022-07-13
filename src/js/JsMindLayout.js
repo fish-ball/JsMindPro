@@ -164,10 +164,8 @@ export default class JsMindLayout {
       if (node.is_root()) return
       // 设置节点布局可见性标记
       node.meta.layout.visible = visible
-      // 如果某节点被设置为不可见，手动夺取焦点
-      if (!visible && this.jm.is_node_selected(node)) {
-        this.jm.select_clear()
-      }
+      // 如果某节点被设置为不可见，剔除选择
+      if (!visible) this.jm.deselect_node(node).catch(() => 0)
     })
   }
 

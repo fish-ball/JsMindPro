@@ -2,9 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Title</title>
+  <title>JsMindPro</title>
+  <style>
+  #container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+  }
+  //.jsmind-inner {
+  //  top: 0;
+  //  left: 0;
+  //  bottom: 0;
+  //  right: 0;
+  //}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"
+          integrity="sha512-WFN04846sdKMIP5LKNphMaWzU7YpMyCU245etK3g/2ARYbPK9Ub18eG+ljU96qKRCWh+quCY7yefSmlkQw1ANQ=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="../../../dist/jsmind.dist.js"></script>
+  <link rel="stylesheet" href="../../style/jsmind.css"/>
+  <link rel="stylesheet" href="../../style/jsmind.theme-xmind.css"/>
 </head>
 <body>
+<div id="container"></div>
+<script>
+const JsMind = jsMind.default
 
+const options = {
+  container: '#container',
+  mode: 'side',           // 显示模式: both/side
+  editable: true,
+  theme: 'xmind',
+  view: {
+    // async render_node (el, node) {
+    //   // destroy old component
+    //   if (node.meta.view.component) {
+    //     node.meta.view.component.$destroy()
+    //     delete node.meta.view.component
+    //   }
+    //   // const attrs = {
+    //   //   nodeid: el.attributes.nodeid,
+    //   //   class: [...el.classList],
+    //   //   style: el.attributes.style.nodeValue
+    //   // }
+    //   const attrs = _.reduce(el.attributes, (obj, param) => {
+    //     obj[param.nodeName] = param.nodeValue
+    //     return obj
+    //   }, {})
+    //
+    //   // console.log(attrs)
+    //   const component = new Render({el, render: h => vm.options.renderNode(h, node, attrs)})
+    //   node.meta.view.component = component
+    //   return component.$el
+    // },
+  },
+  shortcut: {
+    enable: true,        // 是否启用快捷键
+    // 命名的快捷键事件处理器
+    handlers: {
+      /**
+       * 默认的未捕捉热键处理
+       * @param e {KeyboardEvent}
+       * @param keyName {String} 按键全名，例如 Ctrl+Alt+1
+       */
+      default (e, keyName) {
+        console.log(keyName)
+      },
+      // expand_all: e => vm.jm.expand_all(),
+      // collapse_all: e => vm.jm.collapse_all()
+    },
+    // 快捷键映射
+    mapping: {
+      Insert: 'addchild',
+      Tab: 'addchild',
+      Enter: 'addbrother',
+      NumpadEnter: 'addbrother',
+      F2: 'editnode',
+      Delete: 'delnode',
+      Space: 'toggle',
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      ArrowUp: 'up',
+      ArrowDown: 'down'
+    }
+  }
+}
+
+JsMind.show(options, 'node_array', [{
+  id: '0',
+  topic: 'JsMindPro',
+  parentid: null,
+  data: {},
+  expanded: true
+}]).then(jm => {
+  window.jm = jm
+})
+
+</script>
 </body>
 </html>

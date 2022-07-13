@@ -22,8 +22,7 @@ export const DEFAULT_OPTIONS = {
   container: void 0,        // (querySelector/id/Element) of the container
   mode: 'both',             // both or side
   editable: false,          // you can change it in your options
-  theme: 'xmind',
-  view: {
+  theme: 'xmind', view: {
     hmargin: 100,           // 思维导图距容器外框的最小水平距离
     vmargin: 50,            // 思维导图距容器外框的最小垂直距离
     hspace: 20,             // 节点之间的水平间距
@@ -31,21 +30,10 @@ export const DEFAULT_OPTIONS = {
     pspace: 10,             // 节点与连接线之间的水平间距（用于容纳节点收缩/展开控制器）
     line_width: 1,          // 思维导图线条的粗细
     line_color: '#558ED5',  // 思维导图线条的颜色
-    zoom: 1,
-    zoom_step: 0.1,
-    min_zoom: 0.5,
-    max_zoom: 2,
-    render_node: void 0     // functions (elNode, node) to render the node
-  },
-  default_event_handle: {
-    enable_mousedown_handle: true,
-    enable_click_handle: true,
-    enable_dblclick_handle: true
+    zoom: 1, zoom_step: 0.1, min_zoom: 0.5, max_zoom: 2, render_node: void 0     // functions (elNode, node) to render the node
   },
   shortcut: {
-    enable: true,
-    handlers: {},
-    mapping: {
+    enable: true, handlers: {}, mapping: {
       Tab: 'addchild',
       Enter: 'addbrother',
       NumpadEnter: 'addbrother',
@@ -77,8 +65,6 @@ export default class JsMind {
 
     // 初始属性
     this._initialized = false
-    // TODO: 新的钩子机制建立之后，废弃原有的 event_handlers 机制
-    this._event_handlers = []
     // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
     this._hooks = {}
     _.forEach(this.options.hooks, (value, key) => {
@@ -124,14 +110,27 @@ export default class JsMind {
   }
 
   /**
-   * 应用一个钩子函数
+   * 应用一个钩子函数（异步）
    * @param name {String} 钩子名称
    * @param params {Object} 钩子参数
-   * @param context {Object} 上下文对象，用于传递参数
+   * @param context {Object?} 上下文对象，用于传递参数
    * @returns {Promise<void>}
    */
-  async apply_hook (name, params, context) {
+  async apply_hook (name, params = {}, context = null) {
+    // console.log('>>> apply_hook:', name)
     await Promise.all((this._hooks[name] || []).map(func => func(params, context)))
+  }
+
+  /**
+   * 应用一个钩子函数（同步）
+   * 将会顺序执行钩子上的所有处理函数，并且忽略所有 promise 的返回
+   * @param name {String} 钩子名称
+   * @param params {Object} 钩子参数
+   * @param context {Object?} 上下文对象，用于传递参数
+   */
+  apply_hook_sync (name, params = {}, context = null) {
+    // console.log('>>> apply_hook_sync:', name)
+    for (const func of this._hooks[name] || []) func(params, context)
   }
 
   /**
@@ -151,7 +150,8 @@ export default class JsMind {
     this.layout.reset()
     await this.view.init_nodes()
     this.view.show(true)
-    await this.invoke_event_handle(EVENT_TYPE.show, {data: [data]})
+    // 初始化
+    await this.apply_hook('after_render', {jm: this})
   }
 
   /**
@@ -231,8 +231,9 @@ export default class JsMind {
    * TODO: 交集部分的 UI 响应其实是多余的，可以考虑优化掉
    * @param nodes {JsMindNode[]}
    * @param focus {Boolean} 是否定位节点（最后一个），移动到屏幕显示区域中
+   * @returns {Promise<void>}
    */
-  select_nodes (nodes, focus = false) {
+  async select_nodes (nodes, focus = false) {
     const idOld = {}
     const idNew = {}
     this.model.selected_nodes.forEach(node => {
@@ -251,30 +252,37 @@ export default class JsMind {
     if (focus) nodes[nodes.length - 1].scroll_into_view({
       block: 'nearest', inline: 'nearest'
     })
-    // 抛出事件
-    this.invoke_event_handle(EVENT_TYPE.select, {node: nodes[nodes.length - 1] || null, nodes}).catch(() => 0)
+    // HOOK: 选中节点事件
+    await this.apply_hook('select_changed', {nodes: this.get_selected_nodes()})
   }
 
   /**
    * 触发选中某个节点（兼容旧的调用）
    * @param node {JsMindNode} 待选中的节点
    * @param focus {Boolean} 是否定位节点，移动到屏幕显示区域中
+   * @returns {Promise<void>}
    */
-  select_node (node, focus = true) {
-    if (!node) {
-      this.select_clear()
-    } else {
-      this.select_nodes([node], focus)
-    }
+  async select_node (node, focus = true) {
+    return node ? this.select_nodes([node], focus) : this.select_clear()
+  }
+
+  /**
+   * 取消一个节点的选中（从选中集合中移除）
+   * @param node {JsMindNode} 待选中的节点
+   * @returns {Promise<void>}
+   */
+  async deselect_node (node) {
+    return this.toggle_select_node(node, false)
   }
 
   /**
    * 切换一个节点的选中状态（原来没有选中的话加入选中，原来有选中的话取消选中）
    * @param node {JsMindNode} 待选中的节点
    * @param value {Boolean?} 如果指定为 true/false，则指定选中或者剔除选中
+   * @returns {Promise<void>}
    */
-  toggle_select_node (node, value) {
-    const oldValue = this.model.selected_nodes.includes(node)
+  async toggle_select_node (node, value) {
+    const oldValue = this.get_selected_nodes().includes(node)
     value = value === void 0 ? !oldValue : !!value
     if (value && !oldValue) {
       // 原来没选中，现在要选上
@@ -289,25 +297,23 @@ export default class JsMind {
       // 没有变化的话什么也不做
       return
     }
-    // 有处理过的，处理完之后抛出事件
-    this.invoke_event_handle(EVENT_TYPE.select, {
-      node: value ? node : null, // 如果是取消选择，则 node 参数为 null
-      nodes: this.model.selected_nodes
-    }).catch(() => 0)
+    // 选择钩子
+    await this.apply_hook('select_changed', {nodes: this.get_selected_nodes()})
   }
 
   /**
    * 触发清除选中
+   * @returns {Promise<void>}
    */
-  select_clear () {
+  async select_clear () {
     // 原本没有的话，就直接不需要任何的处理了
     if (this.model.selected_nodes.length === 0) return
     // 清理所有原有的 node 选中样式
     for (const node of this.model.selected_nodes) node.deselect()
     // 逻辑清除选中节点
     this.model.selected_node = null
-    // 触发事件
-    this.invoke_event_handle(EVENT_TYPE.select, {node: null, nodes: []}).catch(() => 0)
+    // HOOK: 选择钩子
+    await this.apply_hook('select_changed', {nodes: this.get_selected_nodes()})
   }
 
   /**
@@ -335,9 +341,9 @@ export default class JsMind {
   /**
    * 缩放到指定倍数
    * @param zoom
-   * @returns {Promise<boolean>} 返回是否设置成功（超限返回 false）
+   * @returns {Boolean} 返回是否设置成功（超限返回 false）
    */
-  async set_zoom (zoom) {
+  set_zoom (zoom) {
     return this.view.set_zoom(zoom)
   }
 
@@ -366,43 +372,6 @@ export default class JsMind {
   async refresh_node (node) {
     await this.view.refresh_node(node)
     this.view.show(false)
-  }
-
-  /**
-   * 配置启用某个事件
-   * 例如 call enable_event_handle('dblclick')
-   * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
-   */
-  enable_event_handle (eventName) {
-    this.options.default_event_handle['enable_' + eventName + '_handle'] = true
-  }
-
-  /**
-   * 配置禁用某个事件
-   * 例如 call disable_event_handle('dblclick')
-   * @param eventName {String} options are 'mousedown', 'click', 'dblclick'
-   */
-  disable_event_handle (eventName) {
-    this.options.default_event_handle['enable_' + eventName + '_handle'] = false
-  }
-
-  /**
-   * 添加一个事件处理器
-   * callback(type ,data)
-   * @param callback {Function}
-   */
-  add_event_listener (callback) {
-    this._event_handlers.push(callback)
-  }
-
-  /**
-   * 触发一个事件处理
-   * @param type
-   * @param data
-   * @returns {Promise<void>}
-   */
-  async invoke_event_handle (type, data) {
-    await Promise.all(this._event_handlers.map(handler => handler(type, data)))
   }
 
   /**
@@ -666,10 +635,7 @@ export default class JsMind {
     await this.apply_hook('before_add_node', {
       parent: parentNode, nodeId, topic, index
     }, context)
-    const node = this.model.add_node(
-      parentNode, nodeId, topic, data,
-      index >= 0 ? index - 0.5 : -1
-    )
+    const node = this.model.add_node(parentNode, nodeId, topic, data, index >= 0 ? index - 0.5 : -1)
     await this.view.add_node(node)
     // HOOK: 新增节点后置钩子，允许在钩子中修改 node 的值
     await this.apply_hook('process_add_node', {node}, context)
@@ -741,7 +707,7 @@ export default class JsMind {
     await this.view.show(false)
     this.view.restore_location(node.parent)
     // HOOK: 删除节点后置钩子
-    await this.apply_hook('after_remove_node', {node}, context)
+    await this.apply_hook('after_remove_node', {nodes: [node]}, context)
     return true
   }
 
@@ -772,6 +738,7 @@ export default class JsMind {
     if (nodesToDelete.length === 1) return this.remove_node(nodesToDelete[0])
     // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
     const parent = nodesToDelete[0].parent
+    // HOOK: 删除节点（批量）前置钩子
     const context = {}
     await this.apply_hook('before_remove_node', {nodes}, context)
     this.view.save_location(parent)
@@ -786,6 +753,8 @@ export default class JsMind {
     // 重新渲染回复定位
     await this.view.show(false)
     this.view.restore_location(parent)
+    // HOOK: 删除节点（批量）后置钩子
+    await this.apply_hook('after_remove_node', {nodes: [node]}, context)
     return true
   }
 
@@ -809,6 +778,8 @@ export default class JsMind {
     this.layout.expand_node(parent)
     await this.view.update_node(node)
     this.view.show(false)
+    // 后置钩子
+    await this.apply_hook('after_move_node', {node}, context)
   }
 
   // >>>>>>>> private methods >>>>>>>>

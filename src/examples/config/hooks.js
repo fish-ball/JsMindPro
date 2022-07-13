@@ -55,6 +55,14 @@ export default {
   },
 
   /**
+   * @param node {JsMindNode} 已经移动完成的节点对象
+   * @param context {Object} 上下文对象，用于传递参数
+   * @returns {Promise<void>}
+   */
+  async after_move_node ({node}, context) {
+  },
+
+  /**
    * 更新节点前置钩子
    * @param node {JsMindNode} 待修改的节点，原始状态
    * @param topic {String} 修改的标题
@@ -82,10 +90,17 @@ export default {
 
   /**
    * 删除节点后置钩子
-   * @param node {JsMindNode} 删除之后的节点对象
+   * @param nodes {JsMindNode[]} 被删除的节点对象
    * @param context {Object} 上下文对象，用于传递参数
    */
-  async after_remove_node ({node}, context) {
+  async after_remove_node ({nodes}, context) {
+  },
+
+  /**
+   * 【同步钩子】在画布被缩放之后触发的钩子
+   * @param jm {JsMind}
+   */
+  after_zoom ({jm}) {
   },
 
   /**
@@ -93,7 +108,15 @@ export default {
    * @param jm {JsMind}
    * @param context {Object} 上下文对象，用于传递参数
    */
-  async after_rerender ({jm}, context) {
+  async after_rerender ({jm}) {
+  },
+
+  /**
+   * 选中节点变化的时候触发
+   * @param nodes {JsMindNode[]} 选中的节点集合（支持多选）
+   * @returns {Promise<void>}
+   */
+  async select_changed ({nodes = []}) {
   }
 
 }

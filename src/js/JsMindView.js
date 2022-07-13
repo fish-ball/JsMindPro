@@ -54,9 +54,6 @@ export default class JsMindView {
     this.e_panel = document.createElement('div')
     this.e_panel.className = 'jsmind-inner'
     this.e_panel.tabIndex = 0
-    this.e_panel.style.position = 'absolute'
-    this.e_panel.style.width = 'auto'
-    this.e_panel.style.height = 'auto'
     this.e_panel.appendChild(this.e_canvas)
     this.e_panel.appendChild(this.e_nodes)
     this.container.appendChild(this.e_panel)
@@ -294,9 +291,9 @@ export default class JsMindView {
   /**
    * 缩放到指定倍数
    * @param zoom {Number} 缩放倍数值
-   * @returns {Promise<boolean>} 返回是否设置成功（超限会返回 false）
+   * @returns {boolean} 返回是否设置成功（超限会返回 false）
    */
-  async set_zoom (zoom = 1) {
+  set_zoom (zoom = 1) {
     if ((zoom < this.jm.options.view.min_zoom)
       || (zoom > this.jm.options.view.max_zoom)) return false
     this.jm.options.view.zoom = zoom
@@ -306,8 +303,7 @@ export default class JsMindView {
     this.e_panel.style.top = `${50 - 50 / zoom}%`
     this.e_panel.style.bottom = `${50 - 50 / zoom}%`
     // 执行钩子
-    const context = {}
-    await this.jm.apply_hook('after_rerender', {jm: this.jm}, context)
+    this.jm.apply_hook_sync( 'after_zoom', {jm: this.jm})
     return true
   }
 
@@ -330,8 +326,7 @@ export default class JsMindView {
     this._show_lines()
     this._show_nodes()
     // 重新缩放之后的
-    const context = {}
-    this.jm.apply_hook('after_rerender', {jm: this.jm}, context).catch(() => 0)
+    this.jm.apply_hook_sync('after_rerender', {jm: this.jm})
   }
 
   /**
@@ -406,8 +401,6 @@ export default class JsMindView {
    * @param e {MouseEvent}
    */
   _mousedown_handle (e) {
-    // TODO: 考虑废弃这个控制配置
-    if (!this.jm.options.default_event_handle['enable_mousedown_handle']) return
     // 当前节点
     const targetNode = this.get_node_by_element(e.target)
     if (e.button === 0 && e.buttons === 1) {
@@ -435,8 +428,6 @@ export default class JsMindView {
    * @param e {MouseEvent}
    */
   _click_handle (e) {
-    // TODO: 考虑废弃这个控制配置
-    if (!this.jm.options.default_event_handle['enable_click_handle']) return
     // 仅处理展开器
     if (!e.target.classList.contains('jmexpander')) return
     this.jm.toggle_node(this.get_node_by_element(e.target))
@@ -449,8 +440,6 @@ export default class JsMindView {
    * @private
    */
   async _dblclick_handle (e) {
-    // TODO: 考虑废弃这个控制配置
-    if (!this.jm.options.default_event_handle['enable_dblclick_handle']) return
     return this.jm.begin_edit(this.get_node_by_element(e.target))
   }
 
