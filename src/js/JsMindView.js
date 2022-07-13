@@ -1,6 +1,5 @@
 import _ from 'lodash-es'
 import JsMindUtil from './JsMindUtil'
-import {EVENT_TYPE} from './JsMind'
 
 ///////// Shortcut Functions /////////
 

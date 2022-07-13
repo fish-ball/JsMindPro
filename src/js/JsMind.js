@@ -16,7 +16,6 @@ import JsMindView from './JsMindView'
 import JsMindShortcut from './JsMindShortcut'
 
 export const DIRECTION = {left: -1, center: 0, right: 1}
-export const EVENT_TYPE = {show: 1, resize: 2, edit: 3, select: 4}
 
 export const DEFAULT_OPTIONS = {
   container: void 0,        // (querySelector/id/Element) of the container
@@ -50,7 +49,6 @@ export const DEFAULT_OPTIONS = {
 }
 
 export default class JsMind {
-  static EVENT_TYPE = EVENT_TYPE
   static DIRECTION = DIRECTION
 
   // Subclass registration
