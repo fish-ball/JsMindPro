@@ -1,18 +1,18 @@
 import _ from 'lodash-es'
-import JsMind from '../JsMind'
-import {DIRECTION} from '../JsMind'
-import JsMindUtil from '../JsMindUtil'
-import JsMindPlugin from '../JsMindPlugin'
+import JsMindExtension from '../../JsMindExtension'
+import {DIRECTION} from '../../JsMind'
+import JsMindUtil from '../../JsMindUtil'
 
 let options = {
   line_width: 1, stroke_style: 'rgba(0,0,0,0.3)', stroke_dash: [8, 4]
 }
 
-class JsMindExtensionDraggable {
+export default class JsMindExtensionDraggable extends JsMindExtension {
+
+  static plugin_name = 'draggable'
 
   constructor (jm) {
-    /** @type JsMind */
-    this.jm = jm
+    super(jm)
     this.canvas = null
     this.canvasContext = null
     this.shadowElement = null
@@ -33,7 +33,7 @@ class JsMindExtensionDraggable {
   /**
    * 初始化插件
    */
-  init () {
+  async init () {
     this._event_bind()
     // 需要这样才能在区域内显示可放置图标
     this.jm.view.e_nodes.ondrop = e => false
@@ -290,15 +290,3 @@ class JsMindExtensionDraggable {
   }
 
 }
-
-(function () {
-  if (JsMind.draggable !== void 0) return
-
-  const plugin = new JsMindPlugin('draggable', function (jm) {
-    const ext = new JsMindExtensionDraggable(jm)
-    window.ext = ext
-    ext.init()
-  })
-
-  JsMind.register_plugin(plugin)
-})()

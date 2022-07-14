@@ -108,12 +108,12 @@ export default class JsMindView {
         } else {
           e.preventDefault()
           await this.edit_node_end()
-          this.jm.select_node(node)
+          await this.jm.select_node(node)
         }
       } else if (e.key === 'Escape') {
         await this.edit_node_end(true)
         // 编辑完成重新获得焦点
-        this.jm.select_node(node)
+        await this.jm.select_node(node)
       }
     })
 
@@ -252,7 +252,7 @@ export default class JsMindView {
       await this.jm.update_node(node, topic)
     }
     // 选中这个节点
-    this.jm.select_node(node)
+    await this.jm.select_node(node)
   }
 
   /**
@@ -399,25 +399,25 @@ export default class JsMindView {
    * 处理鼠标按下事件
    * @param e {MouseEvent}
    */
-  _mousedown_handle (e) {
+  async _mousedown_handle (e) {
     // 当前节点
     const targetNode = this.get_node_by_element(e.target)
     if (e.button === 0 && e.buttons === 1) {
       // 单击左键
       if (e.ctrlKey) {
-        if (targetNode) this.jm.toggle_select_node(targetNode)
+        if (targetNode) await this.jm.toggle_select_node(targetNode)
       } else {
-        this.jm.select_node(targetNode)
+        await this.jm.select_node(targetNode)
       }
     } else if (e.button === 2 && e.buttons === 2) {
       // 单击右键
       if (e.ctrlKey) {
       } else if (this.jm.get_selected_nodes().length <= 1) {
         // 单选的时候，右键直接选择到点的节点
-        this.jm.select_node(targetNode)
+        await this.jm.select_node(targetNode)
       } else if (!this.jm.is_node_selected(targetNode)) {
         // 多选的时候，如果当前节点不在已选范围内，直接重选
-        this.jm.select_node(targetNode)
+        await this.jm.select_node(targetNode)
       }
     }
   }

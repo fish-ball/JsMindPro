@@ -1,13 +1,5 @@
-/*
- * Released under BSD License
- * Copyright (c) 2014-2016 hizzgdev@163.com
- *
- * Project Home:
- *   https://github.com/hizzgdev/jsmind/
- */
 import _ from 'lodash-es'
 
-import JsMindPlugin from './JsMindPlugin'
 import JsMindUtil from './JsMindUtil'
 import JsMindNode from './JsMindNode'
 import JsMindModel from './JsMindModel'
@@ -21,7 +13,8 @@ export const DEFAULT_OPTIONS = {
   container: void 0,        // (querySelector/id/Element) of the container
   mode: 'both',             // both or side
   editable: false,          // you can change it in your options
-  theme: 'xmind', view: {
+  theme: 'xmind',
+  view: {
     hmargin: 100,           // 思维导图距容器外框的最小水平距离
     vmargin: 50,            // 思维导图距容器外框的最小垂直距离
     hspace: 20,             // 节点之间的水平间距
@@ -29,7 +22,11 @@ export const DEFAULT_OPTIONS = {
     pspace: 10,             // 节点与连接线之间的水平间距（用于容纳节点收缩/展开控制器）
     line_width: 1,          // 思维导图线条的粗细
     line_color: '#558ED5',  // 思维导图线条的颜色
-    zoom: 1, zoom_step: 0.1, min_zoom: 0.5, max_zoom: 2, render_node: void 0     // functions (elNode, node) to render the node
+    zoom: 1,
+    zoom_step: 0.1,
+    min_zoom: 0.5,
+    max_zoom: 2,
+    render_node: void 0     // functions (elNode, node) to render the node
   },
   shortcut: {
     enable: true, handlers: {}, mapping: {
@@ -44,7 +41,10 @@ export const DEFAULT_OPTIONS = {
       ArrowUp: 'up',
       ArrowDown: 'down'
     }
-  }, // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
+  },
+  // 插件扩展类的注册列表
+  extensions: [],
+  // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
   hooks: {}
 }
 
@@ -52,11 +52,7 @@ export default class JsMind {
   static DIRECTION = DIRECTION
 
   // Subclass registration
-  static plugin = JsMindPlugin
   static util = JsMindUtil // TODO: 考虑清除引用废掉这层
-  static node = JsMindNode
-
-  static plugins = []
 
   constructor (options) {
     this.options = _.defaultsDeep(options, DEFAULT_OPTIONS)
@@ -65,15 +61,19 @@ export default class JsMind {
     this._initialized = false
     // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
     this._hooks = {}
+    // 自动加载配置中的钩子处理函数
     _.forEach(this.options.hooks, (value, key) => {
       this._hooks[key] = value instanceof Function ? [value] : value
     })
+    // 插件注册表
+    this.plugins = {}
   }
 
   /**
    * 初始化 JsMind 控件
+   * @returns {Promise<void>}
    */
-  init () {
+  async init () {
     if (this._initialized) {
       throw new Error('JsMind 已经初始化，请勿重复初始化.')
     }
@@ -88,7 +88,8 @@ export default class JsMind {
     // Init shortcut
     this.shortcut = new JsMindShortcut(this, this.options.shortcut)
 
-    JsMind.init_plugins(this)
+    // 注册所有 options.extensions 里面的扩展成为插件
+    await this._init_plugins()
 
     // 标记已初始化
     this._initialized = true
@@ -116,7 +117,7 @@ export default class JsMind {
    */
   async apply_hook (name, params = {}, context = null) {
     // console.log('>>> apply_hook:', name)
-    await Promise.all((this._hooks[name] || []).map(func => func(params, context)))
+    await Promise.all((this._hooks[name] || []).map(func => func.apply(this, [params, context])))
   }
 
   /**
@@ -128,7 +129,7 @@ export default class JsMind {
    */
   apply_hook_sync (name, params = {}, context = null) {
     // console.log('>>> apply_hook_sync:', name)
-    for (const func of this._hooks[name] || []) func(params, context)
+    for (const func of this._hooks[name] || []) func.apply(this, [params, context])
   }
 
   /**
@@ -143,7 +144,7 @@ export default class JsMind {
     // 加载数据以及 JsMindModel 模型
     this.model = new JsMindModel(format, this.options)
     this.model.load(data)
-    this.init()
+    await this.init()
     this.view.reset()
     this.layout.reset()
     await this.view.init_nodes()
@@ -568,7 +569,7 @@ export default class JsMind {
     if (!this.can_edit()) return
     node = node || this.get_selected_node()
     if (!node) return
-    this.select_node(node)
+    await this.select_node(node)
     return this.view.edit_node_begin(node)
   }
 
@@ -688,11 +689,11 @@ export default class JsMind {
       const parent = node.parent
       const index = parent.children.indexOf(node)
       if (index < parent.children.length - 1) {
-        this.select_node(parent.children[index + 1])
+        await this.select_node(parent.children[index + 1])
       } else if (index > 0) {
-        this.select_node(parent.children[index - 1])
+        await this.select_node(parent.children[index - 1])
       } else {
-        this.select_node(parent)
+        await this.select_node(parent)
       }
     }
     // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
@@ -782,6 +783,21 @@ export default class JsMind {
 
   // >>>>>>>> private methods >>>>>>>>
 
+  /**
+   * 初始化插件
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _init_plugins () {
+    await Promise.all(this.options.extensions.map(async extensionClass => {
+      // 不重复实例化
+      if (extensionClass.plugin_name in this.plugins) return
+      const plugin = new extensionClass(this)
+      this.plugins[extensionClass.plugin_name] = plugin
+      await plugin.init()
+    }))
+  }
+
   // >>>>>>>> static methods >>>>>>>>
 
   /**
@@ -797,25 +813,4 @@ export default class JsMind {
     return jm
   }
 
-  /**
-   * 注册一个插件
-   * @param plugin {JsMindPlugin}
-   */
-  static register_plugin (plugin) {
-    JsMind.plugins.push(plugin)
-  }
-
-  /**
-   * 初始化插件
-   * @param sender
-   */
-  static init_plugins (sender) {
-    JsMind.plugins.forEach(plugin => {
-      plugin.init(sender)
-    })
-  }
-
 }
-
-
-

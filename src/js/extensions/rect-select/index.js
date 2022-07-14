@@ -1,16 +1,17 @@
 import _ from 'lodash-es'
-import JsMind, {DIRECTION} from '../JsMind'
-import JsMindPlugin from '../JsMindPlugin'
+import JsMind, {DIRECTION} from '../../JsMind'
+import JsMindExtension from '../../JsMindExtension'
 
 let options = {
   line_width: 1, stroke_style: 'rgba(83,83,167,0.5)', fill_style: 'rgba(223,223,224,0.5)'
 }
 
-class JsMindExtensionRectSelect {
+export default class JsMindExtensionRectSelect extends JsMindExtension {
+
+  static plugin_name = 'rect-select'
 
   constructor (jm) {
-    /** @type JsMind */
-    this.jm = jm
+    super(jm)
     this.canvas = null
     this.canvasContext = null
     this.rectX = 0
@@ -27,7 +28,7 @@ class JsMindExtensionRectSelect {
   /**
    * 初始化插件
    */
-  init () {
+  async init () {
     this._event_bind()
     this.dragHandler = this.drag.bind(this)
   }
@@ -123,7 +124,7 @@ class JsMindExtensionRectSelect {
     }
     selectFromNode(this.jm.get_root())
     // 执行选中
-    this.jm.select_nodes(selectedNodes)
+    this.jm.select_nodes(selectedNodes).catch(() => 0)
     // >>> DEPRECATED: 暴力算法，节点多了会死人的
     // this.jm.select_nodes(_.filter(this.jm.get_nodes(), node => {
     //   const {x, y} = node.get_location()
@@ -222,14 +223,3 @@ class JsMindExtensionRectSelect {
   }
 
 }
-
-(function () {
-  if (JsMind.rect_select !== void 0) return
-
-  const plugin = new JsMindPlugin('rect_select', function (jm) {
-    const ext = new JsMindExtensionRectSelect(jm)
-    ext.init()
-  })
-
-  JsMind.register_plugin(plugin)
-})()

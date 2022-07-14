@@ -1,11 +1,9 @@
-import JsMind from '../JsMind'
-import JsMindPlugin from '../JsMindPlugin'
+import JsMindExtension from '../../JsMindExtension'
 
-class JsMindExtensionDragScroll {
+export default class JsMindExtensionDragScroll extends JsMindExtension {
 
   constructor (jm) {
-    /** @type JsMind */
-    this.jm = jm
+    super(jm)
     this.target = null
     this.startX = 0
     this.startY = 0
@@ -91,14 +89,3 @@ class JsMindExtensionDragScroll {
   }
 
 }
-
-(function () {
-  if (JsMind.drag_scroll !== void 0) return
-
-  const plugin = new JsMindPlugin('drag_scroll', function (jm) {
-    const ext = new JsMindExtensionDragScroll(jm)
-    ext.init()
-  })
-
-  JsMind.register_plugin(plugin)
-})()
