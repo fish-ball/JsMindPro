@@ -1,5 +1,5 @@
 import _ from 'lodash-es'
-import JsMindExtension from '../../JsMindExtension'
+import JsMindPlugin from '../../JsMindPlugin'
 import {DIRECTION} from '../../JsMind'
 import JsMindUtil from '../../JsMindUtil'
 
@@ -7,7 +7,7 @@ let options = {
   line_width: 1, stroke_style: 'rgba(0,0,0,0.3)', stroke_dash: [8, 4]
 }
 
-export default class JsMindExtensionDraggable extends JsMindExtension {
+export default class JsMindPluginDraggable extends JsMindPlugin {
 
   static plugin_name = 'draggable'
 

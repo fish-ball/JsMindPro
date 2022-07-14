@@ -1,4 +1,4 @@
-export default class JsMindExtension {
+export default class JsMindPlugin {
   /** @type String **/
   static plugin_name
 

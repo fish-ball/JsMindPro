@@ -43,7 +43,7 @@ export const DEFAULT_OPTIONS = {
     }
   },
   // 插件扩展类的注册列表
-  extensions: [],
+  plugins: [],
   // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
   hooks: {}
 }
@@ -88,11 +88,20 @@ export default class JsMind {
     // Init shortcut
     this.shortcut = new JsMindShortcut(this, this.options.shortcut)
 
-    // 注册所有 options.extensions 里面的扩展成为插件
+    // 注册所有 options.plugins 里面的插件
     await this._init_plugins()
 
     // 标记已初始化
     this._initialized = true
+  }
+
+  /**
+   * 返回当前是否有注册指定的钩子
+   * @param name 钩子名称
+   * @returns {*|boolean}
+   */
+  has_hook(name) {
+    return this._hooks.includes(name) && this._hooks[name].length > 0
   }
 
   /**
@@ -789,11 +798,11 @@ export default class JsMind {
    * @private
    */
   async _init_plugins () {
-    await Promise.all(this.options.extensions.map(async extensionClass => {
+    await Promise.all(this.options.plugins.map(async pluginClass => {
       // 不重复实例化
-      if (extensionClass.plugin_name in this.plugins) return
-      const plugin = new extensionClass(this)
-      this.plugins[extensionClass.plugin_name] = plugin
+      if (pluginClass.plugin_name in this.plugins) return
+      const plugin = new pluginClass(this)
+      this.plugins[pluginClass.plugin_name] = plugin
       await plugin.init()
     }))
   }

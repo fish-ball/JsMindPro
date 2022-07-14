@@ -1,12 +1,12 @@
 import _ from 'lodash-es'
-import JsMind, {DIRECTION} from '../../JsMind'
-import JsMindExtension from '../../JsMindExtension'
+import {DIRECTION} from '../../JsMind'
+import JsMindPlugin from '../../JsMindPlugin'
 
 let options = {
   line_width: 1, stroke_style: 'rgba(83,83,167,0.5)', fill_style: 'rgba(223,223,224,0.5)'
 }
 
-export default class JsMindExtensionRectSelect extends JsMindExtension {
+export default class JsMindPluginRectSelect extends JsMindPlugin {
 
   static plugin_name = 'rect-select'
 

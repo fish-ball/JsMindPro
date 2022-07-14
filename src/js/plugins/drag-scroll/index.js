@@ -1,6 +1,8 @@
-import JsMindExtension from '../../JsMindExtension'
+import JsMindPlugin from '../../JsMindPlugin'
 
-export default class JsMindExtensionDragScroll extends JsMindExtension {
+export default class JsMindPluginDragScroll extends JsMindPlugin {
+
+  static plugin_name = 'drag-scroll'
 
   constructor (jm) {
     super(jm)
