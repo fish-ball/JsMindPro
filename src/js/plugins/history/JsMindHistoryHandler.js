@@ -1,15 +1,11 @@
 export default class JsMindHistoryHandler {
 
+  /** @type {string} 历史栈节点的动作类型 */
+  action = ''
+
   constructor (plugin) {
     /** @type {JsMindPlugin} */
     this.plugin = plugin
-  }
-
-  /** 返回历史栈节点的动作类型
-   * @returns {string}
-   */
-  get action () {
-    throw new Error('Must specify JsMindHistoryHandler.action property!')
   }
 
   /**
