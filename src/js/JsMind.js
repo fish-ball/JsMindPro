@@ -29,7 +29,9 @@ export const DEFAULT_OPTIONS = {
     render_node: void 0     // functions (elNode, node) to render the node
   },
   shortcut: {
-    enable: true, handlers: {}, mapping: {
+    enable: true,
+    handlers: {},
+    mapping: {
       Tab: 'addchild',
       Enter: 'addbrother',
       NumpadEnter: 'addbrother',
@@ -63,7 +65,8 @@ export default class JsMind {
     this._hooks = {}
     // 自动加载配置中的钩子处理函数
     _.forEach(this.options.hooks, (value, key) => {
-      this._hooks[key] = value instanceof Function ? [value] : value
+      if (value instanceof Function) this.add_hook(key, value)
+      else value.forEach(func => this.add_hook(key, func))
     })
     // 插件注册表
     this.plugins = {}
@@ -96,12 +99,21 @@ export default class JsMind {
   }
 
   /**
+   * 设置一个热键的处理器
+   * @param key {string} 热键的字符串，例如 'Control+KeyA'
+   * @param handler {Function|string|null} 处理函数/内置处理器名称/空取值为清除
+   */
+  set_key_map (key, handler) {
+    return this.shortcut.set_key_map(key, handler)
+  }
+
+  /**
    * 返回当前是否有注册指定的钩子
    * @param name 钩子名称
    * @returns {*|boolean}
    */
-  has_hook(name) {
-    return this._hooks.includes(name) && this._hooks[name].length > 0
+  has_hook (name) {
+    return (name in this._hooks) && this._hooks[name].length > 0
   }
 
   /**
@@ -113,7 +125,7 @@ export default class JsMind {
     if (!this._hooks[name]) this._hooks[name] = []
     const hooks = this._hooks[name]
     // 避免重复加入参数
-    if (hooks.indexOf(func) === -1) return
+    if (hooks.indexOf(func) > -1) return
     hooks.push(func)
   }
 
@@ -597,7 +609,7 @@ export default class JsMind {
    * @param newId
    */
   rename_node (oldId, newId) {
-    if (!this.can_edit()) return
+    if (!this.can_edit() || oldId === newId) return
     this.model.rename_node(oldId, newId)
   }
 
@@ -762,7 +774,7 @@ export default class JsMind {
     await this.view.show(false)
     this.view.restore_location(parent)
     // HOOK: 删除节点（批量）后置钩子
-    await this.apply_hook('after_remove_node', {nodes: [node]}, context)
+    await this.apply_hook('after_remove_node', {nodes: nodesToDelete}, context)
     return true
   }
 

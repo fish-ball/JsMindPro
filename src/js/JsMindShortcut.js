@@ -21,11 +21,7 @@ export default class JsMindShortcut {
     // 加入映射
     this._mapping = {}
     _.forEach(this.jm.options.shortcut.mapping, (handler, key) => {
-      if (handler instanceof Function) {
-        this._mapping[key] = handler
-      } else if (handler in this.handlers) {
-        this._mapping[key] = this.handlers[handler]
-      }
+      this.set_key_map(key, handler)
     })
     // 绑定事件
     this.jm.view.e_panel.addEventListener('keydown', this.handler.bind(this))
@@ -37,6 +33,25 @@ export default class JsMindShortcut {
 
   disable_shortcut () {
     this.jm.options.shortcut.enable = false
+  }
+
+  /**
+   * 设置一个热键的处理器
+   * @param key {string} 热键的字符串，例如 'Control+KeyA'
+   * @param handler {Function|string|null} 处理函数/内置处理器名称/空取值为清除
+   */
+  set_key_map (key, handler) {
+    if(!handler) {
+      delete this._mapping[key]
+      return
+    }
+    if (handler instanceof Function) {
+      this._mapping[key] = handler
+    } else if (handler in this.handlers) {
+      this._mapping[key] = this.handlers[handler]
+    } else {
+      console.warn(`>> Ignore non-existence shortcut handler: ${handler} for key(${key})`)
+    }
   }
 
   /**
@@ -73,7 +88,9 @@ export default class JsMindShortcut {
     let selectedNode = jm.get_selected_node()
     if (!selectedNode) return
     // 在 await 之前先阻断默认事件
-    await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    const node = await jm.add_node(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    // 添加之后启动编辑
+    jm.begin_edit(node)
   }
 
   /**
@@ -86,7 +103,9 @@ export default class JsMindShortcut {
     if (!selectedNode) return
     if (selectedNode.is_root()) return this.handle_addchild()
     // 在 await 之前先阻断默认事件
-    await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    const node = await jm.insert_node_after(selectedNode, JsMindUtil.uuid.newid(), 'New Node')
+    // 添加之后启动编辑
+    jm.begin_edit(node)
   }
 
   /**

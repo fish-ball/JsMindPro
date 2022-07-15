@@ -1,14 +1,37 @@
-import {JsMindHistoryHandler} from './index'
+import JsMindHistoryHandler from './JsMindHistoryHandler'
 
 export class AddNodeHistoryHandler extends JsMindHistoryHandler {
-  static action = 'add_node'
 
-  constructor (jm) {
-    super(jm)
+  constructor (plugin) {
+    super(plugin)
+  }
+
+  get action () {
+    return 'add_node'
   }
 
   async init () {
-    this.jm.add_hook('after_add_node', async ({node}, context) => {
+    this.plugin.jm.add_hook('after_add_node', async ({node}, context) => {
+      this.plugin.history_push(this.action, JSON.stringify({
+        id: node.id,
+        topic: node.topic,
+        parent: node.parent.id,
+        index: node.index
+      }))
     })
+  }
+
+  async undo (payload) {
+    const jm = this.plugin.jm
+    const data = JSON.parse(payload)
+    const node = jm.get_node(data.id)
+    await jm.remove_node(node)
+  }
+
+  async redo (payload) {
+    const jm = this.plugin.jm
+    const data = JSON.parse(payload)
+    const parentNode = jm.get_node(data.parent)
+    await jm.add_node(parentNode, data.id, data.topic, null, data.index)
   }
 }

@@ -2,56 +2,7 @@ import _ from 'lodash-es'
 import JsMindPlugin from '../../JsMindPlugin'
 import * as default_handlers from './default_handlers'
 
-export class JsMindHistoryHandler {
-  /** @type {string} */
-  static action
-
-  constructor (plugin) {
-    /** @type {JsMind} */
-    this.plugin = plugin
-  }
-
-  /**
-   * 初始化历史栈处理器，一般为注册事件钩子
-   * @returns {Promise<void>}
-   */
-  async init() {
-    throw new Error('JsMindHistoryHandler.init() not implemented!')
-  }
-
-  /**
-   * 撤销历史操作
-   * @param payload
-   * @returns {Promise<void>}
-   */
-  async undo (payload) {
-    throw new Error('JsMindHistoryHandler.undo(payload) not implemented!')
-  }
-
-  /**
-   * 恢复历史操作
-   * @param payload
-   * @returns {Promise<void>}
-   */
-  async redo (payload) {
-    throw new Error('JsMindHistoryHandler.redo(payload) not implemented!')
-  }
-
-  /**
-   * 构造一个 HistoryHandler 对象
-   * @param jm {JsMind}
-   * @param redo {Function}
-   * @param undo {Function}
-   */
-  static build ({jm, redo, undo}) {
-    const handler = new JsMindHistoryHandler(jm)
-    handler.undo = undo
-    handler.redo = redo
-    return handler
-  }
-}
-
-class JsMindPluginHistory extends JsMindPlugin {
+export default class JsMindPluginHistory extends JsMindPlugin {
   static plugin_name = 'history'
 
   constructor (jm) {
@@ -63,21 +14,34 @@ class JsMindPluginHistory extends JsMindPlugin {
     this._history_index = -1
     // 历史处理函数，官方默认历史栈行为只有增删改和移动三种
     this._handlers = {}
+    // 处于撤销和恢复的过程中，锁定不要进行 history_push
+    this._lock = false
   }
 
   /**
    * 初始化插件
    */
-  init () {
+  async init () {
+    // 注册热键
+    this.jm.set_key_map('Control+KeyZ', () => this.history_undo())
+    this.jm.set_key_map('Control+Shift+KeyZ', () => this.history_undo())
+    this.jm.set_key_map('Control+KeyY', () => this.history_redo())
+    // 先读取历史栈
+    await this._history_load()
+    // 加载所有的历史栈处理器
+    Object.values(default_handlers).forEach(handler => {
+      this.setup_handler(handler)
+    })
   }
 
   /**
-   * 添加一个处理器
-   * @param action {string} 历史栈操作类型的关键字
-   * @param handlerClass {JsMindHistoryHandler} 历史处理器对象
+   * 安装一个处理器
+   * @param handlerClass {JsMindHistoryHandler.prototype} 历史处理器对象
    */
-  set_handler (action, handlerClass) {
-    this._handlers[action] = new handlerClass(this)
+  setup_handler (handlerClass) {
+    const handler = new handlerClass(this)
+    this._handlers[handler.action] = handler
+    handler.init()
   }
 
   /**
@@ -92,12 +56,18 @@ class JsMindPluginHistory extends JsMindPlugin {
    * 历史栈推入操作
    * @param action {string} 历史栈节点的动作名称
    * @param payload {string} 历史栈的内容载荷
+   * @returns {Promise<void>}
    */
-  history_push (action, payload) {
+  async history_push (action, payload) {
+    // 锁定中不进行 history_push
+    if (this._lock) return
     this._history_index += 1
     // 裁切掉恢复的历史栈段落
     this._history.length = this._history_index
     this._history.push({action, payload})
+    console.log('>> history_push', action, payload)
+    // 每次发生变动都持久化一下
+    await this._history_dump()
   }
 
   /**
@@ -126,8 +96,24 @@ class JsMindPluginHistory extends JsMindPlugin {
     const {action, payload} = this._history[this._history_index]
     const handler = this._handlers[action]
     if (!handler) throw new Error(`尚未注册历史栈操作类型为 ${action} 的 handler 处理器`)
-    await handler.undo(payload)
+    // 开启锁定
+    this._lock = true
+    // 尝试处理，但是拦截错误
+    const success = await handler.undo(payload).then(() => true, async () => {
+      await this.jm.apply_hook('history_undo_failed', {plugin: this, handler})
+      return false
+    })
+    // 关闭锁定
+    this._lock = false
+    // 处理失败的话，清空历史栈并返回失败
+    if (!success) {
+      console.warn('>> history_undo failed!', handler.action)
+      await this._history_reset()
+      return false
+    }
     this._history_index -= 1
+    // 每次发生变动都持久化一下
+    await this._history_dump()
     return true
   }
 
@@ -141,8 +127,24 @@ class JsMindPluginHistory extends JsMindPlugin {
     const {action, payload} = this._history[this._history_index + 1]
     const handler = this._handlers[action]
     if (!handler) throw new Error(`尚未注册历史栈操作类型为 ${action} 的 handler 处理器`)
-    await handler.redo(payload)
+    // 开启锁定
+    this._lock = true
+    // 尝试处理，但是拦截错误
+    const success = await handler.redo(payload).then(() => true, async () => {
+      await this.jm.apply_hook('history_redo_failed', {plugin: this, handler})
+      return false
+    })
+    // 关闭锁定
+    this._lock = false
+    // 处理失败的话，清空历史栈并返回失败
+    if (!success) {
+      console.warn('>> history_redo failed!', handler.action)
+      await this._history_reset()
+      return false
+    }
     this._history_index += 1
+    // 每次发生变动都持久化一下
+    await this._history_dump()
     return true
   }
 
@@ -160,22 +162,23 @@ class JsMindPluginHistory extends JsMindPlugin {
    * 存储持久化的历史栈
    * @returns {Promise<void>}
    */
-  async history_dump () {
+  async _history_dump () {
     // 如果有定义钩子，使用钩子行为进行持久化存储
     if (this.jm.has_hook('history_dump')) {
       return this.jm.apply_hook('history_dump', {plugin: this})
     }
     // 没有的话，放在 localStorage
-    localStorage.setItem(this.get_history_key(), JSON.dump({
+    const payload = JSON.stringify({
       history: this._history, index: this._history_index
-    }))
+    })
+    localStorage.setItem(this.get_history_key(), payload)
   }
 
   /**
    * 读取持久化的历史栈
    * @returns {Promise<void>}
    */
-  async history_load () {
+  async _history_load () {
     // 如果有定义钩子，使用钩子行为进行持久化存储
     if (this.jm.has_hook('history_load')) {
       return this.jm.apply_hook('history_load', {plugin: this})
@@ -186,6 +189,22 @@ class JsMindPluginHistory extends JsMindPlugin {
     const {history, index} = JSON.parse(payload)
     this._history = history
     this._history_index = index
+  }
+
+  /**
+   * 清空持久化的历史栈
+   * @return {Promise<void>}
+   * @private
+   */
+  async _history_reset () {
+    // 如果有定义钩子，使用钩子行为进行持久化存储
+    if (this.jm.has_hook('history_reset')) {
+      return this.jm.apply_hook('history_reset', {plugin: this})
+    }
+    // 没有的话，清空 localStorage 的存储
+    this._history = []
+    this._history_index = -1
+    localStorage.removeItem(this.get_history_key())
   }
 
 }
