@@ -97,3 +97,42 @@ export class RemoveNodeHistoryHandler extends JsMindHistoryHandler {
     await jm.remove_nodes(ids.map(id => jm.get_node(id)))
   }
 }
+
+/**
+ * 移动节点的默认处理器
+ */
+export class MoveNodeHistoryHandler extends JsMindHistoryHandler {
+
+  action = 'move_node'
+
+  async init () {
+    this.plugin.jm.add_hook('after_move_node', async ({node}, context) => {
+      // 历史栈推入
+      this.plugin.history_push(this.action, JSON.stringify({
+        id: node.id,
+        oldParent: context.parent.id,
+        oldIndex: context.index,
+        oldDirection: context.direction,
+        parent: node.parent.id,
+        index: node.index,
+        direction: node.direction
+      }))
+    })
+  }
+
+  async undo (payload) {
+    const jm = this.plugin.jm
+    const {id, oldParent, oldIndex, oldDirection} = JSON.parse(payload)
+    const node = jm.get_node(id)
+    const parent = jm.get_node(oldParent)
+    await jm.move_node(node, parent.children[oldIndex], parent, oldDirection)
+  }
+
+  async redo (payload) {
+    const jm = this.plugin.jm
+    const {id, parent: parentId, index, direction} = JSON.parse(payload)
+    const node = jm.get_node(id)
+    const parent = jm.get_node(parentId)
+    await jm.move_node(node, parent.children[index], parent, direction)
+  }
+}

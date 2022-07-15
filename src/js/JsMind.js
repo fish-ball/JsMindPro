@@ -797,7 +797,7 @@ export default class JsMind {
   async move_node (node, nextNode, parent, direction) {
     if (!this.can_edit()) return
     // 移动节点前置钩子
-    const context = {}
+    const context = {parent: node.parent, index: node.index, direction: node.direction}
     const targetIndex = parent.children.indexOf(nextNode)
     await this.apply_hook('before_move_node', {
       node, parent, index: targetIndex === -1 ? parent.children.length : targetIndex
