@@ -628,7 +628,7 @@ export default class JsMind {
       await this.view.update_node(node)
     } else {
       // HOOK: 更新节点前置钩子
-      const context = {}
+      const context = {oldTopic: node.topic}
       await this.apply_hook('before_update_node', {node, topic}, context)
       // 有修改
       node.topic = topic
