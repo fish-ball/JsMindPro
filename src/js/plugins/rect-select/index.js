@@ -181,16 +181,15 @@ export default class JsMindPluginRectSelect extends JsMindPlugin {
    */
   drag (e) {
     if (!(e.button === 0 && e.buttons === 1)) return this.drag_end(e)
-    const el = this.jm.view.container.getElementsByClassName('jsmind-inner')[0]
     if (e.target && !this.active) {
       // 初始触发的处理，禁用掉右键菜单，免得拖拽结束的时候触发
       this.target.addEventListener('contextmenu', this.disable_event)
       this.active = true
-      this._create_canvas()
     }
     this.rectW = e.offsetX - this.offsetX
     this.rectH = e.offsetY - this.offsetY
     // 绘制框选框
+    if (!this.canvas) this._create_canvas()
     this._draw_rect()
     // 选中节点
     this.applySelectNodes()
