@@ -8,6 +8,8 @@ export default class JsMindPluginHistory extends JsMindPlugin {
   constructor (jm) {
     super(jm)
 
+    // 用于存放在 after_init_plugin 钩子中传入的上下文参数
+    this.context = {}
     // 历史栈
     this._history = []
     // 历史栈指针
@@ -29,9 +31,14 @@ export default class JsMindPluginHistory extends JsMindPlugin {
     // 先读取历史栈
     await this._history_load()
     // 加载所有的历史栈处理器
-    Object.values(default_handlers).forEach(handler => {
+    const handlerClasses = this.jm.get_plugin_options(
+      this.constructor.plugin_name, 'handlers', Object.values(default_handlers)
+    )
+    handlerClasses.forEach(handler => {
       this.setup_handler(handler)
     })
+    // 用于触发钩子回调
+    await super.init()
   }
 
   /**
@@ -42,6 +49,7 @@ export default class JsMindPluginHistory extends JsMindPlugin {
     const handler = new handlerClass(this)
     this._handlers[handler.action] = handler
     handler.init()
+    this.jm.apply_hook_sync('after_init_history_handler', {handler, plugin: this})
   }
 
   /**
@@ -95,7 +103,13 @@ export default class JsMindPluginHistory extends JsMindPlugin {
     if (!this.can_undo()) return false
     const {action, payload} = this._history[this._history_index]
     const handler = this._handlers[action]
-    if (!handler) throw new Error(`尚未注册历史栈操作类型为 ${action} 的 handler 处理器`)
+    // 无法处理的时候，抛钩加重置
+    if (!handler) {
+      await this.jm.apply_hook('history_undo_failed', {plugin: this, handler})
+      console.warn(`尚未注册历史栈操作类型为 ${action} 的 handler 处理器`)
+      await this._history_reset()
+      return false
+    }
     // 开启锁定
     this._lock = true
     // 尝试处理，但是拦截错误
@@ -126,7 +140,13 @@ export default class JsMindPluginHistory extends JsMindPlugin {
     if (!this.can_redo()) return false
     const {action, payload} = this._history[this._history_index + 1]
     const handler = this._handlers[action]
-    if (!handler) throw new Error(`尚未注册历史栈操作类型为 ${action} 的 handler 处理器`)
+    // 无法处理的时候，抛钩加重置
+    if (!handler) {
+      await this.jm.apply_hook('history_redo_failed', {plugin: this, handler})
+      console.warn(`尚未注册历史栈操作类型为 ${action} 的 handler 处理器`)
+      await this._history_reset()
+      return false
+    }
     // 开启锁定
     this._lock = true
     // 尝试处理，但是拦截错误

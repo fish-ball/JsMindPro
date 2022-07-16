@@ -46,6 +46,7 @@ export const DEFAULT_OPTIONS = {
   },
   // 插件扩展类的注册列表
   plugins: [],
+  plugin_options: {},
   // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
   hooks: {}
 }
@@ -175,6 +176,17 @@ export default class JsMind {
   }
 
   /**
+   * 获取某个插件的配置
+   * @param plugin_name {string} 插件名称
+   * @param key {string} 配置项的关键字
+   * @param default_value 默认配置值
+   */
+  get_plugin_options(plugin_name, key, default_value = void 0) {
+    const opts = this.options.plugin_options[plugin_name] || {}
+    return opts[key] || default_value
+  }
+
+/**
    * 增量渲染数据，相当于在原本 Model 上面加上一些新的源数据内容，多用于批量插入
    * @param data
    * @returns {Promise<void>}

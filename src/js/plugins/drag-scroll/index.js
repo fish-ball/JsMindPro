@@ -16,9 +16,10 @@ export default class JsMindPluginDragScroll extends JsMindPlugin {
   /**
    * 初始化插件
    */
-  init () {
+  async init () {
     this._event_bind()
     this.dragHandler = this.drag.bind(this)
+    await super.init()
   }
 
   /**

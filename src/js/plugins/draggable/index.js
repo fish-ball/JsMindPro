@@ -38,6 +38,7 @@ export default class JsMindPluginDraggable extends JsMindPlugin {
     // 需要这样才能在区域内显示可放置图标
     this.jm.view.e_nodes.ondrop = e => false
     this.jm.view.e_nodes.ondragover = e => false
+    await super.init()
   }
 
   /**

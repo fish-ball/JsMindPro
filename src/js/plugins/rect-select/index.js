@@ -31,6 +31,7 @@ export default class JsMindPluginRectSelect extends JsMindPlugin {
   async init () {
     this._event_bind()
     this.dragHandler = this.drag.bind(this)
+    await super.init()
   }
 
   /**
