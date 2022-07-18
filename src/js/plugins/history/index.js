@@ -99,6 +99,8 @@ export default class JsMindPluginHistory extends JsMindPlugin {
    * @returns {Promise<boolean>} 返回是否操作成功
    */
   async history_undo () {
+    // 防止重复提交
+    if(this._lock) return false
     // 已经无可撤销
     if (!this.can_undo()) return false
     const {action, payload} = this._history[this._history_index]
@@ -136,6 +138,8 @@ export default class JsMindPluginHistory extends JsMindPlugin {
    * @returns {Promise<boolean>} 返回是否操作成功
    */
   async history_redo () {
+    // 防止重复提交
+    if(this._lock) return false
     // 已经无可恢复
     if (!this.can_redo()) return false
     const {action, payload} = this._history[this._history_index + 1]
