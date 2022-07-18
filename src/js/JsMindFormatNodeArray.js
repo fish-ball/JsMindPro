@@ -55,6 +55,7 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     // 先创建所有节点
     arr.forEach(node => {
       if (model.nodes[node.id]) {
+        // TODO: 如果进入这个分支实际上会导致渲染错误（可能因为引用丢失）
         const nd = model.nodes[node.id]
         nd.topic = node.topic
         nd.data = node.data

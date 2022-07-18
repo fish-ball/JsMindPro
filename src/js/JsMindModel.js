@@ -185,12 +185,15 @@ export default class JsMindModel {
     if (node.is_root()) return
     // 后序遍历，先递归清理所有子树节点
     let children = node.children
+    const parent = node.parent
     node.children = []
     children.forEach(node => this.remove_node(node))
     // 从父节点的 children 中剔除当前节点
     node.parent.children.splice(node.parent.children.indexOf(node), 1)
     // 节点集合中清除
     delete this.nodes[node.id]
+    // 重排一下父节点
+    this._reindex(parent)
   }
 
   /**
