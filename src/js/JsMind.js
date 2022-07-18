@@ -181,12 +181,12 @@ export default class JsMind {
    * @param key {string} 配置项的关键字
    * @param default_value 默认配置值
    */
-  get_plugin_options(plugin_name, key, default_value = void 0) {
+  get_plugin_options (plugin_name, key, default_value = void 0) {
     const opts = this.options.plugin_options[plugin_name] || {}
     return opts[key] || default_value
   }
 
-/**
+  /**
    * 增量渲染数据，相当于在原本 Model 上面加上一些新的源数据内容，多用于批量插入
    * @param data
    * @returns {Promise<void>}
@@ -705,6 +705,28 @@ export default class JsMind {
   }
 
   /**
+   * 精简节点集，仅保留所有涉及的子树根节点，用于批量删除及复制等场景
+   * @param nodes {JsMindNode[]} 需要精简的节点集合
+   */
+  compact_node_set (nodes) {
+    // 这里多选的情况下会产生一些冲突，例如一个节点和他的子节点都被选中，
+    // 同时删除，结果子节点删除的时候被级联干掉了，会导致失败
+    // 更好的处理应该事先逻辑剔除一些被覆盖的子节点再执行
+    const results = []
+    const nodeMap = {}
+    // 将待删除的节点列表全部标记在集合中
+    for (const node of nodes) nodeMap[node.id] = true
+    // 然后每个节点上溯路径上，如果有被标记过的，则不删除
+    for (const node of nodes) {
+      if (node.is_root()) continue
+      let nd = node
+      while (!nd.parent.is_root() && !(nd.parent.id in nodeMap)) nd = nd.parent
+      if (nd.parent.is_root()) results.push(node)
+    }
+    return results
+  }
+
+  /**
    * 移除一个指定的节点
    * @param node {JsMindNode} 待移除节点
    * @returns {Promise<Boolean>}
@@ -722,20 +744,7 @@ export default class JsMind {
     if (!this.can_edit()) return false
     // 钩子上下文
     const context = {}
-    // 这里多选的情况下会产生一些冲突，例如一个节点和他的子节点都被选中，
-    // 同时删除，结果子节点删除的时候被级联干掉了，会导致失败
-    // 更好的处理应该事先逻辑剔除一些被覆盖的子节点再执行
-    const nodesToDelete = []
-    const nodeMap = {}
-    // 将待删除的节点列表全部标记在集合中
-    for (const node of nodes) nodeMap[node.id] = true
-    // 然后每个节点上溯路径上，如果有被标记过的，则不删除
-    for (const node of nodes) {
-      if (node.is_root()) continue
-      let nd = node
-      while (!nd.parent.is_root() && !(nd.parent.id in nodeMap)) nd = nd.parent
-      if (nd.parent.is_root()) nodesToDelete.push(node)
-    }
+    const nodesToDelete = this.compact_node_set(nodes)
     // 没有要删的就直接退出
     if (nodesToDelete.length === 0) return false
     // 做一次全遍历，先计算所有要删除的节点，并存放在 context.allNodes 中
