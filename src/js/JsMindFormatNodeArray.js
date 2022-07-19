@@ -47,7 +47,8 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
   }
 
   /**
-   * 追加数据
+   * 追加数据，通过增量的节点数据，追加到当前的脑图中
+   * !!IMPORTANT!! 前置条件：必须保证 arr 的节点顺序为先序遍历
    * @param model {JsMindModel}
    * @param arr {Object[]}
    */
@@ -55,10 +56,12 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
     // 先创建所有节点
     arr.forEach(node => {
       if (model.nodes[node.id]) {
-        // TODO: 如果进入这个分支实际上会导致渲染错误（可能因为引用丢失）
+        // TODO: 理论上应该不能进入这个分支，禁止重复刷入节点数据
+        //  如果进入这个分支实际上会导致渲染错误（可能因为引用丢失）
         const nd = model.nodes[node.id]
         nd.topic = node.topic
         nd.data = node.data
+        console.warn('>>> 检测到重复的节点数据', node)
       } else {
         // console.log('create_node model:', node.id, node.topic)
         model.nodes[node.id] = new JsMindNode(
@@ -73,7 +76,13 @@ export default class JsMindFormatNodeArray extends JsMindFormatBase {
       const parentNode = model.nodes[node.parentid]
       if (!parentNode) throw new Error(`Parent with id=${node.parentid} not found.`)
       childNode.parent = parentNode
-      parentNode.children.push(childNode)
+      if(node.index !== void 0 && node.index > -1) {
+        // 如果有指定 index 的话，采取插入到指定位置
+        parentNode.children.splice(node.index, 0, childNode)
+      } else {
+        // 否则直接加到末尾
+        parentNode.children.push(childNode)
+      }
     })
     // 整理 model
     model.arrange()
