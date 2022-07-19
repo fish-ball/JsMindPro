@@ -73,7 +73,7 @@ export default class JsMindPluginHistory extends JsMindPlugin {
     // 裁切掉恢复的历史栈段落
     this._history.length = this._history_index
     this._history.push({action, payload})
-    console.log('>> history_push', action, payload)
+    // console.log('>> history_push', action, payload)
     // 每次发生变动都持久化一下
     await this._history_dump()
   }
