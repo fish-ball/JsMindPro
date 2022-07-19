@@ -36,8 +36,8 @@ export default class JsMindPluginDraggable extends JsMindPlugin {
   async init () {
     this._event_bind()
     // 需要这样才能在区域内显示可放置图标
-    this.jm.view.e_nodes.ondrop = e => false
-    this.jm.view.e_nodes.ondragover = e => false
+    this.jm.view.e_nodes.ondrop = () => false
+    this.jm.view.e_nodes.ondragover = () => false
     await super.init()
   }
 
@@ -254,11 +254,11 @@ export default class JsMindPluginDraggable extends JsMindPlugin {
   /**
    * 拖动结束的处理
    * @param e {MouseEvent}
-   * @param cancel {Boolean} 是否取消操作
+   * @return {Promise<void>}
    */
-  drag_end (e) {
+  async drag_end (e) {
     // 如果操作合法，执行操作
-    if (this.jm.can_edit() && this.targetNode) this.move_node()
+    if (this.jm.can_edit() && this.targetNode) await this.move_node()
     // 清理所有
     this._destroy_canvas()
     this._hide_shadow()

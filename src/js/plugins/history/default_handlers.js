@@ -125,7 +125,8 @@ export class MoveNodeHistoryHandler extends JsMindHistoryHandler {
     const {id, oldParent, oldIndex, oldDirection} = JSON.parse(payload)
     const node = jm.get_node(id)
     const parent = jm.get_node(oldParent)
-    await jm.move_node(node, parent.children[oldIndex], parent, oldDirection)
+    await jm.move_node(
+      node, parent.children.filter(nd => nd !== node)[oldIndex], parent, oldDirection)
   }
 
   async redo (payload) {
@@ -133,6 +134,7 @@ export class MoveNodeHistoryHandler extends JsMindHistoryHandler {
     const {id, parent: parentId, index, direction} = JSON.parse(payload)
     const node = jm.get_node(id)
     const parent = jm.get_node(parentId)
-    await jm.move_node(node, parent.children[index], parent, direction)
+    await jm.move_node(
+      node, parent.children.filter(nd => nd !== node)[index], parent, direction)
   }
 }

@@ -81,7 +81,6 @@ export default class JsMind {
     if (this._initialized) {
       throw new Error('JsMind 已经初始化，请勿重复初始化.')
     }
-
     // TODO: 职责引用解耦 Init layout
     this.layout = new JsMindLayout(this)
 
@@ -819,9 +818,11 @@ export default class JsMind {
     if (!this.can_edit()) return
     // 移动节点前置钩子
     const context = {parent: node.parent, index: node.index, direction: node.direction}
-    const targetIndex = parent.children.indexOf(nextNode)
+    // 目标位置下标（排除现有节点后，移入后的目标下标序号，0 开始）
+    const children = parent.children.filter(nd => nd !== node)
+    const targetIndex = children.indexOf(nextNode)
     await this.apply_hook('before_move_node', {
-      node, parent, index: targetIndex === -1 ? parent.children.length : targetIndex
+      node, parent, index: targetIndex === -1 ? children.length : targetIndex
     }, context)
     if (!this.model.move_node(node, nextNode, parent, direction)) return
     this.layout.expand_node(parent)
