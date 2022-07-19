@@ -117,6 +117,15 @@ export default {
    * @returns {Promise<void>}
    */
   async select_changed ({nodes = []}) {
+  },
+
+  /**
+   * 热键触发前置钩子，可以用于一些特殊的拦截
+   * @param keyName {string} 按键名称，例如 'Control+Shift+KeyA'
+   * @param isDefault {boolean} 是否属于未注册按键处理，并进入已定义的默认处理器的情况
+   * @return {Promise<void>}
+   */
+  async before_key_shortcut_trigger ({keyName, isDefault}) {
   }
 
 }

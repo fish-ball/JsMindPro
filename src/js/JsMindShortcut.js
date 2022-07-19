@@ -41,7 +41,7 @@ export default class JsMindShortcut {
    * @param handler {Function|string|null} 处理函数/内置处理器名称/空取值为清除
    */
   set_key_map (key, handler) {
-    if(!handler) {
+    if (!handler) {
       delete this._mapping[key]
       return
     }
@@ -57,8 +57,9 @@ export default class JsMindShortcut {
   /**
    * 调度器
    * @param e {KeyboardEvent}
+   * @return {Promise<void>}
    */
-  handler (e) {
+  async handler (e) {
     // 编辑中状态不处理热键
     if (this.jm.view.is_editing()) return
     if (!this.jm.options.shortcut.enable) return
@@ -72,9 +73,11 @@ export default class JsMindShortcut {
     keys.push(e.code)
     const keyName = keys.join('+')
     if (keyName in this._mapping) {
+      await this.jm.apply_hook('before_key_shortcut_trigger', {keyName, isDefault: false})
       this._mapping[keyName].apply(this, [e])
       if (e) e.preventDefault()
     } else if ('default' in this.handlers) {
+      await this.jm.apply_hook('before_key_shortcut_trigger', {keyName, isDefault: true})
       this.handlers.default.apply(this, [e, keyName])
     }
   }

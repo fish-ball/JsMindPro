@@ -62,6 +62,8 @@ export default class JsMind {
 
     // 初始属性
     this._initialized = false
+    // 修改的动作锁
+    this._lock = false
     // 钩子注册表，key 为 hook_name，value 为对应该钩子的处理函数
     this._hooks = {}
     // 自动加载配置中的钩子处理函数
@@ -71,6 +73,15 @@ export default class JsMind {
     })
     // 插件注册表
     this.plugins = {}
+
+    /** @type {JsMindModel|null} */
+    this.model = null
+    /** @type {JsMindView|null} */
+    this.view = null
+    /** @type {JsMindLayout|null} */
+    this.layout = null
+    /** @type {JsMindShortcut|null} */
+    this.shortcut = null
   }
 
   /**
@@ -96,6 +107,23 @@ export default class JsMind {
 
     // 标记已初始化
     this._initialized = true
+  }
+
+  /**
+   * 需要同步操作锁的执行调用
+   * @param func {function}
+   * @return {Promise<*>}
+   */
+  async acquire_lock (func) {
+    if (this._lock) throw new Error('请勿重复操作')
+    this._lock = true
+    return func.apply(this).then(result => {
+      this._lock = false
+      return result
+    }, err => {
+      this._lock = false
+      throw err
+    })
   }
 
   /**
@@ -160,18 +188,20 @@ export default class JsMind {
    * @returns {Promise<void>}
    */
   async render (format, data) {
-    // 执行初始化（）
-    this._initialized = false
-    // 加载数据以及 JsMindModel 模型
-    this.model = new JsMindModel(format, this.options)
-    this.model.load(data)
-    await this.init()
-    this.view.reset()
-    this.layout.reset()
-    await this.view.init_nodes()
-    this.view.show(true)
-    // 初始化
-    await this.apply_hook('after_render', {jm: this})
+    return this.acquire_lock(async function () {
+      // 执行初始化（）
+      this._initialized = false
+      // 加载数据以及 JsMindModel 模型
+      this.model = new JsMindModel(format, this.options)
+      this.model.load(data)
+      await this.init()
+      this.view.reset()
+      this.layout.reset()
+      await this.view.init_nodes()
+      this.view.show(true)
+      // 初始化
+      await this.apply_hook('after_render', {jm: this})
+    })
   }
 
   /**
@@ -631,23 +661,25 @@ export default class JsMind {
    * @returns {Promise<void>}
    */
   async update_node (node, topic) {
-    // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
-    if (!this.can_edit()) return
-    if (!topic || !topic.trim()) topic = '<未命名>'
-    if (node.topic === topic) {
-      // 没有修改
-      await this.view.update_node(node)
-    } else {
-      // HOOK: 更新节点前置钩子
-      const context = {oldTopic: node.topic}
-      await this.apply_hook('before_update_node', {node, topic}, context)
-      // 有修改
-      node.topic = topic
-      await this.view.update_node(node)
-      this.view.show(false)
-      // HOOK: 更新节点后置钩子
-      await this.apply_hook('after_update_node', {node}, context)
-    }
+    return this.acquire_lock(async function () {
+      // if (!topic || !topic.trim()) throw new Error('topic can not be empty')
+      if (!this.can_edit()) return
+      if (!topic || !topic.trim()) topic = '<未命名>'
+      if (node.topic === topic) {
+        // 没有修改
+        await this.view.update_node(node)
+      } else {
+        // HOOK: 更新节点前置钩子
+        const context = {oldTopic: node.topic}
+        await this.apply_hook('before_update_node', {node, topic}, context)
+        // 有修改
+        node.topic = topic
+        await this.view.update_node(node)
+        this.view.show(false)
+        // HOOK: 更新节点后置钩子
+        await this.apply_hook('after_update_node', {node}, context)
+      }
+    })
   }
 
   /**
@@ -661,21 +693,23 @@ export default class JsMind {
    */
   async add_node (parentNode, nodeId, topic, data = null, index = -1) {
     if (!this.can_edit()) return null
-    // HOOK: 新增节点前置钩子
-    const context = {}
-    await this.apply_hook('before_add_node', {
-      parent: parentNode, nodeId, topic, index
-    }, context)
-    const node = this.model.add_node(parentNode, nodeId, topic, data, index >= 0 ? index - 0.5 : -1)
-    await this.view.add_node(node)
-    // HOOK: 新增节点后置钩子，允许在钩子中修改 node 的值
-    await this.apply_hook('process_add_node', {node}, context)
-    // 需要刷新视图才能正常显示
-    this.expand_node(parentNode)
-    await this.refresh_node(node)
-    // HOOK: 新增并渲染完成之后执行
-    await this.apply_hook('after_add_node', {node}, context)
-    return node
+    return this.acquire_lock(async function () {
+      // HOOK: 新增节点前置钩子
+      const context = {}
+      await this.apply_hook('before_add_node', {
+        parent: parentNode, nodeId, topic, index
+      }, context)
+      const node = this.model.add_node(parentNode, nodeId, topic, data, index >= 0 ? index - 0.5 : -1)
+      await this.view.add_node(node)
+      // HOOK: 新增节点后置钩子，允许在钩子中修改 node 的值
+      await this.apply_hook('process_add_node', {node}, context)
+      // 需要刷新视图才能正常显示
+      this.expand_node(parentNode)
+      await this.refresh_node(node)
+      // HOOK: 新增并渲染完成之后执行
+      await this.apply_hook('after_add_node', {node}, context)
+      return node
+    })
   }
 
   /**
@@ -741,69 +775,71 @@ export default class JsMind {
    */
   async remove_nodes (nodes) {
     if (!this.can_edit()) return false
-    // 钩子上下文
-    const context = {}
-    const nodesToDelete = this.compact_node_set(nodes)
-    // 没有要删的就直接退出
-    if (nodesToDelete.length === 0) return false
-    // 做一次全遍历，先计算所有要删除的节点，并存放在 context.allNodes 中
-    const allNodes = []
-    const allNodeMap = {}
-    const dfs = nd => {
-      allNodeMap[nd.id] = nd
-      allNodes.push(nd)
-      for (const child of nd.children) dfs(child)
-    }
-    for (const nd of nodesToDelete) dfs(nd)
-    context.allNodes = allNodes
-    // 选中的节点被级联删除了，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
-    // 这个要先处理完再从逻辑层删除，否则会炸
-    let selectedNode = this.get_selected_node()
-    if (selectedNode && !selectedNode.is_root()) {
-      while (selectedNode.parent.id in allNodeMap) {
-        selectedNode = selectedNode.parent
+    return this.acquire_lock(async function () {
+      // 钩子上下文
+      const context = {}
+      const nodesToDelete = this.compact_node_set(nodes)
+      // 没有要删的就直接退出
+      if (nodesToDelete.length === 0) return false
+      // 做一次全遍历，先计算所有要删除的节点，并存放在 context.allNodes 中
+      const allNodes = []
+      const allNodeMap = {}
+      const dfs = nd => {
+        allNodeMap[nd.id] = nd
+        allNodes.push(nd)
+        for (const child of nd.children) dfs(child)
       }
-      let nextSelectedNode = null
-      const siblings = selectedNode.parent.children
-      // 寻找下一个未被删掉的兄弟
-      for (let i = selectedNode.index + 1; i < siblings.length; ++i) {
-        if (!(siblings[i].id in allNodeMap)) {
-          nextSelectedNode = siblings[i]
-          break
+      for (const nd of nodesToDelete) dfs(nd)
+      context.allNodes = allNodes
+      // 选中的节点被级联删除了，应该调整焦点到（优先级：下一个兄弟/前一个兄弟/父节点）
+      // 这个要先处理完再从逻辑层删除，否则会炸
+      let selectedNode = this.get_selected_node()
+      if (selectedNode && !selectedNode.is_root()) {
+        while (selectedNode.parent.id in allNodeMap) {
+          selectedNode = selectedNode.parent
         }
-      }
-      // 找不到的话找上一个
-      if (!nextSelectedNode) {
-        for (let i = selectedNode.index - 1; i >= 0; --i) {
+        let nextSelectedNode = null
+        const siblings = selectedNode.parent.children
+        // 寻找下一个未被删掉的兄弟
+        for (let i = selectedNode.index + 1; i < siblings.length; ++i) {
           if (!(siblings[i].id in allNodeMap)) {
             nextSelectedNode = siblings[i]
             break
           }
         }
+        // 找不到的话找上一个
+        if (!nextSelectedNode) {
+          for (let i = selectedNode.index - 1; i >= 0; --i) {
+            if (!(siblings[i].id in allNodeMap)) {
+              nextSelectedNode = siblings[i]
+              break
+            }
+          }
+        }
+        // 还找不到的话选中父亲
+        if (!nextSelectedNode) nextSelectedNode = selectedNode.parent
+        await this.select_node(nextSelectedNode)
       }
-      // 还找不到的话选中父亲
-      if (!nextSelectedNode) nextSelectedNode = selectedNode.parent
-      await this.select_node(nextSelectedNode)
-    }
-    // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
-    const anchorNode = nodesToDelete[0].parent
-    // HOOK: 删除节点（批量）前置钩子
-    await this.apply_hook('before_remove_node', {nodes: nodesToDelete}, context)
-    this.view.save_location(anchorNode)
-    // 执行删除
-    await Promise.all(nodesToDelete.map(async node => {
-      if (node.is_root()) return
-      // 视图层删除
-      await this.view.remove_node(node)
-      // 逻辑层删除
-      this.model.remove_node(node)
-    }))
-    // 重新渲染回复定位
-    await this.view.show(false)
-    this.view.restore_location(anchorNode)
-    // HOOK: 删除节点（批量）后置钩子
-    await this.apply_hook('after_remove_node', {nodes: nodesToDelete}, context)
-    return true
+      // 因为删除节点会导致布局突变，需要锚定 parent 的位置等布完之后恢复
+      const anchorNode = nodesToDelete[0].parent
+      // HOOK: 删除节点（批量）前置钩子
+      await this.apply_hook('before_remove_node', {nodes: nodesToDelete}, context)
+      this.view.save_location(anchorNode)
+      // 执行删除
+      await Promise.all(nodesToDelete.map(async node => {
+        if (node.is_root()) return
+        // 视图层删除
+        await this.view.remove_node(node)
+        // 逻辑层删除
+        this.model.remove_node(node)
+      }))
+      // 重新渲染回复定位
+      await this.view.show(false)
+      this.view.restore_location(anchorNode)
+      // HOOK: 删除节点（批量）后置钩子
+      await this.apply_hook('after_remove_node', {nodes: nodesToDelete}, context)
+      return true
+    })
   }
 
   /**
@@ -816,20 +852,22 @@ export default class JsMind {
    */
   async move_node (node, nextNode, parent, direction) {
     if (!this.can_edit()) return
-    // 移动节点前置钩子
-    const context = {parent: node.parent, index: node.index, direction: node.direction}
-    // 目标位置下标（排除现有节点后，移入后的目标下标序号，0 开始）
-    const children = parent.children.filter(nd => nd !== node)
-    const targetIndex = children.indexOf(nextNode)
-    await this.apply_hook('before_move_node', {
-      node, parent, index: targetIndex === -1 ? children.length : targetIndex
-    }, context)
-    if (!this.model.move_node(node, nextNode, parent, direction)) return
-    this.layout.expand_node(parent)
-    await this.view.update_node(node)
-    this.view.show(false)
-    // 后置钩子
-    await this.apply_hook('after_move_node', {node}, context)
+    return this.acquire_lock(async function () {
+      // 移动节点前置钩子
+      const context = {parent: node.parent, index: node.index, direction: node.direction}
+      // 目标位置下标（排除现有节点后，移入后的目标下标序号，0 开始）
+      const children = parent.children.filter(nd => nd !== node)
+      const targetIndex = children.indexOf(nextNode)
+      await this.apply_hook('before_move_node', {
+        node, parent, index: targetIndex === -1 ? children.length : targetIndex
+      }, context)
+      if (!this.model.move_node(node, nextNode, parent, direction)) return
+      this.layout.expand_node(parent)
+      await this.view.update_node(node)
+      this.view.show(false)
+      // 后置钩子
+      await this.apply_hook('after_move_node', {node}, context)
+    })
   }
 
   // >>>>>>>> private methods >>>>>>>>
