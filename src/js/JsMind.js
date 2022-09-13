@@ -740,11 +740,13 @@ export default class JsMind {
   /**
    * 精简节点集，仅保留所有涉及的子树根节点，用于批量删除及复制等场景
    * @param nodes {JsMindNode[]} 需要精简的节点集合
+   * @param allowRoot {Boolean} 是否需要根节点
    */
-  compact_node_set (nodes) {
+  compact_node_set (nodes, allowRoot=false) {
     // 这里多选的情况下会产生一些冲突，例如一个节点和他的子节点都被选中，
     // 同时删除，结果子节点删除的时候被级联干掉了，会导致失败
     // 更好的处理应该事先逻辑剔除一些被覆盖的子节点再执行
+    if(allowRoot && nodes.includes(this.get_root())) return [this.get_root()]
     const results = []
     const nodeMap = {}
     // 将待删除的节点列表全部标记在集合中
