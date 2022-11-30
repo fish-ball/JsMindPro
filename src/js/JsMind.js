@@ -475,7 +475,7 @@ export default class JsMind {
     // 没有匹配到的话，那就是已经最后一个了
     if (!nxt) return null
     // 曾经有上溯过的话，要拉回来
-    while (depth > 0 && nxt.children.length > 0) {
+    while (depth > 0 && nxt.children.length > 0 && nxt.expanded) {
       depth -= 1
       nxt = nxt.children[nxt.children.length - 1]
     }
@@ -510,7 +510,7 @@ export default class JsMind {
     // 没有匹配到的话，那就是已经最后一个了
     if (!nxt) return null
     // 曾经有上溯过的话，要拉回来
-    while (depth > 0 && nxt.children.length > 0) {
+    while (depth > 0 && nxt.children.length > 0 && nxt.expanded) {
       depth -= 1
       nxt = nxt.children[0]
     }

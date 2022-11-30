@@ -205,6 +205,10 @@ export default class JsMindShortcut {
       // 同方向的左右，找到中间的儿子节点
       const children = selectedNode.children
       node = children[Math.floor((children.length - 1) / 2)]
+      // 如果节点没有展开，则把节点展开
+      if (children.length && !selectedNode.expanded) {
+        jm.expand_node(selectedNode)
+      }
     } else {
       node = selectedNode.parent
     }
