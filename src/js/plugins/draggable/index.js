@@ -110,7 +110,7 @@ export default class JsMindPluginDraggable extends JsMindPlugin {
           ? lb : cy + ch / 2 - oh / 2
         const chb = (i === n - 1 || mode === 'both' && node === root && i === n - 2)
           ? hb : cy + ch / 2 + oh / 2
-        if (clb <= sy + sh / 2 && sy + sh / 2 < chb) {
+        if (clb <= sy + sh / 2 && sy + sh / 2 < chb && node.expanded) {
           lb = clb
           hb = chb
           node = childNode
